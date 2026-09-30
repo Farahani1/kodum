@@ -237,6 +237,7 @@ TRANSLATORS: dict[str, Callable[[], Translator]] = {"stub": StubTranslator}
 MODEL_TRANSLATORS = (
     "translategemma-4b",
     "translategemma-4b-bf16",
+    "translategemma-4b-bf16-terms",
     "translategemma-4b-4bit-fp32",
     "translategemma-12b-4bit",
     "qwen3-8b-4bit",
@@ -252,6 +253,7 @@ def translator_factory(name: str) -> Callable[[], Translator]:
         return {
             "translategemma-4b": hf.translategemma_4b,
             "translategemma-4b-bf16": hf.translategemma_4b_bf16,
+            "translategemma-4b-bf16-terms": hf.translategemma_4b_bf16_terms,
             "translategemma-4b-4bit-fp32": hf.translategemma_4b_4bit_fp32,
             "translategemma-12b-4bit": hf.translategemma_12b_4bit,
             "qwen3-8b-4bit": hf.qwen3_8b_4bit,

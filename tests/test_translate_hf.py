@@ -11,6 +11,7 @@ from kodoom.translate.hf import (
     clean_output,
     gemma_messages,
     load_generator,
+    pin_terms,
 )
 from kodoom.translate.pipeline import Item, translator_factory
 
@@ -111,3 +112,33 @@ def test_every_registered_model_translator_has_a_factory():
     for name in MODEL_TRANSLATORS:
         assert callable(translator_factory(name)), name
     assert {"translategemma-4b-bf16", "translategemma-4b-4bit-fp32"} <= set(MODEL_TRANSLATORS)
+
+
+def test_pin_terms_writes_the_persian_term_into_the_english_text():
+    glossary = load()
+    ai = "agent_trace_observability"
+    agent = glossary.terms(ai)["agent"]
+    pinned = pin_terms(item("The agent stopped. Two agents wait.", workflow=ai), glossary)
+    assert pinned.text == f"The {agent} stopped. Two {agent}\u200c\u0647\u0627 wait."
+    security = glossary.terms("security_incidents")
+    text = pin_terms(
+        item("A service account used the account.", workflow="security_incidents"), glossary
+    )
+    assert text.text == f"A {security['service account']} used the {glossary.common['account']}."
+    # register survives and the original item is not changed
+    original = item("TLS refund", register="colloquial")
+    assert pin_terms(original, glossary).register == "colloquial"
+    assert original.text == "TLS refund"
+
+
+def test_translategemma_sends_pinned_text_only_when_given_a_glossary():
+    sent = []
+
+    def generate(conversations):
+        sent.extend(m[0]["content"][0]["text"] for m in conversations)
+        return ["x"] * len(conversations)
+
+    the_item = item("Your refund", workflow="customer_service")
+    TranslateGemmaTranslator("plain", generate).translate([the_item])
+    TranslateGemmaTranslator("pinned", generate, load()).translate([the_item])
+    assert sent == ["Your refund", f"Your {load().common['refund']}"]

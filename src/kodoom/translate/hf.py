@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable, Sequence
+from dataclasses import replace
 from typing import Any
 
 from kodoom.translate.glossary import Glossary
@@ -65,6 +66,26 @@ def chat_messages(item: Item, glossary: Glossary) -> Messages:
         {"role": "system", "content": SYSTEM},
         {"role": "user", "content": "\n".join(lines) + "\n\nText:\n" + item.text},
     ]
+
+
+def pin_terms(item: Item, glossary: Glossary) -> Item:
+    """The item with each glossary term already written in Persian.
+
+    TranslateGemma takes no instructions, so a glossary cannot be put in its prompt. This
+    writes the chosen Persian term into the English text before translation («Let the
+    عامل proceed»), which a translation model normally copies through; a plural gets the
+    ZWNJ-joined «ها». Whether the model keeps the term is then checked by the glossary check.
+    """
+    text = item.text
+    terms = glossary.relevant(item.workflow, text)
+    for en in sorted(terms, key=len, reverse=True):
+        text = re.sub(
+            rf"\b{re.escape(en)}(s?)\b",
+            lambda m, fa=terms[en]: fa + ("\u200c\u0647\u0627" if m.group(1) else ""),
+            text,
+            flags=re.IGNORECASE,
+        )
+    return replace(item, text=text)
 
 
 def gemma_messages(item: Item) -> Messages:
@@ -115,12 +136,17 @@ class ChatTranslator:
 
 
 class TranslateGemmaTranslator:
-    def __init__(self, name: str, generate: Generate) -> None:
+    """``glossary``: when given, its terms are written into the input in Persian
+    (see ``pin_terms``); without it the model translates the text as is."""
+
+    def __init__(self, name: str, generate: Generate, glossary: Glossary | None = None) -> None:
         self.name = name
         self._generate = generate
+        self._glossary = glossary
 
     def translate(self, items: Sequence[Item]) -> list[str]:
-        return _pair(items, self._generate([gemma_messages(i) for i in items]))
+        sent = [pin_terms(i, self._glossary) if self._glossary else i for i in items]
+        return _pair(items, self._generate([gemma_messages(i) for i in sent]))
 
 
 def _pair(items: Sequence[Item], replies: Sequence[str]) -> list[str]:
@@ -226,6 +252,12 @@ def translategemma_4b() -> TranslateGemmaTranslator:
 def translategemma_4b_bf16() -> TranslateGemmaTranslator:
     generate = load_generator(TRANSLATEGEMMA_4B, dtype="bfloat16")
     return TranslateGemmaTranslator("translategemma-4b-bf16", generate)
+
+
+def translategemma_4b_bf16_terms() -> TranslateGemmaTranslator:
+    """bf16 with the glossary terms written into the input."""
+    generate = load_generator(TRANSLATEGEMMA_4B, dtype="bfloat16")
+    return TranslateGemmaTranslator("translategemma-4b-bf16-terms", generate, load_glossary())
 
 
 def translategemma_4b_4bit_fp32() -> TranslateGemmaTranslator:
