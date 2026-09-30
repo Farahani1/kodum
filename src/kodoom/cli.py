@@ -30,7 +30,8 @@ from kodoom.metrics import MetricError
 from kodoom.predictions import PredictionError, read_predictions, write_predictions
 from kodoom.runs import RunError, list_runs
 from kodoom.schema import RecordError, read_jsonl, write_jsonl
-from kodoom.sources import SourceError, check_record
+from kodoom.sources import SourceError, check_record, get_source
+from kodoom.typed_decisions import REVISION, TypedDecisionsError, load_records
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -51,6 +52,7 @@ def main(argv: list[str] | None = None) -> int:
         GeneratorError,
         InspectError,
         PredictionError,
+        TypedDecisionsError,
         CalibrationError,
         MetricError,
     ) as e:
@@ -117,6 +119,22 @@ def _parser() -> argparse.ArgumentParser:
     inspect.add_argument("--max-chars", type=int, default=6000, help="cut a printed row after this")
     inspect.add_argument("--out", type=Path, help="also write the report to this file")
     inspect.set_defaults(func=_inspect)
+
+    fetch = commands.add_parser(
+        "fetch", help="download a source dataset and convert it to records (run on Colab)"
+    )
+    fetch.add_argument("dataset", choices=["typed-decisions"])
+    _add_profile_args(fetch)
+    fetch.add_argument(
+        "--revision", default=REVISION, help="commit to read (default: the pinned one)"
+    )
+    fetch.add_argument(
+        "--limit", type=int, help="cases per workflow and split (default: the profile's cap)"
+    )
+    fetch.add_argument(
+        "--out", type=Path, help="output directory (default: <data_dir>/typed-decisions/en)"
+    )
+    fetch.set_defaults(func=_fetch)
 
     baseline = commands.add_parser(
         "baseline", help="write trivial-baseline predictions (uniform, prior, oracle)"
@@ -217,6 +235,46 @@ def _generate(args: argparse.Namespace) -> int:
         print(f"{path}: {len(records)} records (seed {seed}, {pairs} pairs per kind)")
         print(f"  splits: {manifest['by_split']}")
         print(f"  sha256: {manifest['sha256']}")
+    return 0
+
+
+def _fetch(args: argparse.Namespace) -> int:
+    profile = _load(args)
+    try:
+        from huggingface_hub import hf_hub_download
+    except ImportError as e:
+        raise InspectError(
+            "huggingface_hub is not installed: pip install huggingface_hub pyarrow"
+        ) from e
+    limit = args.limit if args.limit is not None else profile.max_cases_per_source
+    out_dir = args.out if args.out is not None else profile.data_dir / "typed-decisions" / "en"
+    by_split = load_records(hf_hub_download, revision=args.revision, limit=limit)
+    manifest = {
+        "source": "LocalLLaMA/typed-decisions",
+        "revision": args.revision,
+        "license": get_source("LocalLLaMA/typed-decisions").license,
+        "kodoom_version": __version__,
+        "cases_per_workflow_and_split": limit,
+        "splits": {},
+    }
+    for split, records in by_split.items():
+        path = out_dir / f"{split}.jsonl"
+        write_jsonl(path, records)
+        cases = {r.source_id for r in records}
+        manifest["splits"][split] = {
+            "cases": len(cases),
+            "decisions": len(records),
+            "by_workflow": dict(Counter(r.extra["workflow"] for r in records)),
+            "by_type": dict(Counter(r.question_type for r in records)),
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        }
+        print(f"{path}: {len(cases)} cases, {len(records)} decisions")
+        print(f"  by workflow: {manifest['splits'][split]['by_workflow']}")
+        print(f"  by type:     {manifest['splits'][split]['by_type']}")
+    (out_dir / "manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    print(f"commit {args.revision}")
     return 0
 
 
