@@ -23,6 +23,7 @@ _SCHEMA: dict[str, dict[str, type | tuple[type, ...]]] = {
     "run": {"seed": int, "runs_dir": str},
     "compute": {"device": str, "precision": str, "threads": int},
     "data": {"max_cases_per_source": int},
+    "storage": {"scratch_dir": str, "cache_dir": str, "reserve_gb": (int, float)},
 }
 
 
@@ -39,6 +40,12 @@ class Profile:
     precision: str
     threads: int | None  # None: leave the library default
     max_cases_per_source: int | None  # None: use every case
+    # Fast local disk: checkpoints are written here, then copied to runs_dir.
+    scratch_dir: Path
+    # Where downloaded base models go (HF_HOME). Never on Drive (plan: Storage budget).
+    cache_dir: Path
+    # Space to leave free on the runs_dir disk after any checkpoint write.
+    reserve_gb: float
 
 
 def load_profile(name_or_path: str | Path, *, runs_dir: str | Path | None = None) -> Profile:
@@ -50,8 +57,10 @@ def load_profile(name_or_path: str | Path, *, runs_dir: str | Path | None = None
     _check_keys(raw)
 
     run, compute, data = raw.get("run", {}), raw.get("compute", {}), raw.get("data", {})
+    storage = raw.get("storage", {})
     for section, key in (("run", "seed"), ("run", "runs_dir"), ("compute", "device"),
-                         ("compute", "precision")):  # fmt: skip
+                         ("compute", "precision"), ("storage", "scratch_dir"),
+                         ("storage", "cache_dir")):  # fmt: skip
         if key not in raw.get(section, {}):
             raise ProfileError(f"profile {name!r}: missing [{section}] {key}")
 
@@ -63,6 +72,9 @@ def load_profile(name_or_path: str | Path, *, runs_dir: str | Path | None = None
         precision=compute["precision"],
         threads=compute.get("threads"),
         max_cases_per_source=data.get("max_cases_per_source"),
+        scratch_dir=Path(storage["scratch_dir"]),
+        cache_dir=Path(storage["cache_dir"]),
+        reserve_gb=float(storage.get("reserve_gb", 1.0)),
     )
     _check_values(profile)
     return profile
@@ -110,5 +122,7 @@ def _check_values(p: Profile) -> None:
         raise ProfileError(f"profile {p.name!r}: fp16 needs a GPU; use fp32 on cpu")
     if p.threads is not None and p.threads < 1:
         raise ProfileError(f"profile {p.name!r}: threads must be at least 1")
+    if p.reserve_gb < 0:
+        raise ProfileError(f"profile {p.name!r}: reserve_gb cannot be negative")
     if p.max_cases_per_source is not None and p.max_cases_per_source < 1:
         raise ProfileError(f"profile {p.name!r}: max_cases_per_source must be at least 1")

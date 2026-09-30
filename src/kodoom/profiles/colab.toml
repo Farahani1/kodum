@@ -8,3 +8,10 @@ runs_dir = "/content/drive/MyDrive/kodoom/runs"
 [compute]
 device = "cuda"
 precision = "fp16"
+
+[storage]
+# The runtime's own disk: fast, large, wiped when the session ends.
+scratch_dir = "/content/kodoom-scratch"
+cache_dir = "/content/hf-cache"
+# Drive is shared with Gmail and Photos (free 15 GB): keep 1 GB free.
+reserve_gb = 1

@@ -30,6 +30,14 @@ def test_all_profiles_share_the_seed():
     assert len({load_profile(n).seed for n in BUILTIN_PROFILES}) == 1
 
 
+def test_colab_keeps_models_and_scratch_off_drive():
+    for name in ("colab", "colab-preflight"):
+        p = load_profile(name)
+        assert not p.cache_dir.as_posix().startswith("/content/drive/")
+        assert not p.scratch_dir.as_posix().startswith("/content/drive/")
+        assert p.runs_dir.as_posix().startswith("/content/drive/")
+
+
 def test_runs_dir_override():
     assert load_profile("dev", runs_dir="elsewhere").runs_dir == Path("elsewhere")
 
@@ -37,7 +45,8 @@ def test_runs_dir_override():
 def test_profile_from_file(tmp_path):
     path = tmp_path / "mine.toml"
     path.write_text(
-        '[run]\nseed = 7\nruns_dir = "out"\n[compute]\ndevice = "cpu"\nprecision = "fp32"\n',
+        '[run]\nseed = 7\nruns_dir = "out"\n[compute]\ndevice = "cpu"\nprecision = "fp32"\n'
+        '[storage]\nscratch_dir = "s"\ncache_dir = "c"\n',
         encoding="utf-8",
     )
     profile = load_profile(path)
@@ -50,7 +59,10 @@ def _write(tmp_path, text):
     return path
 
 
-BASE = '[run]\nseed = 1\nruns_dir = "r"\n[compute]\ndevice = "cpu"\nprecision = "fp32"\n'
+BASE = (
+    '[run]\nseed = 1\nruns_dir = "r"\n[compute]\ndevice = "cpu"\nprecision = "fp32"\n'
+    '[storage]\nscratch_dir = "s"\ncache_dir = "c"\n'
+)
 
 
 @pytest.mark.parametrize(
@@ -64,6 +76,8 @@ BASE = '[run]\nseed = 1\nruns_dir = "r"\n[compute]\ndevice = "cpu"\nprecision = 
         (BASE.replace('"cpu"', '"tpu"'), "device must be"),
         (BASE + "[data]\nmax_cases_per_source = 0\n", "at least 1"),
         ("[run\n", "invalid TOML"),
+        (BASE.replace('cache_dir = "c"\n', ""), "missing \\[storage\\] cache_dir"),
+        (BASE + "reserve_gb = -1\n", "cannot be negative"),
     ],
 )
 def test_bad_profiles_are_rejected(tmp_path, text, message):
