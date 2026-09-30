@@ -18,6 +18,7 @@ from kodoom.typed_decisions import (
     WORKFLOWS,
     TypedDecisionsError,
     case_records,
+    field_stats,
     load_records,
     parquet_name,
 )
@@ -211,3 +212,32 @@ def test_fetch_writes_splits_and_manifest_to_the_data_dir(fake_hub, tmp_path, mo
     assert manifest["revision"] == REVISION and manifest["license"] == "Apache-2.0"
     assert manifest["splits"]["train"]["decisions"] == len(train)
     assert "decisions" in capsys.readouterr().out
+
+
+def test_field_stats_counts_each_case_once_and_ranks_free_text_first():
+    rows = []
+    for i in range(4):
+        state = json.dumps(
+            {
+                "status": "open",
+                "notes": [f"a long free text number {i} " * 3, "short"],
+                "customer": {"name": f"Name {i}"},
+            }
+        )
+        rows.append(make_row(f"c-{i}", state=state))
+    records = [r for row in rows for r in case_records(row)]
+    stats = {r["path"]: r for r in field_stats(records)["customer_service"]}
+    assert stats["status"]["distinct"] == 1 and stats["status"]["coverage"] == 1.0
+    assert stats["notes[]"]["occurrences"] == 8  # two list items in each of 4 cases
+    assert stats["customer.name"]["distinct"] == 4
+    ranked = [r["path"] for r in field_stats(records)["customer_service"]]
+    assert ranked[0] == "notes[]" and ranked[-1] == "status"
+
+
+def test_fields_command_prints_the_paths(tmp_path, capsys):
+    from kodoom.schema import write_jsonl
+
+    write_jsonl(tmp_path / "r.jsonl", case_records(make_row()))
+    assert cli.main(["fields", str(tmp_path / "r.jsonl")]) == 0
+    out = capsys.readouterr().out
+    assert "1 cases, 3 decisions" in out and "ticket.text" in out

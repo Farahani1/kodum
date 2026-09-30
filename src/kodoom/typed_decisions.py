@@ -207,3 +207,58 @@ def _json_text(row: Mapping[str, Any], key: str, where: str) -> str:
     if isinstance(value, dict):
         return json.dumps(value, ensure_ascii=False, sort_keys=True)
     raise TypedDecisionsError(f"{where}: {key!r} must be a JSON string or object")
+
+
+# -- field statistics ------------------------------------------------------------
+
+
+def field_stats(records: Sequence[Record], *, samples: int = 3) -> dict[str, list[dict[str, Any]]]:
+    """Per workflow, statistics of every text leaf of ``state``.
+
+    Decides which fields the translation step translates and which it keeps: a
+    field with few distinct values across many cases is a label or an identifier
+    (keep), a long one with many distinct values is free text (translate). Each
+    case counts once even though its questions share the state.
+    """
+    per_workflow: dict[str, dict[str, dict[str, Any]]] = {}
+    seen: set[str] = set()
+    for record in records:
+        if record.source_id in seen:
+            continue
+        seen.add(record.source_id)
+        stats = per_workflow.setdefault(record.extra["workflow"], {})
+        for path, value in _leaves(json.loads(record.state)):
+            entry = stats.setdefault(path, {"cases": 0, "values": {}, "chars": 0})
+            entry["cases"] += 1
+            entry["values"][value] = entry["values"].get(value, 0) + 1
+            entry["chars"] += len(value)
+    result: dict[str, list[dict[str, Any]]] = {}
+    for workflow, stats in per_workflow.items():
+        cases = sum(1 for _ in {r.source_id for r in records if r.extra["workflow"] == workflow})
+        rows = []
+        for path, entry in stats.items():
+            total = sum(entry["values"].values())
+            rows.append(
+                {
+                    "path": path,
+                    "coverage": entry["cases"] / cases,
+                    "occurrences": total,
+                    "distinct": len(entry["values"]),
+                    "mean_chars": entry["chars"] / total,
+                    "samples": [v[:80] for v in list(entry["values"])[:samples]],
+                }
+            )
+        result[workflow] = sorted(rows, key=lambda r: (-r["mean_chars"] * r["distinct"], r["path"]))
+    return result
+
+
+def _leaves(node: Any, path: str = "") -> Iterator[tuple[str, str]]:
+    """Text leaves as (path, value); list positions collapse to ``[]``."""
+    if isinstance(node, dict):
+        for key, value in node.items():
+            yield from _leaves(value, f"{path}.{key}" if path else str(key))
+    elif isinstance(node, list):
+        for value in node:
+            yield from _leaves(value, f"{path}[]")
+    elif isinstance(node, str):
+        yield path, node
