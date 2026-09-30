@@ -22,6 +22,7 @@ Effort is a rough guess for a solo developer: **S** is days, **M** is weeks, **L
 | --- | --- | --- | --- |
 | **Localized typed-decisions-fa (v2)** | Amounts in Toman/Rial and dates in Jalali, with labels recomputed by code. The plan already names this as a separate v2 and keeps v1 unlocalized. | M | typed-decisions-fa v1.0; a way to recompute labels that depend on numbers |
 | **Native, human-labeled Persian decision set** | Persian customer messages, invoices and tickets written by Persians and labeled by people. Removes translationese and the ceiling of labels from an unnamed teacher model, the two biggest limits of typed-decisions-fa. | L | Annotators, a labeling guide, a license for the source texts |
+| **Second reviewer for the test split** | A second person reviews a sample of the 400 test cases, so agreement between reviewers can be published alongside the fix count. | S–M | A Persian-speaking volunteer; the reviewed v1.0 test split |
 | **Better soft labels** | Relabel typed-decisions (English and Persian) with several strong models and average them, or add human labels on a sample, to raise the label ceiling. | M | API budget or annotators |
 | **Finglish (Persian in Latin script)** | Many users type Persian in Latin letters on phones and in chats. No current data covers it. | M | A transliteration source or a generator; tests on real Finglish |
 | **Colloquial and dialect coverage** (Tehrani colloquial, other regional varieties) | The plan covers formal vs colloquial register only broadly. | M | Native speakers for review |
@@ -54,6 +55,6 @@ Effort is a rough guess for a solo developer: **S** is days, **M** is weeks, **L
 | Idea | Why | Effort | Needs first |
 | --- | --- | --- | --- |
 | **Public Persian leaderboard** | Makes the Persian test suite a standing benchmark others submit to, which is what gets a dataset cited. | S–M | The evaluation harness from plan 3.6 |
-| **Contributing the Persian sets to community benchmarks** (e.g. typed-decision-bench) | Persian results appear wherever other languages are compared. | S | typed-decisions-fa v1.0 and the harness |
+| **Contributing the Persian sets to community benchmarks** (e.g. typed-decision-bench, which had no Persian cases as of September 2026) | Persian results appear wherever other languages are compared. | S | typed-decisions-fa v1.0 and the harness |
 | **Feedback loop from real use** | Users flag wrong answers; these become new test items and, after review, training data. | L | A deployed model with users; a privacy policy |
 | **Write-up** (blog post or workshop paper) on how decision models handle Persian | Reaches people who never browse model hubs. The evaluation report is most of the material. | M | The evaluation report |

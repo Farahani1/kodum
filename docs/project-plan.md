@@ -1,17 +1,22 @@
-# Persian Typed-Decision Model: Project Plan
+# Persian Typed Decisions: Project Plan
 
-Version 4 · Sep 30, 2026 · @Shah
+Version 5 · Sep 30, 2026 · @Shah
 
 ## Overview
 
-The goal is an open, Persian-capable decision model that speaks Jev's interface: choice, score and yes/no (noul) questions answered with calibrated probabilities. Jev itself can't be fine-tuned (closed weights; TypeSafe customizes it only through the request), so this project trains an open model and builds the Persian data and tests that prove it works.
+**Persian Typed Decisions: an open bilingual dataset, a Persian skills suite and an evaluation harness, with CPU-friendly reference models.**
 
-**Deliverables**, each publishable on its own:
+Typed decisions are choice, score and yes/no (noul) questions answered with calibrated probabilities, the interface Jev popularized. Open decision models already exist, including multilingual and Persian-first ones, so another Persian model alone is not a distinctive contribution. What is missing is an independent, reproducible Persian data and evaluation layer that any decision model can be trained or measured on. This project builds that layer, and trains small reference models on top of it.
 
-1. **typed-decisions-fa**: a reviewed Persian translation of LocalLLaMA/typed-decisions, same splits and labels (Part 1).
-2. **Persian training mix**: converters and templates that turn native Persian datasets and synthetic data into decision records (Part 2).
-3. **Models**: a fine-tuned mmBERT-base (main) and Qwen3.5-0.8B (challenger), each with a model card (Part 2).
-4. **Evaluation report**: accuracy, calibration, English–Persian gap and CPU latency, with raw predictions (Part 3).
+The test for every deliverable: could a developer drop this project's model entirely and still benefit? For the first three, the answer is yes.
+
+**Deliverables**, each publishable on its own, in order of importance:
+
+1. **typed-decisions-fa**: a Persian translation of LocalLLaMA/typed-decisions, same case IDs, splits and gold distributions as the English original, so the same case can be scored in both languages. Every test case is human-reviewed (Part 1).
+2. **Persian skills suite**: executable generators for Jalali dates, digit forms, Toman and Rial, business hours and Iranian formats, with labels computed by code and minimal pairs, regenerable by anyone from published seeds and templates (Part 1).
+3. **Evaluation harness and report**: a model-agnostic harness that scores any decision model on the Persian sets, raw predictions for every model evaluated, and a report on accuracy, calibration, the English–Persian gap and CPU latency (Part 3).
+4. **Reference models**: a fine-tuned mmBERT-base (main) and Qwen3.5-0.8B (challenger), trained only on permissively licensed data, each with a model card, a CPU export and a `calibration.json` (Part 2). How much of this is trained depends on the decision gate (2.4).
+5. **Reproducible tooling**: the record schema, converters, split and leakage tools, and the Persian normalizer (Parts 1–2).
 
 **Constraints**
 
@@ -27,6 +32,9 @@ The goal is an open, Persian-capable decision model that speaks Jev's interface:
 - Report native Persian results separately from translated data, always.
 - Publish early. Part 1's dataset is the first public output.
 - Develop on the laptop, run on Colab. Nothing reaches Colab until it has run end to end on the laptop.
+- The resource is the headline; the model is a reference implementation. The project is worthwhile even if the model turns out average.
+- Clean training data only. A source enters training only if its license allows a permissively licensed model; everything else is test-only or converter-only.
+- Benchmark data is stored as people write it. Normalization is part of a model's input pipeline, not of the published data, so the benchmark still tests how other models handle digit forms and spelling variants.
 
 &#91;embedded content: pipeline · sources through Parts 1–3\]
 
@@ -118,6 +126,12 @@ These teach skills multilingual models are weak at. Code computes every label, s
 
 Preparation: write 5–10 Persian templates per generator, colloquial and formal. Keep 2 templates per generator for testing only. Fix the random seed and target 3–5k items in total.
 
+**Minimal pairs.** Every generated item comes with a partner that differs in one fact and flips or changes the answer: the two dates swapped, Rial written instead of Toman, one digit of a postal code changed. Code computes both answers. A pair counts as correct only when both halves are, which separates a model that reads the fact from one that guesses from the wording.
+
+**Raw forms.** Generated text keeps its digit forms and spelling variants as written (Persian, Arabic-Indic and Latin digits; ٫ and ٬ separators). It is never passed through the normalizer before publishing, or the suite would stop testing other models on exactly these variations.
+
+**Task families.** Every record names its task family (for example `workflow`, `topics`, `intent`, `entailment`, `reading`, `sentiment`, `paraphrase`, `skill-dates`, `skill-currency`), so results can be reported for families seen in training vs unseen ones (3.2).
+
 **Pilot first.** Take 50 typed-decisions cases through all of 1.2 before the full run.
 
 ### 1.2 Translation
@@ -137,8 +151,11 @@ Preparation: write 5–10 Persian templates per generator, colloquial and formal
    - Output is Persian, not empty, not looping, with no extreme length ratio.
    - Glossary terms match between a state and its options.
 4. **Meaning check.** The checker compares English and Persian for each case. It flags any change in meaning, urgency, negation, or who did what.
-5. **Human review.** Read every flagged case plus 100–150 random unflagged ones. Fix or drop them. The error rate in the random sample goes into the dataset card.
-6. **Normalize.** Persian ی/ک instead of Arabic ي/ك, the zero-width non-joiner (نیم‌فاصله) where it belongs, one digit policy. The same normalizer runs later at training and inference.
+5. **Human review.**
+   - **Test split: all 400 cases**, English and Persian side by side, for meaning, negation, urgency and who did what. The dataset card can then say every benchmark case was reviewed, and reports how many needed a fix. At 2–4 minutes a case this is roughly 15–25 hours, the largest single cost of M1.
+   - **Train split:** every flagged case plus 100–150 random unflagged ones. The error rate in the random sample goes into the dataset card.
+   - Fix or drop cases; never change the gold.
+6. **Orthographic cleanup only.** Fix translator noise: Persian ی/ک instead of Arabic ي/ك, the zero-width non-joiner (نیم‌فاصله) where it belongs, invisible marks and stray spaces. Digits stay as in the source. The full normalizer, including one digit policy, is part of the reference model's input pipeline at training and inference; it is not applied to the published data.
 
 Output: typed-decisions-fa (train and test, original gold unchanged) and a Persian sample of synthetic-typed-decisions.
 
@@ -153,12 +170,13 @@ Output: typed-decisions-fa (train and test, original gold unchanged) and a Persi
 - `state_lang` and `question_lang`
 - `state`, `question_type` (choice, score or noul), `question_text`, `options` (ID and text)
 - `gold` as a probability distribution (one-hot where the source has hard labels)
+- `task_family` (1.1)
 - Quality flags: automatic checks passed, meaning-check flag, human-reviewed
 
 **Publish typed-decisions-fa on Hugging Face**
 
 - Same splits, labels and case IDs as the original.
-- Dataset card: source revision, translator and checker models, prompt summary, glossary, review sample size and measured error rate, known limits (translationese, unlocalized numbers, labels from a teacher model), Apache-2.0 attribution. Use the [Russian](https://huggingface.co/datasets/yyhlm/typed-decisions-ru) and [Japanese](https://huggingface.co/datasets/GeneLab/typed-decisions-ja) cards as models.
+- Dataset card: source revision, translator and checker models, prompt summary, glossary, the full test-split review and its fix count, the train review sample size and measured error rate, known limits (translationese, unlocalized numbers, labels from a teacher model), Apache-2.0 attribution. Use the [Russian](https://huggingface.co/datasets/yyhlm/typed-decisions-ru) and [Japanese](https://huggingface.co/datasets/GeneLab/typed-decisions-ja) cards as models.
 - Versions: v0.1 is the pilot, v1.0 the full reviewed set.
 
 **Keep generators reproducible.** Store seeds and template files with the synthetic data, so anyone can regenerate it.
@@ -175,13 +193,15 @@ Part 2 merges native Persian data with Part 1's output into one training mix, tr
 | --- | --- | --- | --- | --- | --- | --- |
 | [MASSIVE](https://github.com/alexa/massive) (fa-IR) | choice: 60 intents or 18 scenarios | \~11.5k train, 2k dev, 3k test | CC BY 4.0\* | Train and test | Voice-assistant commands, close to the STT→intent project. Many options per question teach the model to read option lists. | Write a short Persian description for each intent and scenario (labels are English codes such as `alarm_set`). Sample option subsets. |
 | [FarsTail](https://github.com/dml-qom/FarsTail) | choice (3-way entailment) or noul | 10,367 | Apache-2.0 | Train and test | Human-made reasoning over two texts, cleanly licensed. | Download from GitHub, map labels, write templates. |
-| [PersianQA](https://github.com/sajjjadayobi/PersianQA) | noul: does the passage answer the question? | 9,000+ | GPL-3.0 | Train and test | Its unanswerable questions give natural "no" cases. | Pair questions with wrong passages for extra negatives. Truncate passages without cutting the answer. Publish the converter, not converted data. |
+| [PersianQA](https://github.com/sajjjadayobi/PersianQA) | noul: does the passage answer the question? | 9,000+ | GPL-3.0 | **Test only** | Its unanswerable questions give natural "no" cases. GPL-3.0 training data would put a permissive model license in question, so it stays out of training and becomes one more held-out task family. | Pair questions with wrong passages for extra negatives. Truncate passages without cutting the answer. Publish the converter, not converted data. |
 | [ParsiNLU](https://huggingface.co/persiannlp) (entailment, paraphrase, sentiment, multiple-choice QA) | all three types | 1.3k–17.5k per task | CC BY-NC-SA 4.0 | **Test only** | Tasks the model never trains on. Keeping them out of training also keeps the model's license clean. | Convert to records; never mix into training. |
 | [Belebele](https://huggingface.co/datasets/facebook/belebele) (Persian) | choice (4-way reading comprehension) | 900 | CC BY-SA 4.0\* | **Test only** | Parallel across 115 languages, so results compare with published ones. | Convert; check passage lengths. |
 | Own STT→intent transcripts | choice | yours | yours | **Test only** | Noisy speech-recognition text, the closest thing to real use. | Remove anything private; label with intent options. |
 | [Khayyam / PersianMMLU](https://github.com/raia-center/khayyam-challenge) | — | — | CC BY-ND, academic only | **Excluded** | Its license forbids derivative benchmarks. | — |
 
 \* License from memory; confirm on the dataset page.
+
+**Training sources**, all compatible with a permissively licensed model: MASSIVE (CC BY 4.0, attribution in the model card, once confirmed), FarsTail (Apache-2.0), and Part 1's data (Apache-2.0 and MIT). Everything else is test-only or excluded.
 
 **From Part 1:** typed-decisions-fa train split (soft labels), the Persian synthetic-typed-decisions sample, and the code-labeled Persian data (training templates only).
 
@@ -192,7 +212,7 @@ Part 2 merges native Persian data with Part 1's output into one training mix, tr
 1. **Templates.** 5–10 question phrasings per task, mostly Persian, some English. Hold 2 per task back for testing.
 2. **Options.** Human-readable option text, shuffled every time, sometimes renamed. Sometimes add "none of these" and remove the correct option, so "none" becomes right.
 3. **Gold.** Soft distributions where the source has them, one-hot elsewhere.
-4. **Normalize** exactly as in Part 1.
+4. **Normalize** with the reference model's full normalizer (orthography and digits). This happens when building the training mix and at inference, never in published test data.
 5. **Length check.** Measure token lengths with each candidate's tokenizer; Persian often costs more tokens. Max length 256, or 384 for QA passages.
 6. **Balance.** No single source above about 30% of training decisions; upsample small sources.
 7. **Splits.** Train, validation (early stopping), calibration (temperature scaling only), test. Split by `source_id`, so a case and its translation always land on the same side.
@@ -223,7 +243,9 @@ Not chosen: ParsBERT and XLM-R (superseded by mmBERT), and anything 2B or larger
 
 - Random and majority-class.
 - Untrained mmBERT-base with a fresh head (expected near chance).
-- [Laya](https://github.com/NandhaKishorM/laya)-multilingual, zero-shot: the open reference. If it does not load or run on the laptop or a T4, prompted Qwen3.5-0.8B takes its place as the reference, including at the decision gate (2.4).
+- [Laya](https://github.com/he-jev/laya)-multilingual (`convaiinnovations/laya-multilingual`), zero-shot: the open multilingual reference.
+- [DibaOne](https://huggingface.co/Dibachain/DibaOne-X1) X1, zero-shot: the Persian-first open reference. Before use, confirm its license and interface, and check its published training data against this project's test sets; overlap would inflate its scores.
+- If neither reference runs on the laptop or a T4, prompted Qwen3.5-0.8B takes their place, including at the decision gate (2.4).
 - Qwen3.5-0.8B prompted, no training.
 - Jev through its API, only if access works. Otherwise cite published third-party numbers and label them so.
 
@@ -268,7 +290,7 @@ Keep enough that any number in the final report can be recomputed without retrai
 
 After the M2 baselines and before M3's training runs, one planned decision: does Persian need a new decision model, or does it mostly need data and a benchmark? Every outcome still publishes something; the gate only decides where the time goes and what the release leads with.
 
-**Reference model.** Laya-multilingual, zero-shot. It shares mmBERT-base with the main model, so its weaknesses in Persian are this model's reason to exist. If it cannot be run, prompted Qwen3.5-0.8B is the reference.
+**Reference model.** The stronger on held-out Persian tasks of Laya-multilingual (same mmBERT-base as the main model) and DibaOne X1 (Persian-first). Their weaknesses in Persian are the model's reason to exist; if a Persian-first model is already strong, the gate should find that out. If neither can be run, prompted Qwen3.5-0.8B is the reference.
 
 **Three signals**, all measured with no training:
 
@@ -310,11 +332,11 @@ The model is judged on Persian it never trained on, on how honest its confidence
 
 | Test set | Question it answers | Source |
 | --- | --- | --- |
-| In-task native | Did it learn the trained tasks? | MASSIVE-fa test, FarsTail test, PersianQA held-out part |
-| Held-out native tasks | Is it a decision model, or a classifier of the tasks it saw? | ParsiNLU (4 tasks), Belebele-fa |
+| In-task native | Did it learn the trained tasks? | MASSIVE-fa test, FarsTail test |
+| Held-out native tasks | Is it a decision model, or a classifier of the tasks it saw? | ParsiNLU (4 tasks), Belebele-fa, PersianQA |
 | Held-out templates | Did it learn the task, or memorize the phrasing? | Test-only templates from 1.1 and 2.1 |
 | typed-decisions-fa test + English original | How much does the same case lose in Persian? | 400 cases, 2,000 decisions, in both languages |
-| Persian skills | Dates, digits, currency, Iranian formats | Code-labeled data, test templates only |
+| Persian skills | Dates, digits, currency, Iranian formats | Code-labeled data, test templates only, raw forms, with minimal pairs |
 | Real use | Does it hold up on noisy speech transcripts? | Own STT→intent data |
 
 ### 3.2 Metrics
@@ -325,7 +347,9 @@ The model is judged on Persian it never trained on, on how honest its confidence
 - **Soft agreement** on typed-decisions: distance between predicted and gold distributions (total variation or Jensen–Shannon).
 - **Score questions:** within-one accuracy and mean absolute error.
 - **Language gap:** English minus Persian accuracy on the same typed-decisions cases.
-- **Cost:** CPU latency per question (median and 95th percentile) and memory on the laptop, no GPU.
+- **Seen vs unseen task families:** every metric reported separately for task families in training and those held out, so "decision model, not classifier" is a number rather than a claim.
+- **Minimal-pair consistency:** share of skill pairs where both halves are right.
+- **Cost:** CPU latency per question (p50 and p95) and peak memory (RSS) on the laptop, no GPU. Every latency figure is published with its context, so it can be compared elsewhere: CPU model, threads, RAM, model, precision (and export format), sequence length and options per question.
 
 ### 3.3 Comparisons
 
@@ -344,7 +368,14 @@ The model is judged on Persian it never trained on, on how honest its confidence
 
 ### 3.5 Success criteria
 
-Set exact thresholds after the baselines and before runs 1–4, so results can't move the goalposts. (The decision gate's thresholds in 2.4 are different: they are fixed before the baselines.)
+**Resource criteria**, which do not depend on the model:
+
+- [ ] Every one of the 400 typed-decisions-fa test cases has been human-reviewed; the number of fixed and dropped cases is published.
+- [ ] The harness has scored at least three models this project did not train (for example Laya-multilingual, DibaOne X1 and prompted Qwen3.5-0.8B), with their raw predictions published.
+- [ ] The skills suite regenerates identically from the published seeds and templates.
+- [ ] Every training source's license allows a permissively licensed model, and the model card lists them.
+
+**Model criteria.** Set exact thresholds after the baselines and before runs 1–4, so results can't move the goalposts. (The decision gate's thresholds in 2.4 are different: they are fixed before the baselines.)
 
 - [ ] Fine-tuned mmBERT-base beats Laya-multilingual on held-out native Persian tasks, outside the confidence interval.
 - [ ] ECE after temperature scaling is lower than every baseline's.
@@ -355,12 +386,12 @@ Set exact thresholds after the baselines and before runs 1–4, so results can't
 
 - One headline table, a reliability diagram, an accuracy-vs-coverage curve and a language-gap chart.
 - Raw prediction files published with the report.
-- An evaluation harness that reads the same request and response format as the community benchmarks ([typed-decision-bench](https://github.com/kyr0/typed-decision-bench), [open-system-one](https://github.com/zhlei07/open-system-one)), so others can run their models on the Persian sets.
+- A model-agnostic evaluation harness (for example `kodoom evaluate --model <adapter> --benchmark typed-decisions-fa --out results/<model>/`) that reads the same request and response format as the community benchmarks ([typed-decision-bench](https://github.com/kyr0/typed-decision-bench), [open-system-one](https://github.com/zhlei07/open-system-one)), so others can run their models on the Persian sets. Its outputs are raw predictions (ID, gold, predicted distribution, temperature, latency), from which every metric is recomputed.
 - Model card: training data with licenses, intended use, known limits, and the translation error rate from Part 1.
 
 **Making adoption easy.** For downloads, easy use matters more than a few accuracy points.
 
-- **Recalibration recipe.** A documented step, with a script, that fits a new temperature on 100–300 of a user's own labels. Temperature scaling already exists from 2.2; this makes it usable on someone else's data, where the shipped calibration will not hold. The model card says plainly that the top answer transfers better than the probability.
+- **Recalibration recipe.** A documented step, with a script, that fits a new temperature on 100–300 of a user's own labels, and writes it as a `calibration.json` in typed-decision-bench's format (one temperature per question type, a global fallback), so engines that read that format pick it up. Temperature scaling already exists from 2.2; this makes it usable on someone else's data, where the shipped calibration will not hold. The model card says plainly that the top answer transfers better than the probability.
 - **CPU-friendly export.** An exported model (for example ONNX, optionally int8) with the latency measured on it, so the CPU latency in 3.2 is reproducible by users.
 - **Community request/response format.** The evaluation harness above already reads it; a small adapter lets the model answer in the same format.
 
@@ -387,7 +418,8 @@ The likeliest failure is a classifier in disguise; the costliest are silent labe
 | Code passes on the laptop but fails on Colab (fp16, GPU memory, CUDA-only packages) | Medium | Medium | Errors or NaN loss early in a Colab run | `colab-preflight` profile before every long run; Colab-only extras kept separate; same code path in all profiles |
 | Qwen3.5-0.8B won't train on a T4 in fp16 | Medium | Low | Kernel errors, NaN loss, very slow steps | Switch to Qwen3-0.6B |
 | Someone publishes a Persian version first, or the Jev trend fades | Medium | Low | New Persian decision datasets appear | Publish typed-decisions-fa early; the evaluation work stays useful either way |
-| License contamination (non-commercial or GPL data in a release) | Low | High | NC or GPL licenses show up in training records | License field on every record, ParsiNLU test-only, Khayyam excluded, converters published instead of GPL-derived data |
+| License contamination (non-commercial or GPL data in a release) | Low | High | NC or GPL licenses show up in training records | License field on every record, checked by code; ParsiNLU and PersianQA test-only; Khayyam excluded; converters published instead of GPL-derived data |
+| Normalized benchmark data hides the skills it should test | Medium | High | Published test files contain only Latin digits and one spelling | Benchmark stored raw (Principles); orthographic cleanup only for translations; the full normalizer lives in the model's input pipeline |
 
 Likelihood and impact are judgment calls for a solo project on free Colab; revisit them after the M1 pilot.
 
@@ -401,6 +433,7 @@ Changes since the milestone diagram was drawn (the diagram itself still needs up
 
 - **Gate 2** now also applies the decision gate (2.4): its thresholds are written down before the baselines run, and its outcome (A, B or C) is recorded.
 - **M3's scope depends on the gate outcome**: the full run plan, a reduced one, or a light fine-tune of Laya-multilingual.
+- **M1 now includes the full review of the 400-case test split** (1.2 step 5), and the skills suite with minimal pairs.
 
 ## References
 
@@ -409,7 +442,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 | Resource | Kind | License | Used in |
 | --- | --- | --- | --- |
 | [LocalLLaMA/typed-decisions](https://huggingface.co/datasets/LocalLLaMA/typed-decisions) | English decision dataset | Apache-2.0 | 1.1, 2.1, 3.1 |
-| [helmo/synthetic-typed-decisions](https://huggingface.co/helmo/DecidaBERT-large) (described on the DecidaBERT card) | English decision dataset | MIT | 1.1 |
+| [helmo/synthetic-typed-decisions](https://huggingface.co/datasets/helmo/synthetic-typed-decisions) | English decision dataset, 9,879 records, 207 topics | MIT | 1.1 |
 | [typed-decisions-ru](https://huggingface.co/datasets/yyhlm/typed-decisions-ru) | Russian translation, card model | Apache-2.0 | 1.3 |
 | [typed-decisions-ja](https://huggingface.co/datasets/GeneLab/typed-decisions-ja) | Japanese translation, card model | Apache-2.0 | 1.3 |
 | [MASSIVE](https://github.com/alexa/massive) | Intent dataset, fa-IR locale | CC BY 4.0\* | 2.1, 3.1 |
@@ -422,7 +455,9 @@ Licenses marked \* are from memory; confirm them on the page before use.
 | [Qwen3.5-0.8B](https://huggingface.co/Qwen/Qwen3.5-0.8B) | Small multilingual decoder | Apache-2.0 | 2.2 |
 | [Qwen3-0.6B](https://huggingface.co/Qwen/Qwen3-0.6B) | Fallback decoder | Apache-2.0\* | 2.2 |
 | [Persian-ModernBERT-base](https://huggingface.co/myrkur/Persian-ModernBert-base) | Persian encoder | see card | 2.2 |
-| [Laya](https://github.com/NandhaKishorM/laya) | Open decision model, baseline | see repo | 2.2, 3.3 |
+| [Laya](https://github.com/he-jev/laya) (multilingual checkpoint `convaiinnovations/laya-multilingual`) | Open decision model, baseline | Apache-2.0 (repo) | 2.2, 2.4, 3.3 |
+| [DibaOne X1](https://huggingface.co/Dibachain/DibaOne-X1) ([M3](https://huggingface.co/Dibachain/DibaOne-M3)) | Persian-first open decision models, baseline | X1 reported Apache-2.0, M3 CC BY-NC-SA\* | 2.2, 2.4 |
+| [laya-persian-benchmark](https://github.com/alipyth/laya-persian-benchmark) | 64-case Persian diagnostic for Laya (routing, 8 Persian families) | MIT | Related work |
 | [Dohnuts-0.1.0-0.8B](https://huggingface.co/PsiACE/Dohnuts-0.1.0-0.8B) | Decision model on Qwen3.5-0.8B, evidence | see card | 2.2 |
 | [Tiny-Jev](https://huggingface.co/lostargon/Tiny-Jev) | Decision model on Qwen3-0.6B, evidence | see card | 2.2 |
 | [TranslateGemma](https://arxiv.org/pdf/2601.09012) ([vLLM guide](https://docs.vllm.ai/projects/recipes/en/latest/Google/TranslateGemma.html)) | Translation model | Gemma terms | 1.2 |
@@ -434,6 +469,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
+| 5 | Sep 30, 2026 | Reframed after a peer review: the project is a Persian typed-decision data and evaluation layer with reference models, not a model first. Deliverables reordered; new principles (resource first, clean training data, benchmark stored raw). PersianQA moved to test-only (GPL-3.0). Full human review of the 400-case test split. Minimal pairs, raw forms and task families in 1.1. Orthographic cleanup only for published translations; the full normalizer moved to the model's input pipeline. DibaOne X1 added as a baseline and gate reference. Resource success criteria. `calibration.json` output, a model-agnostic harness, latency context, seen vs unseen family and minimal-pair metrics. Two failure-mode updates. Fixed the synthetic-typed-decisions and Laya links. |
 | 4 | Sep 30, 2026 | Added the decision gate after the M2 baselines (2.4): three signals, thresholds fixed before the baselines (placeholders for now), outcomes A/B/C deciding M3's scope. Added run 6 (Laya-multilingual warm start), a fallback reference if Laya cannot run, adoption items in 3.6 (recalibration recipe, CPU export, request/response adapter), a failure mode, and notes on Gate 2 and M3. Ideas outside this plan moved to `docs/future-work.md`. |
 | 3 | Sep 30, 2026 | Added "Environments": laptop development separated from Colab runs, with `dev`, `colab-preflight` and `colab` profiles, tiny random models, a 5-minute smoke run and the laptop's limits. Added the laptop to Constraints, a principle, and a failure mode. |
 | 2 | Sep 30, 2026 | Plan as first added to the repository. |

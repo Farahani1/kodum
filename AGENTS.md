@@ -4,7 +4,7 @@ These instructions are for any coding agent (Claude Code, Codex, Cursor, …) wo
 
 ## The project
 
-kodoom builds an open, Persian-capable typed-decision model. `docs/project-plan.md` is the big picture and the source of truth for scope, data rules, licenses and milestones. Read the parts relevant to your task before changing code, and do not work against it. If a change needs the plan to change, update the plan in the same piece of work, bump its version and add a row to its version history.
+kodoom builds a Persian typed-decision data and evaluation layer (dataset, skills suite, harness) with small reference models on top. `docs/project-plan.md` is the big picture and the source of truth for scope, data rules, licenses and milestones. Read the parts relevant to your task before changing code, and do not work against it. If a change needs the plan to change, update the plan in the same piece of work, bump its version and add a row to its version history.
 
 ## Commits: one insightful commit for every change
 
@@ -62,9 +62,9 @@ Read "Environments" in the plan. In short:
 ## Data rules that code must enforce
 
 - Every record carries `source`, `license`, `split` and `origin`. Never drop them.
-- Test-only sources (ParsiNLU, Belebele, own STT data) never enter training. Khayyam / PersianMMLU is excluded entirely.
+- Test-only sources (ParsiNLU, PersianQA, Belebele, own STT data) never enter training. Khayyam / PersianMMLU is excluded entirely. Only permissively usable data enters training.
 - Split by `source_id`, so a case and its translation always land on the same side.
-- The same normalizer runs on data, at training and at inference.
+- The full normalizer (`normalize`) runs when building the training mix and at inference, the same function both times. Published data is never fully normalized: translations get `clean_orthography` only, and the skills suite keeps its raw digit forms and spellings, because the benchmark must test other models on them.
 - Never commit datasets, model weights, checkpoints or run outputs. They go to `data/`, `runs/` or Drive, all git-ignored.
 
 ## Fast checks
