@@ -13,11 +13,20 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-from kodoom import __version__
+from kodoom import __version__, baselines
+from kodoom.calibration import (
+    CalibrationError,
+    fit_calibration,
+    read_calibration,
+    write_calibration,
+)
 from kodoom.check import FAIL, apply_environment, run_checks
 from kodoom.config import BUILTIN_PROFILES, Profile, ProfileError, load_profile
+from kodoom.evaluation import evaluate, format_table
 from kodoom.generators import GENERATORS
 from kodoom.generators.common import DEFAULT_PAIRS_PER_KIND, GeneratorError
+from kodoom.metrics import MetricError
+from kodoom.predictions import PredictionError, read_predictions, write_predictions
 from kodoom.runs import RunError, list_runs
 from kodoom.schema import RecordError, read_jsonl, write_jsonl
 from kodoom.sources import SourceError, check_record
@@ -33,7 +42,16 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         return args.func(args)
-    except (ProfileError, RecordError, SourceError, RunError, GeneratorError) as e:
+    except (
+        ProfileError,
+        RecordError,
+        SourceError,
+        RunError,
+        GeneratorError,
+        PredictionError,
+        CalibrationError,
+        MetricError,
+    ) as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
 
@@ -77,6 +95,37 @@ def _parser() -> argparse.ArgumentParser:
         "profile's max_cases_per_source if that is smaller)",
     )
     generate.set_defaults(func=_generate)
+
+    baseline = commands.add_parser(
+        "baseline", help="write trivial-baseline predictions (uniform, prior, oracle)"
+    )
+    baseline.add_argument("name", choices=["uniform", "prior", "oracle"])
+    baseline.add_argument("--data", type=Path, required=True, help="gold records (JSONL)")
+    baseline.add_argument("--split", help="only records of this split")
+    baseline.add_argument("--train", type=Path, help="training records for the prior baseline")
+    baseline.add_argument("--out", type=Path, required=True, help="prediction file to write")
+    baseline.set_defaults(func=_baseline)
+
+    score = commands.add_parser("score", help="score a prediction file against gold records")
+    score.add_argument("--gold", type=Path, required=True, help="gold records (JSONL)")
+    score.add_argument("--pred", type=Path, required=True, help="prediction file (JSONL)")
+    score.add_argument("--split", help="only records of this split (default: all)")
+    score.add_argument(
+        "--by", action="append", default=[], help="break down by a field or extra.KEY"
+    )
+    score.add_argument("--calibration", type=Path, help="apply a calibration.json before scoring")
+    score.add_argument("--seen-from", type=Path, help="training records: seen vs unseen families")
+    score.add_argument("--json", type=Path, help="also write the full report as JSON")
+    score.set_defaults(func=_score)
+
+    calibrate = commands.add_parser(
+        "calibrate", help="fit calibration.json (a temperature per question type) from predictions"
+    )
+    calibrate.add_argument("--gold", type=Path, required=True)
+    calibrate.add_argument("--pred", type=Path, required=True)
+    calibrate.add_argument("--split", default="calibration", help="split to fit on (never test)")
+    calibrate.add_argument("--out", type=Path, required=True)
+    calibrate.set_defaults(func=_calibrate)
 
     validate = commands.add_parser(
         "validate", help="check record files against the schema and source rules"
@@ -145,6 +194,78 @@ def _generate(args: argparse.Namespace) -> int:
         print(f"{path}: {len(records)} records (seed {seed}, {pairs} pairs per kind)")
         print(f"  splits: {manifest['by_split']}")
         print(f"  sha256: {manifest['sha256']}")
+    return 0
+
+
+def _records(path: Path, split: str | None):
+    return [r for r in read_jsonl(path) if split is None or r.split == split]
+
+
+def _baseline(args: argparse.Namespace) -> int:
+    records = _records(args.data, args.split)
+    if args.name == "prior":
+        if args.train is None:
+            raise MetricError("the prior baseline needs --train")
+        predictions = baselines.prior(records, _records(args.train, "train"))
+    else:
+        predictions = getattr(baselines, args.name)(records)
+    count = write_predictions(args.out, predictions)
+    print(f"{args.out}: {count} predictions ({args.name})")
+    return 0
+
+
+def _score(args: argparse.Namespace) -> int:
+    records = _records(args.gold, args.split)
+    seen = None
+    if args.seen_from:
+        seen = {r.task_family for r in read_jsonl(args.seen_from) if r.split == "train"}
+    calibration = read_calibration(args.calibration) if args.calibration else None
+    result = evaluate(
+        records, read_predictions(args.pred), calibration=calibration, seen_families=seen
+    )
+    summary = result.summary()
+    by = list(args.by) or ["question_type"]
+    if seen is not None:
+        by.append("family_status")
+    print(format_table({"all": summary}, "scored"))
+    report: dict = {"summary": summary.to_dict(), "by": {}}
+    for name in by:
+        rows = result.by(name)
+        print("\n" + format_table(rows, name))
+        report["by"][name] = {k: v.to_dict() for k, v in rows.items()}
+    pairs = result.pairs()
+    if pairs:
+        print(
+            f"\nminimal pairs: {pairs.pairs} pairs, both right {pairs.pair_accuracy:.3f} "
+            f"(item accuracy {pairs.item_accuracy:.3f}, exactly one right in {pairs.one_right})"
+        )
+        report["pairs"] = vars(pairs)
+    print(
+        f"\nmissing {len(result.missing)}, failed {len(result.failed)}, "
+        f"unexpected {len(result.unexpected)}"
+    )
+    report["missing"], report["failed"] = len(result.missing), len(result.failed)
+    if args.json:
+        args.json.parent.mkdir(parents=True, exist_ok=True)
+        text = json.dumps(report, ensure_ascii=False, indent=2) + "\n"
+        args.json.write_text(text, encoding="utf-8")
+    return 1 if result.missing or result.failed else 0
+
+
+def _calibrate(args: argparse.Namespace) -> int:
+    if args.split == "test":
+        raise MetricError("never fit a calibration on the test split")
+    predictions = read_predictions(args.pred)
+    examples = [
+        (r.question_type, predictions[r.id].probs, r.gold)
+        for r in _records(args.gold, args.split)
+        if r.id in predictions and not predictions[r.id].error
+    ]
+    calibration = fit_calibration(examples)
+    write_calibration(args.out, calibration)
+    print(
+        f"{args.out}: global T {calibration.temperature:.3f}, per type {calibration.temperatures}"
+    )
     return 0
 
 
