@@ -1,6 +1,6 @@
 # Persian Typed Decisions: Project Plan
 
-Version 6 · Sep 30, 2026 · @Shah
+Version 7 · Sep 30, 2026 · @Shah
 
 ## Overview
 
@@ -21,6 +21,7 @@ The test for every deliverable: could a developer drop this project's model enti
 **Constraints**
 
 - Training runs on the free Colab tier: a T4 GPU (16 GB), no bf16, no FlashAttention 2, sessions that drop.
+- Google Drive storage is the free 15 GB plan, shared with Gmail and Photos, so less than 15 GB is actually free. Drive is scratch space, not an archive (see Environments: Storage budget).
 - Data preparation, generation and small-model evaluation run on the laptop CPU.
 - The laptop is modest: Intel i3-1005G1 (2 cores, 4 threads), about 12 GB RAM, and an NVIDIA MX110 (2 GB) that is not used. It proves the code works; it does not train the real models (see Environments).
 - The Jev API may not be reachable; nothing in the plan depends on it.
@@ -86,6 +87,34 @@ Development and Colab are separate. The code is written and proven error-free on
 **What the laptop cannot catch.** fp16 overflow (the Gemma 3 / TranslateGemma issue), Qwen3.5's Gated DeltaNet layers in fp16, GPU memory at the real batch size and length, and real run times. The `colab-preflight` profile (real models, about 20 steps, about 5 minutes) catches these before a full session is spent.
 
 **Workflow:** laptop `dev` smoke run → Colab `colab-preflight` → Colab full run.
+
+### Storage budget: Google Drive, free 15 GB plan
+
+Drive holds only what must survive a dropped session. Everything else lives on the Colab runtime's own disk (tens of GB, wiped at the end of each session) or on Hugging Face. The sizes below are estimates from parameter counts, not measurements; measure them in the first preflight run.
+
+| What | Size (estimate) | On Drive? |
+| --- | --- | --- |
+| Datasets, translations, training mix | about 1 GB | Yes |
+| Predictions, logs, run registry | under 0.5 GB | Yes |
+| mmBERT-base run: latest checkpoint with optimizer state (for resuming) | about 3.7 GB | Only during the run |
+| mmBERT-base run: best checkpoint, weights only, fp16 (for early stopping) | about 0.6 GB | Only during the run |
+| Qwen3.5 LoRA run: adapter weights and their optimizer state | about 0.5 GB | Only during the run |
+| Final models (mmBERT-small, mmBERT-base variants, Qwen3.5 adapter), fp16 | about 0.3–0.6 GB each | Until pushed to Hugging Face |
+| CPU exports (ONNX) | about 1.5 GB | Until pushed to Hugging Face |
+| Base models, translators, checker (TranslateGemma 4B about 8.6 GB, Qwen3-8B about 16 GB) | 25+ GB | **Never** |
+
+Rules:
+
+- **Never put base models, translators or the checker on Drive.** Colab downloads them from Hugging Face into the runtime disk (the Hugging Face cache stays under `/content`, not on Drive).
+- **Two checkpoints at most per run:** the latest, with optimizer state, overwritten in place so a dropped session can resume; and the best, as fp16 weights only. That keeps an mmBERT-base run's peak at about 4.3 GB instead of about 7.5 GB for two full checkpoints.
+- **When a run ends,** delete the latest checkpoint and keep only the final fp16 weights, its tokenizer and its temperature.
+- **Decoder runs save only the LoRA adapter,** never the full 0.8B model at every checkpoint.
+- **Hugging Face is the archive.** Each finished dataset, model or export is pushed there (privately until it is released), and only then deleted from Drive. Predictions and logs stay on Drive; they are small.
+- **Check free space before writing a checkpoint,** and stop the run with a clear message if the next write would not fit, instead of failing halfway through a save.
+- **One run at a time on Drive.** Runs share the space, so a run's scratch files are cleaned up before the next one starts.
+- **Optional:** freeze mmBERT's embedding matrix. Its 256k-token vocabulary holds about two-thirds of the 307M parameters, so freezing it removes most of the optimizer state (a resumable checkpoint drops to about 2 GB) and speeds up training. Run 1 checks that it costs no accuracy before any main run relies on it.
+
+Measure the space actually free on Drive before M3; if it is under about 8 GB, clear it first. With these rules the project's own peak stays around 6–7 GB.
 
 ## Part 1 — Data augmentation
 
@@ -279,7 +308,7 @@ Which runs actually happen depends on the decision gate (2.4).
 - Loss: cross-entropy against the gold distribution. It is a proper scoring rule, so it rewards honest confidence.
 - Early stopping on validation log-loss, not accuracy.
 - After training: temperature scaling on the calibration split, one value per model (optionally per question type).
-- Fixed seeds. Checkpoint to Drive every few hundred steps; every run must resume after a dropped session.
+- Fixed seeds. Checkpoint to Drive every few hundred steps, within the storage budget (Environments): the latest checkpoint overwritten in place, the best one as fp16 weights only. Every run must resume after a dropped session.
 - Budget: one run fits one Colab session (1–2 hours). If it doesn't, shrink the data or model rather than stretch the session.
 
 ### 2.3 Collecting logs and training data
@@ -292,7 +321,7 @@ Keep enough that any number in the final report can be recomputed without retrai
 - **Where:** plain files on Google Drive (CSV or JSON, or TensorBoard / MLflow file logs). Avoid depending on a hosted tracker that may not be reachable.
 - **Predictions, not just metrics:** for every evaluation, save per item the ID, gold distribution, predicted distribution, temperature used and latency. Every later metric, chart and error analysis comes from these files, and they can be published as raw results.
 - **Error log:** after each main run, read 50 wrong answers and tag them: translation artifact, ambiguous options, truncated context, number or date reasoning, colloquial text, label noise.
-- **Artifacts kept:** best checkpoint, its tokenizer, its temperature value, the exact training-mix version, and a draft model card.
+- **Artifacts kept:** the best weights in fp16, its tokenizer, its temperature value, the exact training-mix version, and a draft model card; pushed to Hugging Face, then removed from Drive.
 
 ### 2.4 Decision gate: does Persian need a new model?
 
@@ -416,6 +445,7 @@ The likeliest failure is a classifier in disguise; the costliest are silent labe
 | Failure mode | Likelihood | Impact | Early signal | Mitigation |
 | --- | --- | --- | --- | --- |
 | A classifier in disguise: the model learns templates and trained tasks, not decisions | High | High | Strong in-task scores, near chance on held-out tasks and templates | Template variety, option shuffling and sampling, held-out tasks and templates from day one |
+| Google Drive fills up during a run (free 15 GB, shared with Gmail and Photos) | Medium | High | Save fails; a half-written checkpoint; no space to resume | Storage budget rules: no base models on Drive, at most two checkpoints, best as fp16 weights only, finished artifacts pushed to Hugging Face; free-space check before every checkpoint |
 | Free Colab GPU unavailable, capped, or sessions drop | High | Medium | Runs cut off; no GPU assigned | Runs sized to one session, checkpoints on Drive, resumable training; Kaggle notebooks as a backup if reachable |
 | Label ceiling: typed-decisions labels come from an unnamed \~4B teacher model | High | Medium | Scores plateau; the typed-decisions card reports a teacher self-agreement ceiling of 0.735 (and warns that scores well above it mean learning the teacher's quirks) | Report results against the ceiling; weigh human-labeled native sets more |
 | Scope creep on a solo side project | High | Medium | A milestone slips twice | Each milestone is publishable alone; M1 by itself is a valid finish |
@@ -484,6 +514,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
+| 7 | Sep 30, 2026 | Added the Google Drive storage constraint (free 15 GB plan, shared with Gmail and Photos): a storage budget in Environments with estimated sizes and rules (no base models on Drive, latest checkpoint plus best as fp16 weights only, Hugging Face as the archive, free-space check before saving, optional frozen embeddings tested in run 1). Updated 2.2 checkpointing, 2.3 artifacts, Constraints, and a failure mode. |
 | 6 | Sep 30, 2026 | Updated from the model and dataset cards of Laya-multilingual, DibaOne X1 and M3, and typed-decisions. Gate: language gap moved to parallel MASSIVE and Belebele items, because Laya is near chance on typed-decisions zero-shot even in English; M3 cannot be the gate reference (trained on ParsiNLU and PersianQA); X1 is choice-only. Baselines: Laya as the primary controlled comparison (same backbone), laya-typed-decisions, M3 as an evaluation-only baseline, every baseline reported raw and recalibrated. Run 7 (Laya start, no Persian data). Metrics: KL from gold, parallel language gap; stated mode (specialist or general) and request shape. Robustness: score position bias, noul vs two-option choice. typed-decisions case structure in 1.1. Licenses confirmed for MASSIVE and Belebele; PersianQA's conflicting licenses noted. A failure mode for baselines trained on test sets. Laya links corrected. Success criteria use the parallel language gap and recalibrated baselines. |
 | 5 | Sep 30, 2026 | Reframed after a peer review: the project is a Persian typed-decision data and evaluation layer with reference models, not a model first. Deliverables reordered; new principles (resource first, clean training data, benchmark stored raw). PersianQA moved to test-only (GPL-3.0). Full human review of the 400-case test split. Minimal pairs, raw forms and task families in 1.1. Orthographic cleanup only for published translations; the full normalizer moved to the model's input pipeline. DibaOne X1 added as a baseline and gate reference. Resource success criteria. `calibration.json` output, a model-agnostic harness, latency context, seen vs unseen family and minimal-pair metrics. Two failure-mode updates. Fixed the synthetic-typed-decisions and Laya links. |
 | 4 | Sep 30, 2026 | Added the decision gate after the M2 baselines (2.4): three signals, thresholds fixed before the baselines (placeholders for now), outcomes A/B/C deciding M3's scope. Added run 6 (Laya-multilingual warm start), a fallback reference if Laya cannot run, adoption items in 3.6 (recalibration recipe, CPU export, request/response adapter), a failure mode, and notes on Gate 2 and M3. Ideas outside this plan moved to `docs/future-work.md`. |
