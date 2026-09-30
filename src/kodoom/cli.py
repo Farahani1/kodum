@@ -31,6 +31,14 @@ from kodoom.predictions import PredictionError, read_predictions, write_predicti
 from kodoom.runs import RunError, list_runs
 from kodoom.schema import RecordError, read_jsonl, write_jsonl
 from kodoom.sources import SourceError, check_record, get_source
+from kodoom.translate.pilot import (
+    PilotError,
+    build_sheet,
+    read_sheet,
+    score_sheet,
+    write_key,
+    write_sheet,
+)
 from kodoom.translate.pipeline import (
     MODEL_TRANSLATORS,
     TRANSLATORS,
@@ -63,6 +71,7 @@ def main(argv: list[str] | None = None) -> int:
         PredictionError,
         TypedDecisionsError,
         RuleError,
+        PilotError,
         CalibrationError,
         MetricError,
     ) as e:
@@ -176,6 +185,25 @@ def _parser() -> argparse.ArgumentParser:
     show.add_argument("--split", choices=list(SPLITS), default="test")
     show.add_argument("--show", type=int, default=3, help="cases to print side by side")
     show.set_defaults(func=_translations)
+
+    sheet = commands.add_parser(
+        "pilot-sheet", help="write the blind review sheet for two translators' output"
+    )
+    sheet.add_argument("dataset", choices=["typed-decisions"])
+    _add_profile_args(sheet)
+    sheet.add_argument("--a", required=True, metavar="TRANSLATOR", help="a folder under fa/")
+    sheet.add_argument("--b", required=True, metavar="TRANSLATOR", help="the other translator")
+    sheet.add_argument("--split", choices=list(SPLITS), default="train")
+    sheet.add_argument("--seed", type=int, default=1234, help="draws which one is A or B")
+    sheet.set_defaults(func=_pilot_sheet)
+
+    score = commands.add_parser("pilot-score", help="tally a filled review sheet against its key")
+    score.add_argument("dataset", choices=["typed-decisions"])
+    _add_profile_args(score)
+    score.add_argument(
+        "--sheet", default="sheet-filled.csv", help="file name in the pilot folder on Drive"
+    )
+    score.set_defaults(func=_pilot_score)
 
     fields = commands.add_parser(
         "fields", help="statistics of the text fields of fetched typed-decisions records"
@@ -409,6 +437,49 @@ def _translations(args: argparse.Namespace) -> int:
         english = [english_by_id[r.id.removesuffix(":fa")] for r in fa_case]
         print()
         print(side_by_side(english, fa_case))
+    return 0
+
+
+def _pilot_dir(profile: Profile) -> Path:
+    return profile.data_dir / "typed-decisions" / "pilot"
+
+
+def _pilot_sheet(args: argparse.Namespace) -> int:
+    profile = _load(args)
+    base = profile.data_dir / "typed-decisions"
+    english = cases(read_jsonl(base / "en" / f"{args.split}.jsonl"))
+    candidates = {}
+    for name in (args.a, args.b):
+        path = base / "fa" / name / f"{args.split}.jsonl"
+        if not path.exists():
+            raise InspectError(f"{path} does not exist; run `kodoom translate` first")
+        candidates[name] = {c[0].source_id: c for c in cases(read_jsonl(path))}
+    rows, key = build_sheet(english, candidates, seed=args.seed)
+    out = _pilot_dir(profile)
+    write_sheet(out / "sheet.csv", rows)
+    write_key(out / "key-do-not-open.json", key)
+    print(f"{out / 'sheet.csv'}: {len(rows)} cases, two translations each, in random order")
+    print("Fill the columns better (A, B or tie) and meaning_errors_A / _B, then save the")
+    print(f"file as {out / 'sheet-filled.csv'} and run `kodoom pilot-score`.")
+    print(f"Do not open {out / 'key-do-not-open.json'}: it tells which translator was A or B.")
+    return 0
+
+
+def _pilot_score(args: argparse.Namespace) -> int:
+    profile = _load(args)
+    folder = _pilot_dir(profile)
+    sheet_path, key_path = folder / args.sheet, folder / "key-do-not-open.json"
+    for path in (sheet_path, key_path):
+        if not path.exists():
+            raise InspectError(f"{path} does not exist")
+    result = score_sheet(read_sheet(sheet_path), json.loads(key_path.read_text(encoding="utf-8")))
+    print(f"{result['cases']} cases: {result['ties']} ties, {result['unrated']} not rated")
+    for name, wins in result["wins"].items():
+        errors = result["mean_meaning_errors"][name]
+        shown = "n/a" if errors is None else f"{errors:.2f}"
+        print(f"  {name}: {wins} wins, mean meaning errors per case {shown}")
+    for workflow, counts in result["wins_by_workflow"].items():
+        print(f"  {workflow}: {counts}")
     return 0
 
 
