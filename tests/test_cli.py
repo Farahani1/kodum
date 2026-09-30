@@ -60,3 +60,23 @@ def test_validate_rejects_test_only_source_in_training(tmp_path, capsys):
     path.write_text(json.dumps(bad.to_dict(), ensure_ascii=False) + "\n", encoding="utf-8")
     assert main(["validate", str(path)]) == 1
     assert "test-only" in capsys.readouterr().err
+
+
+def test_check_passes_on_the_dev_profile(tmp_path, capsys, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    assert main(["check", "--profile", "dev"]) == 0
+    out = capsys.readouterr().out
+    assert "[  ok] runs_dir" in out
+    assert out.strip().endswith("ready")
+
+
+def test_runs_lists_resumable_runs(tmp_path, capsys, monkeypatch):
+    from kodoom.config import load_profile
+    from kodoom.runs import Run
+
+    monkeypatch.chdir(tmp_path)
+    run = Run.open(load_profile("dev"), "smoke-1", {"x": 1})
+    run.save_latest(3, lambda d: (d / "w.bin").write_bytes(b"123"))
+    assert main(["runs", "--profile", "dev"]) == 0
+    out = capsys.readouterr().out
+    assert "smoke-1" in out and "running" in out
