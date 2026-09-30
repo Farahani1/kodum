@@ -1,6 +1,6 @@
 # Persian Typed Decisions: Project Plan
 
-Version 5 · Sep 30, 2026 · @Shah
+Version 6 · Sep 30, 2026 · @Shah
 
 ## Overview
 
@@ -100,6 +100,8 @@ Part 1 turns English typed-decision data and code-generated examples into Persia
 | [LocalLLaMA/typed-decisions](https://huggingface.co/datasets/LocalLLaMA/typed-decisions) | 1,200 train cases (6,000 decisions); 400 test cases (2,000) | Apache-2.0 | Already in Jev's shape. Gold labels are probability distributions, which suits calibration. Covers four business workflows Persian data lacks (agent traces, customer service, invoices, security incidents). Russian and Japanese versions exist, so a Persian one joins a set people already run. | Pin the dataset revision. Map the schema. Mark every text field as translate or keep. Flag cases with money, dates or numeric thresholds. Keep the original splits and case IDs. |
 | [helmo/synthetic-typed-decisions](https://huggingface.co/datasets/helmo/synthetic-typed-decisions) | 9,879 single-question records, 207 topic domains | MIT | Topic breadth the four workflows lack. One question per record makes translation simpler. | Deduplicate. Sample 3–5k, balanced across choice, score and yes/no. Confirm no overlap with the typed-decisions test split. |
 
+**What a typed-decisions case looks like** (from its dataset card): one `state` and five `questions`, which together are exactly the body of a System One request (`POST /v1/systemone`), plus `gold` with the full distribution for every question. Every option carries a written description in `criteria`, and those descriptions are model input, so they are translated. A state is free text where the artefact is textual and structured (JSON) where it is structured; only text values are translated. `factors` and `label_agreement` describe how a case was built, are not model input, and are not translated. Parquet files, one config per workflow plus `all`.
+
 **Field rules, decided before any translation**
 
 - Translate: natural-language text in states, question text, option descriptions.
@@ -191,17 +193,17 @@ Part 2 merges native Persian data with Part 1's output into one training mix, tr
 
 | Dataset | Converts to | Size | License | Role | Why | Preparation needed |
 | --- | --- | --- | --- | --- | --- | --- |
-| [MASSIVE](https://github.com/alexa/massive) (fa-IR) | choice: 60 intents or 18 scenarios | \~11.5k train, 2k dev, 3k test | CC BY 4.0\* | Train and test | Voice-assistant commands, close to the STT→intent project. Many options per question teach the model to read option lists. | Write a short Persian description for each intent and scenario (labels are English codes such as `alarm_set`). Sample option subsets. |
+| [MASSIVE](https://github.com/alexa/massive) (fa-IR) | choice: 60 intents or 18 scenarios | \~11.5k train, 2k dev, 3k test | CC BY 4.0 | Train and test | Voice-assistant commands, close to the STT→intent project. Many options per question teach the model to read option lists. | Write a short Persian description for each intent and scenario (labels are English codes such as `alarm_set`). Sample option subsets. |
 | [FarsTail](https://github.com/dml-qom/FarsTail) | choice (3-way entailment) or noul | 10,367 | Apache-2.0 | Train and test | Human-made reasoning over two texts, cleanly licensed. | Download from GitHub, map labels, write templates. |
-| [PersianQA](https://github.com/sajjjadayobi/PersianQA) | noul: does the passage answer the question? | 9,000+ | GPL-3.0 | **Test only** | Its unanswerable questions give natural "no" cases. GPL-3.0 training data would put a permissive model license in question, so it stays out of training and becomes one more held-out task family. | Pair questions with wrong passages for extra negatives. Truncate passages without cutting the answer. Publish the converter, not converted data. |
+| [PersianQA](https://github.com/sajjjadayobi/PersianQA) | noul: does the passage answer the question? | 9,000+ | GPL-3.0 (the repository's LICENSE; DibaOne M3's card cites CC BY-NC-SA 4.0 from a GitHub release) | **Test only** | Its unanswerable questions give natural "no" cases. Either license would put a permissive model license in question, so it stays out of training and becomes one more held-out task family. | Pair questions with wrong passages for extra negatives. Truncate passages without cutting the answer. Publish the converter, not converted data. |
 | [ParsiNLU](https://huggingface.co/persiannlp) (entailment, paraphrase, sentiment, multiple-choice QA) | all three types | 1.3k–17.5k per task | CC BY-NC-SA 4.0 | **Test only** | Tasks the model never trains on. Keeping them out of training also keeps the model's license clean. | Convert to records; never mix into training. |
-| [Belebele](https://huggingface.co/datasets/facebook/belebele) (Persian) | choice (4-way reading comprehension) | 900 | CC BY-SA 4.0\* | **Test only** | Parallel across 115 languages, so results compare with published ones. | Convert; check passage lengths. |
+| [Belebele](https://huggingface.co/datasets/facebook/belebele) (Persian) | choice (4-way reading comprehension) | 900 | CC BY-SA 4.0 | **Test only** | Parallel across 115 languages, so results compare with published ones. | Convert; check passage lengths. |
 | Own STT→intent transcripts | choice | yours | yours | **Test only** | Noisy speech-recognition text, the closest thing to real use. | Remove anything private; label with intent options. |
 | [Khayyam / PersianMMLU](https://github.com/raia-center/khayyam-challenge) | — | — | CC BY-ND, academic only | **Excluded** | Its license forbids derivative benchmarks. | — |
 
-\* License from memory; confirm on the dataset page.
+Licenses checked against each repository's LICENSE or NOTICE file (September 2026). Still to confirm: that MASSIVE's release includes the `fa-IR` locale.
 
-**Training sources**, all compatible with a permissively licensed model: MASSIVE (CC BY 4.0, attribution in the model card, once confirmed), FarsTail (Apache-2.0), and Part 1's data (Apache-2.0 and MIT). Everything else is test-only or excluded.
+**Training sources**, all compatible with a permissively licensed model: MASSIVE (CC BY 4.0, attribution in the model card), FarsTail (Apache-2.0), and Part 1's data (Apache-2.0 and MIT). Everything else is test-only or excluded.
 
 **From Part 1:** typed-decisions-fa train split (soft labels), the Persian synthetic-typed-decisions sample, and the code-labeled Persian data (training templates only).
 
@@ -243,8 +245,11 @@ Not chosen: ParsBERT and XLM-R (superseded by mmBERT), and anything 2B or larger
 
 - Random and majority-class.
 - Untrained mmBERT-base with a fresh head (expected near chance).
-- [Laya](https://github.com/he-jev/laya)-multilingual (`convaiinnovations/laya-multilingual`), zero-shot: the open multilingual reference.
-- [DibaOne](https://huggingface.co/Dibachain/DibaOne-X1) X1, zero-shot: the Persian-first open reference. Before use, confirm its license and interface, and check its published training data against this project's test sets; overlap would inflate its scores.
+- [Laya](https://github.com/NandhaKishorM/laya)-multilingual (`convaiinnovations/laya-multilingual`, Apache-2.0), zero-shot: the open multilingual reference, and the **primary controlled comparison**, because it starts from the same mmBERT-base as the main model (see below). What its card says matters here: it ships uncalibrated (temperature 1.0; refitting moved its mean ECE from 0.314 to 0.106), it is near chance on typed-decisions zero-shot (0.342, against 0.318 random and 0.461 majority), it wants choice questions under about 20 options (256 tokens for a question and its options), it rarely picks the first level of a score question, and noul can under-report "true".
+- [laya-typed-decisions](https://huggingface.co/convaiinnovations/laya-typed-decisions) (ModernBERT-large, English), optional: an English specialist fitted on the typed-decisions workflows. On the Persian test it shows what an English-only specialist loses in Persian.
+- [DibaOne X1](https://huggingface.co/Dibachain/DibaOne-X1) (Apache-2.0), zero-shot: the Persian-first open reference. A 278M XLM-R-family cross-encoder behind a 118M retriever; **choice questions only** (no noul or score). Trained on its own synthetic data (CC0) and Wikipedia, so no overlap with this project's test sets is expected. Slow on CPU (0.7–1.8 s per decision at 2 threads in `best` mode), so it is evaluated on a T4.
+- [DibaOne M3](https://huggingface.co/Dibachain/DibaOne-M3) (CC BY-NC-SA 4.0), evaluation only: a Persian-first bi-encoder answering all three question types. **It was trained on ParsiNLU and PersianQA**, so its scores on those sets are in-domain and excluded from every held-out comparison; its full source list (`NOTICE`) is checked against the other test sets before its scores are reported.
+- Every baseline is reported **raw and recalibrated**: a temperature per question type is fitted on this project's calibration split for every model alike, so calibration differences are not just "one model shipped a temperature and another did not".
 - If neither reference runs on the laptop or a T4, prompted Qwen3.5-0.8B takes their place, including at the decision gate (2.4).
 - Qwen3.5-0.8B prompted, no training.
 - Jev through its API, only if access works. Otherwise cite published third-party numbers and label them so.
@@ -259,9 +264,12 @@ Not chosen: ParsBERT and XLM-R (superseded by mmBERT), and anything 2B or larger
 | 3 | mmBERT-base | Mix without translated data | Ablation: did translation help or hurt? |
 | 4 | Qwen3.5-0.8B with LoRA (or Qwen3-0.6B) | Full mix | Challenger, head-to-head with run 2 |
 | 5 (optional) | Best of runs 2 and 4 | Mix without the English slice | Does English data help Persian? |
-| 6 | Laya-multilingual as the starting point (warm start) | Full mix | Does starting from a decision model beat starting from plain mmBERT-base? Compare with run 2. Confirm Laya's license on its repo first. |
+| 6 | Laya-multilingual as the starting point (warm start) | Full mix | Does starting from a decision model beat starting from plain mmBERT-base? Compare with run 2. |
+| 7 | Laya-multilingual as the starting point | English slice only (no Persian data) | With run 6, the cleanest measure of what the Persian data adds: same start, same procedure, only the Persian data differs. |
 
 Which runs actually happen depends on the decision gate (2.4).
+
+**Controlled and uncontrolled comparisons.** Laya-multilingual and the main model share the mmBERT-base backbone, so comparing them (and runs 6 and 7) isolates decision training and Persian data. DibaOne (XLM-R family), Qwen and the others differ in backbone, data, objective, option handling and calibration at once. Their comparisons are empirical ("model A scored X, model B scored Y on this benchmark") and are never read as evidence that one backbone suits Persian better.
 
 **Settings on the Colab T4**
 
@@ -290,11 +298,11 @@ Keep enough that any number in the final report can be recomputed without retrai
 
 After the M2 baselines and before M3's training runs, one planned decision: does Persian need a new decision model, or does it mostly need data and a benchmark? Every outcome still publishes something; the gate only decides where the time goes and what the release leads with.
 
-**Reference model.** The stronger on held-out Persian tasks of Laya-multilingual (same mmBERT-base as the main model) and DibaOne X1 (Persian-first). Their weaknesses in Persian are the model's reason to exist; if a Persian-first model is already strong, the gate should find that out. If neither can be run, prompted Qwen3.5-0.8B is the reference.
+**Reference model.** The stronger on held-out Persian tasks of Laya-multilingual (same mmBERT-base as the main model) and DibaOne X1 (Persian-first; choice questions only, so noul and score signals come from Laya). DibaOne M3 cannot be the reference: it was trained on ParsiNLU and PersianQA, two of the held-out sets. Their weaknesses in Persian are the model's reason to exist; if a Persian-first model is already strong, the gate should find that out. If neither can be run, prompted Qwen3.5-0.8B is the reference.
 
 **Three signals**, all measured with no training:
 
-1. **Language gap.** The reference's accuracy on the English typed-decisions test minus its accuracy on the same 2,000 decisions in Persian. Same items in both languages, so the difference is the cost of Persian alone.
+1. **Language gap.** The reference's accuracy on parallel native sets, English minus Persian on the same items: MASSIVE (`en-US` vs `fa-IR`, same utterance IDs, 20-option questions as in Laya's own MASSIVE evaluation) and Belebele (`eng_Latn` vs `pes_Arab`). Not on typed-decisions: Laya-multilingual is near chance there zero-shot even in English (0.342 against 0.318 random), so any gap would be noise at the floor. A reference's gap on a set counts only if its English score there is clearly above chance. The typed-decisions gap remains a metric for trained models (3.2).
 2. **Held-out native tasks.** The reference on ParsiNLU and Belebele-fa, against the random and majority baselines.
 3. **Persian skills.** The reference on the code-labeled test templates (Jalali dates, digit forms, Toman vs Rial, Iranian formats).
 
@@ -304,7 +312,7 @@ Calibration in Persian and the STT transcripts are measured and reported too, bu
 
 | Signal | Large gap (counts toward A) | Small gap (counts toward C) |
 | --- | --- | --- |
-| Language gap | ≥ _8_ points | < _3_ points |
+| Language gap (MASSIVE, Belebele) | ≥ _8_ points | < _3_ points |
 | Held-out native tasks | Within _5_ points of majority-class on most tasks | Clearly above chance on every task |
 | Persian skills | Below _60_% accuracy | At or above _80_% accuracy |
 
@@ -332,8 +340,9 @@ The model is judged on Persian it never trained on, on how honest its confidence
 
 | Test set | Question it answers | Source |
 | --- | --- | --- |
-| In-task native | Did it learn the trained tasks? | MASSIVE-fa test, FarsTail test |
-| Held-out native tasks | Is it a decision model, or a classifier of the tasks it saw? | ParsiNLU (4 tasks), Belebele-fa, PersianQA |
+| In-task native | Did it learn the trained tasks? | MASSIVE-fa test (20-option questions, fixed seed), FarsTail test |
+| Held-out native tasks | Is it a decision model, or a classifier of the tasks it saw? | ParsiNLU (4 tasks), Belebele-fa, PersianQA (in-domain for DibaOne M3, which trained on ParsiNLU and PersianQA) |
+| Parallel language gap | How much does the same native item lose in Persian? | MASSIVE `en-US`/`fa-IR` and Belebele `eng_Latn`/`pes_Arab` test items |
 | Held-out templates | Did it learn the task, or memorize the phrasing? | Test-only templates from 1.1 and 2.1 |
 | typed-decisions-fa test + English original | How much does the same case lose in Persian? | 400 cases, 2,000 decisions, in both languages |
 | Persian skills | Dates, digits, currency, Iranian formats | Code-labeled data, test templates only, raw forms, with minimal pairs |
@@ -344,9 +353,9 @@ The model is judged on Persian it never trained on, on how honest its confidence
 - **Accuracy** (top-1), plus macro-F1 where classes are imbalanced.
 - **Calibration:** ECE with fixed bins, Brier score, log-loss, and a reliability diagram.
 - **Accuracy vs coverage:** if only answers above a confidence threshold are auto-accepted, what share is automated and how accurate is it? This is the number that matters for Jev-style gating.
-- **Soft agreement** on typed-decisions: distance between predicted and gold distributions (total variation or Jensen–Shannon).
+- **Distance from the gold distribution** on typed-decisions: KL divergence from gold, the typed-decisions leaderboard's headline next to accuracy and Brier, so results can be compared with it (Jensen–Shannon as a bounded companion). ECE alone is not read as quality: on that leaderboard the prior, which ignores the input, has the best ECE.
 - **Score questions:** within-one accuracy and mean absolute error.
-- **Language gap:** English minus Persian accuracy on the same typed-decisions cases.
+- **Language gap:** English minus Persian accuracy on the same typed-decisions cases, and on the parallel MASSIVE and Belebele items.
 - **Seen vs unseen task families:** every metric reported separately for task families in training and those held out, so "decision model, not classifier" is a number rather than a claim.
 - **Minimal-pair consistency:** share of skill pairs where both halves are right.
 - **Cost:** CPU latency per question (p50 and p95) and peak memory (RSS) on the laptop, no GPU. Every latency figure is published with its context, so it can be compared elsewhere: CPU model, threads, RAM, model, precision (and export format), sequence length and options per question.
@@ -354,6 +363,9 @@ The model is judged on Persian it never trained on, on how honest its confidence
 ### 3.3 Comparisons
 
 - Every fine-tuned run against every baseline from 2.2, on the same items.
+- **The primary controlled comparison:** the main model (run 2) against Laya-multilingual, same backbone; and run 6 against run 7, same start with and without Persian data.
+- **Mode is stated with every typed-decisions result**, as the leaderboard asks: *specialist* (trained on typed-decisions `train`, as this project's models are) or *general* (zero-shot, as Laya, DibaOne and prompted Qwen are). The gap between the modes is the price of generality, not a quality ranking; held-out tasks measure generality.
+- **Request shape is recorded:** whole case in one request (the leaderboard's shape) or one question per request. It changes results (Jev's yes/no accuracy was 0.843 per question and 0.788 alongside the others), so compared rows use the same shape.
 - Run 2 vs run 3 (with vs without translated data) and run 2 vs run 4 (encoder vs decoder).
 - Before vs after temperature scaling.
 - 95% confidence intervals by bootstrap, with paired comparisons on the same items. A difference inside the interval is reported as a tie.
@@ -365,6 +377,8 @@ The model is judged on Persian it never trained on, on how honest its confidence
 - Rewrite a formal state colloquially, and the reverse.
 - Swap Persian and Latin digits.
 - Ask in English about a Persian state.
+- Position bias on score questions: how often each level position is chosen, since Laya reports rarely picking the first level.
+- noul against the same question as a two-option choice (neutral keys, yes/no descriptions): the probabilities should agree.
 
 ### 3.5 Success criteria
 
@@ -378,15 +392,15 @@ The model is judged on Persian it never trained on, on how honest its confidence
 **Model criteria.** Set exact thresholds after the baselines and before runs 1–4, so results can't move the goalposts. (The decision gate's thresholds in 2.4 are different: they are fixed before the baselines.)
 
 - [ ] Fine-tuned mmBERT-base beats Laya-multilingual on held-out native Persian tasks, outside the confidence interval.
-- [ ] ECE after temperature scaling is lower than every baseline's.
-- [ ] The Persian–English gap on typed-decisions is smaller than Laya-multilingual's.
+- [ ] ECE after temperature scaling is lower than every baseline's, each baseline also recalibrated on the same calibration split.
+- [ ] The Persian–English gap on the parallel MASSIVE and Belebele items is smaller than Laya-multilingual's. (Not on typed-decisions, where Laya is near chance zero-shot in both languages, so its gap there says nothing.)
 - [ ] CPU latency is low enough for a voice assistant (threshold set after measuring baselines).
 
 ### 3.6 Reporting
 
 - One headline table, a reliability diagram, an accuracy-vs-coverage curve and a language-gap chart.
 - Raw prediction files published with the report.
-- A model-agnostic evaluation harness (for example `kodoom evaluate --model <adapter> --benchmark typed-decisions-fa --out results/<model>/`) that reads the same request and response format as the community benchmarks ([typed-decision-bench](https://github.com/kyr0/typed-decision-bench), [open-system-one](https://github.com/zhlei07/open-system-one)), so others can run their models on the Persian sets. Its outputs are raw predictions (ID, gold, predicted distribution, temperature, latency), from which every metric is recomputed.
+- A model-agnostic evaluation harness (for example `kodoom evaluate --model <adapter> --benchmark typed-decisions-fa --out results/<model>/`) whose input is the System One request (a state plus typed questions, as in typed-decisions and Laya), with adapters for per-question models such as DibaOne, and that reads the same request and response format as the community benchmarks ([typed-decision-bench](https://github.com/kyr0/typed-decision-bench), [open-system-one](https://github.com/zhlei07/open-system-one)), so others can run their models on the Persian sets. Its outputs are raw predictions (ID, gold, predicted distribution, temperature, latency), from which every metric is recomputed.
 - Model card: training data with licenses, intended use, known limits, and the translation error rate from Part 1.
 
 **Making adoption easy.** For downloads, easy use matters more than a few accuracy points.
@@ -403,7 +417,7 @@ The likeliest failure is a classifier in disguise; the costliest are silent labe
 | --- | --- | --- | --- | --- |
 | A classifier in disguise: the model learns templates and trained tasks, not decisions | High | High | Strong in-task scores, near chance on held-out tasks and templates | Template variety, option shuffling and sampling, held-out tasks and templates from day one |
 | Free Colab GPU unavailable, capped, or sessions drop | High | Medium | Runs cut off; no GPU assigned | Runs sized to one session, checkpoints on Drive, resumable training; Kaggle notebooks as a backup if reachable |
-| Label ceiling: typed-decisions labels come from an unnamed \~4B teacher model | High | Medium | Scores plateau; Laya reports a teacher self-agreement ceiling of about 0.735 | Report results against the ceiling; weigh human-labeled native sets more |
+| Label ceiling: typed-decisions labels come from an unnamed \~4B teacher model | High | Medium | Scores plateau; the typed-decisions card reports a teacher self-agreement ceiling of 0.735 (and warns that scores well above it mean learning the teacher's quirks) | Report results against the ceiling; weigh human-labeled native sets more |
 | Scope creep on a solo side project | High | Medium | A milestone slips twice | Each milestone is publishable alone; M1 by itself is a valid finish |
 | Existing open models already handle Persian well, so a new model adds little | Medium | Medium | Small language gap and reasonable held-out scores in the M2 baselines | Decision gate (2.4): lead with the dataset, benchmark and skills data; train little |
 | Jev API not reachable | High | Low | Waitlist or payment fails | Nothing depends on it; cite published third-party numbers, labeled as such |
@@ -419,6 +433,7 @@ The likeliest failure is a classifier in disguise; the costliest are silent labe
 | Qwen3.5-0.8B won't train on a T4 in fp16 | Medium | Low | Kernel errors, NaN loss, very slow steps | Switch to Qwen3-0.6B |
 | Someone publishes a Persian version first, or the Jev trend fades | Medium | Low | New Persian decision datasets appear | Publish typed-decisions-fa early; the evaluation work stays useful either way |
 | License contamination (non-commercial or GPL data in a release) | Low | High | NC or GPL licenses show up in training records | License field on every record, checked by code; ParsiNLU and PersianQA test-only; Khayyam excluded; converters published instead of GPL-derived data |
+| A baseline was trained on a test set (DibaOne M3 on ParsiNLU and PersianQA), inflating its scores | Medium | High | A baseline far ahead on one set only | Check every baseline's published training sources; mark in-domain scores and exclude them from held-out comparisons |
 | Normalized benchmark data hides the skills it should test | Medium | High | Published test files contain only Latin digits and one spelling | Benchmark stored raw (Principles); orthographic cleanup only for translations; the full normalizer lives in the model's input pipeline |
 
 Likelihood and impact are judgment calls for a solo project on free Colab; revisit them after the M1 pilot.
@@ -445,18 +460,18 @@ Licenses marked \* are from memory; confirm them on the page before use.
 | [helmo/synthetic-typed-decisions](https://huggingface.co/datasets/helmo/synthetic-typed-decisions) | English decision dataset, 9,879 records, 207 topics | MIT | 1.1 |
 | [typed-decisions-ru](https://huggingface.co/datasets/yyhlm/typed-decisions-ru) | Russian translation, card model | Apache-2.0 | 1.3 |
 | [typed-decisions-ja](https://huggingface.co/datasets/GeneLab/typed-decisions-ja) | Japanese translation, card model | Apache-2.0 | 1.3 |
-| [MASSIVE](https://github.com/alexa/massive) | Intent dataset, fa-IR locale | CC BY 4.0\* | 2.1, 3.1 |
+| [MASSIVE](https://github.com/alexa/massive) | Intent dataset, fa-IR locale (to confirm) | CC BY 4.0 (NOTICE.md) | 2.1, 3.1 |
 | [FarsTail](https://github.com/dml-qom/FarsTail) | Persian entailment | Apache-2.0 | 2.1, 3.1 |
-| [PersianQA](https://github.com/sajjjadayobi/PersianQA) | Persian reading QA | GPL-3.0 | 2.1, 3.1 |
+| [PersianQA](https://github.com/sajjjadayobi/PersianQA) | Persian reading QA | GPL-3.0 (LICENSE; a release is cited as CC BY-NC-SA 4.0) | 2.1, 3.1 (test only) |
 | [ParsiNLU](https://huggingface.co/persiannlp) | Persian NLU suite | CC BY-NC-SA 4.0 | 3.1 (test only) |
-| [Belebele](https://huggingface.co/datasets/facebook/belebele) | Multilingual reading comprehension | CC BY-SA 4.0\* | 3.1 (test only) |
+| [Belebele](https://huggingface.co/datasets/facebook/belebele) | Multilingual reading comprehension, includes `pes_Arab` | CC BY-SA 4.0 | 3.1 (test only) |
 | [Khayyam / PersianMMLU](https://github.com/raia-center/khayyam-challenge) | Persian exam questions | CC BY-ND, academic only | Excluded |
 | [mmBERT](https://github.com/jhu-clsp/mmBERT) | Multilingual encoder (small, base) | see repo | 2.2 |
 | [Qwen3.5-0.8B](https://huggingface.co/Qwen/Qwen3.5-0.8B) | Small multilingual decoder | Apache-2.0 | 2.2 |
 | [Qwen3-0.6B](https://huggingface.co/Qwen/Qwen3-0.6B) | Fallback decoder | Apache-2.0\* | 2.2 |
 | [Persian-ModernBERT-base](https://huggingface.co/myrkur/Persian-ModernBert-base) | Persian encoder | see card | 2.2 |
-| [Laya](https://github.com/he-jev/laya) (multilingual checkpoint `convaiinnovations/laya-multilingual`) | Open decision model, baseline | Apache-2.0 (repo) | 2.2, 2.4, 3.3 |
-| [DibaOne X1](https://huggingface.co/Dibachain/DibaOne-X1) ([M3](https://huggingface.co/Dibachain/DibaOne-M3)) | Persian-first open decision models, baseline | X1 reported Apache-2.0, M3 CC BY-NC-SA\* | 2.2, 2.4 |
+| [Laya](https://github.com/NandhaKishorM/laya) ([laya-multilingual](https://huggingface.co/convaiinnovations/laya-multilingual), [laya-typed-decisions](https://huggingface.co/convaiinnovations/laya-typed-decisions); a copy at [he-jev/laya](https://github.com/he-jev/laya)) | Open decision models, baselines | Apache-2.0 | 2.2, 2.4, 3.3 |
+| [DibaOne X1](https://huggingface.co/Dibachain/DibaOne-X1), [DibaOne M3](https://huggingface.co/Dibachain/DibaOne-M3) | Persian-first open decision models, baselines | X1 Apache-2.0; M3 CC BY-NC-SA 4.0 | 2.2, 2.4 |
 | [laya-persian-benchmark](https://github.com/alipyth/laya-persian-benchmark) | 64-case Persian diagnostic for Laya (routing, 8 Persian families) | MIT | Related work |
 | [Dohnuts-0.1.0-0.8B](https://huggingface.co/PsiACE/Dohnuts-0.1.0-0.8B) | Decision model on Qwen3.5-0.8B, evidence | see card | 2.2 |
 | [Tiny-Jev](https://huggingface.co/lostargon/Tiny-Jev) | Decision model on Qwen3-0.6B, evidence | see card | 2.2 |
@@ -469,6 +484,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
+| 6 | Sep 30, 2026 | Updated from the model and dataset cards of Laya-multilingual, DibaOne X1 and M3, and typed-decisions. Gate: language gap moved to parallel MASSIVE and Belebele items, because Laya is near chance on typed-decisions zero-shot even in English; M3 cannot be the gate reference (trained on ParsiNLU and PersianQA); X1 is choice-only. Baselines: Laya as the primary controlled comparison (same backbone), laya-typed-decisions, M3 as an evaluation-only baseline, every baseline reported raw and recalibrated. Run 7 (Laya start, no Persian data). Metrics: KL from gold, parallel language gap; stated mode (specialist or general) and request shape. Robustness: score position bias, noul vs two-option choice. typed-decisions case structure in 1.1. Licenses confirmed for MASSIVE and Belebele; PersianQA's conflicting licenses noted. A failure mode for baselines trained on test sets. Laya links corrected. Success criteria use the parallel language gap and recalibrated baselines. |
 | 5 | Sep 30, 2026 | Reframed after a peer review: the project is a Persian typed-decision data and evaluation layer with reference models, not a model first. Deliverables reordered; new principles (resource first, clean training data, benchmark stored raw). PersianQA moved to test-only (GPL-3.0). Full human review of the 400-case test split. Minimal pairs, raw forms and task families in 1.1. Orthographic cleanup only for published translations; the full normalizer moved to the model's input pipeline. DibaOne X1 added as a baseline and gate reference. Resource success criteria. `calibration.json` output, a model-agnostic harness, latency context, seen vs unseen family and minimal-pair metrics. Two failure-mode updates. Fixed the synthetic-typed-decisions and Laya links. |
 | 4 | Sep 30, 2026 | Added the decision gate after the M2 baselines (2.4): three signals, thresholds fixed before the baselines (placeholders for now), outcomes A/B/C deciding M3's scope. Added run 6 (Laya-multilingual warm start), a fallback reference if Laya cannot run, adoption items in 3.6 (recalibration recipe, CPU export, request/response adapter), a failure mode, and notes on Gate 2 and M3. Ideas outside this plan moved to `docs/future-work.md`. |
 | 3 | Sep 30, 2026 | Added "Environments": laptop development separated from Colab runs, with `dev`, `colab-preflight` and `colab` profiles, tiny random models, a 5-minute smoke run and the laptop's limits. Added the laptop to Constraints, a principle, and a failure mode. |
