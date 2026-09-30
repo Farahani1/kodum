@@ -28,6 +28,8 @@ from kodoom.translate.checks import (
     check_text,
     protected_tokens,
 )
+from kodoom.translate.glossary import Glossary
+from kodoom.translate.glossary import load as load_glossary
 from kodoom.translate.rules import FORMAL, apply, segments
 
 STATE, QUESTION, OPTION = "state", "question", "option"
@@ -40,6 +42,7 @@ class Item:
     text: str
     register: str  # rules.FORMAL or rules.COLLOQUIAL
     kind: str  # STATE, QUESTION or OPTION
+    workflow: str = ""  # which glossary terms apply ("agent" differs per workflow)
 
 
 class Translator(Protocol):
@@ -57,23 +60,43 @@ class StubTranslator:
     must never produce published data."""
 
     name = "stub"
+
+    def __init__(self, use_glossary: bool = True) -> None:
+        self.glossary = load_glossary() if use_glossary else None
+
     _VOCABULARY = (
         "کار", "میز", "راه", "نام", "دست", "شهر", "باغ", "کتاب",
         "پنجره", "ستاره", "دریا", "چراغ", "خانه", "درخت", "سفر", "ماه",
     )  # fmt: skip
-    _PIECE = re.compile(
+    _TOKEN = (
         rf"(?P<keep>{_BACKTICKED.pattern}|{_URL.pattern}|{_EMAIL.pattern}|{_IDENTIFIER.pattern})"
         r"|(?P<word>[A-Za-z]+)"
     )
 
     def translate(self, items: Sequence[Item]) -> list[str]:
-        return [self._one(item.text) for item in items]
+        return [self._one(item) for item in items]
 
     def _word(self, english: str) -> str:
         return self._VOCABULARY[sum(map(ord, english.lower())) % len(self._VOCABULARY)]
 
-    def _one(self, text: str) -> str:
+    def _one(self, item: Item) -> str:
+        terms = self.glossary.terms(item.workflow) if self.glossary else {}
+        keep = self.glossary.keep if self.glossary else ()
+        pieces = []
+        if terms:  # longest first, so "service account" wins over "account"
+            names = "|".join(re.escape(t) for t in sorted(terms, key=len, reverse=True))
+            pieces.append(rf"(?P<term>\b(?:{names})s?\b)")
+        if keep:
+            kept = "|".join(map(re.escape, keep))
+            pieces.append(rf"(?P<kept>(?<![A-Za-z0-9])(?:{kept})(?![A-Za-z0-9]))")
+        pattern = re.compile("|".join([*pieces, self._TOKEN]), re.IGNORECASE)
+
         def piece(m: re.Match) -> str:
+            if m.groupdict().get("kept"):
+                return m.group("kept")
+            if m.groupdict().get("term"):
+                key = m.group("term").lower()
+                return terms[key if key in terms else key[:-1]]  # a plural takes the same term
             if m.group("keep"):
                 token = m.group("keep")
                 if token in protected_tokens(token):
@@ -81,11 +104,11 @@ class StubTranslator:
                 return re.sub(r"[A-Za-z]+", lambda w: self._word(w.group()), token)
             return self._word(m.group("word"))
 
-        return self._PIECE.sub(piece, text)
+        return pattern.sub(piece, item.text)
 
 
 def translate_case(
-    records: Sequence[Record], translator: Translator
+    records: Sequence[Record], translator: Translator, glossary: Glossary | None = None
 ) -> tuple[list[Record], list[Finding]]:
     """Persian records for one case (all its questions) and the findings of the checks."""
     if not records:
@@ -96,18 +119,21 @@ def translate_case(
     }:
         raise ValueError(f"records of case {first.source_id!r} must share one source_id and state")
     workflow = first.extra["workflow"]
+    glossary = glossary if glossary is not None else load_glossary()
 
     todo = [s for s in segments(workflow, first.state) if s.rule.action == "translate"]
-    items = [Item(s.text, s.rule.register, STATE) for s in todo]
+    items = [Item(s.text, s.rule.register, STATE, workflow) for s in todo]
     for r in records:
-        items.append(Item(r.question_text, FORMAL, QUESTION))
-        items += [Item(o.text, FORMAL, OPTION) for o in r.options]
+        items.append(Item(r.question_text, FORMAL, QUESTION, workflow))
+        items += [Item(o.text, FORMAL, OPTION, workflow) for o in r.options]
     out = [clean_orthography(t) for t in translator.translate(items)]
     if len(out) != len(items):
         raise ValueError(f"translator returned {len(out)} texts for {len(items)} items")
 
     state = apply(first.state, {s.location: out[i] for i, s in enumerate(todo)})
     state_findings = check_state(workflow, first.state, state)
+    for i, seg in enumerate(todo):
+        state_findings += glossary.check(workflow, seg.text, out[i], "state." + seg.path)
     all_findings = list(state_findings)
     cursor = len(todo)
     result = []
@@ -119,6 +145,8 @@ def translate_case(
         own = check_text(r.question_text, question, f"{name}.question")
         for o, text in zip(r.options, options, strict=True):
             own += check_text(o.text, text, f"{name}.option.{o.id}")
+            own += glossary.check(workflow, o.text, text, f"{name}.option.{o.id}")
+        own += glossary.check(workflow, r.question_text, question, f"{name}.question")
         all_findings += own
         found = state_findings + own
         result.append(

@@ -26,7 +26,7 @@ kodoom = "kodoom.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-kodoom = ["profiles/*.toml", "generators/templates/*.toml"]
+kodoom = ["profiles/*.toml", "generators/templates/*.toml", "translate/*.toml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -1,0 +1,47 @@
+# English -> Persian terms for the typed-decisions workflows (plan 1.1, "Glossary and
+# register"). One Persian term per English term, so a state and its options name the
+# same thing the same way. DRAFT: written by the assistant, waiting for review by a
+# native speaker; the terms below are the ones the plan's dataset card will publish.
+# Zero-width non-joiners are written as \u200c.
+
+[keep]
+# Technical terms that stay in English (Latin script), exactly as written.
+terms = ["TLS", "IP", "API", "SKU", "USD", "EUR", "VPN", "SSH", "MFA", "OAuth"]
+
+[common]
+"refund" = "بازپرداخت"
+"invoice" = "فاکتور"
+"purchase order" = "سفارش خرید"
+"ticket" = "تیکت"
+"account" = "حساب"
+"customer" = "مشتری"
+"payment" = "پرداخت"
+"delivery" = "تحویل"
+"vendor" = "تأمین\u200cکننده"
+"escalation" = "ارجاع به سطح بالاتر"
+"incident" = "رخداد"
+"alert" = "هشدار"
+"constraint" = "محدودیت"
+"overdue" = "معوق"
+
+[customer_service]
+"agent" = "کارشناس پشتیبانی"
+"order" = "سفارش"
+
+[agent_trace_observability]
+# Here "agent" is an AI agent, not a support agent.
+"agent" = "عامل"
+"trace" = "ردگیری"
+"run" = "اجرا"
+"tool" = "ابزار"
+
+[invoice_processing]
+"freight" = "حمل"
+
+[security_incidents]
+"service account" = "حساب سرویس"
+"privilege" = "دسترسی"
+"evidence" = "شواهد"
+"login" = "ورود"
+"authentication" = "احراز هویت"
+"malware" = "بدافزار"

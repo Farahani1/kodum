@@ -164,3 +164,10 @@ def test_translate_command_says_what_to_run_first(tmp_path, capsys):
     args = ["translate", "typed-decisions", "--profile", str(write_profile(tmp_path))]
     assert cli.main([*args, "--translator", "stub"]) != 0
     assert "kodoom fetch typed-decisions" in capsys.readouterr().err
+
+
+def test_a_translator_that_ignores_the_glossary_is_flagged():
+    english = case("g", json.dumps({"thread": [{"role": "customer", "text": "Please refund me."}]}))
+    persian, findings = translate_case(english, StubTranslator(use_glossary=False))
+    assert any(f.check == "glossary" and "refund" in f.message for f in findings)
+    assert persian[0].checks_passed is False
