@@ -210,5 +210,21 @@ def translate_file(
     return stats
 
 
-# Translators by name for `kodoom translate`; real ones are added with the pilot.
+# Translators by name for `kodoom translate`. The model ones load lazily (torch and
+# transformers, Colab only) and are looked up through `translator_factory`.
 TRANSLATORS: dict[str, Callable[[], Translator]] = {"stub": StubTranslator}
+MODEL_TRANSLATORS = ("translategemma-4b", "translategemma-12b-4bit", "qwen3-8b-4bit")
+
+
+def translator_factory(name: str) -> Callable[[], Translator]:
+    if name in TRANSLATORS:
+        return TRANSLATORS[name]
+    if name in MODEL_TRANSLATORS:
+        from kodoom.translate import hf  # imports no torch until a model is loaded
+
+        return {
+            "translategemma-4b": hf.translategemma_4b,
+            "translategemma-12b-4bit": hf.translategemma_12b_4bit,
+            "qwen3-8b-4bit": hf.qwen3_8b_4bit,
+        }[name]
+    raise KeyError(f"unknown translator {name!r}")

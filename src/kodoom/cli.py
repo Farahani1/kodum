@@ -31,7 +31,14 @@ from kodoom.predictions import PredictionError, read_predictions, write_predicti
 from kodoom.runs import RunError, list_runs
 from kodoom.schema import RecordError, read_jsonl, write_jsonl
 from kodoom.sources import SourceError, check_record, get_source
-from kodoom.translate.pipeline import TRANSLATORS, translate_file
+from kodoom.translate.pipeline import (
+    MODEL_TRANSLATORS,
+    TRANSLATORS,
+    cases,
+    translate_file,
+    translator_factory,
+)
+from kodoom.translate.report import side_by_side, summarize
 from kodoom.translate.rules import RuleError
 from kodoom.typed_decisions import REVISION, SPLITS, TypedDecisionsError, field_stats, load_records
 
@@ -149,13 +156,23 @@ def _parser() -> argparse.ArgumentParser:
     _add_profile_args(translate)
     translate.add_argument(
         "--translator",
-        choices=list(TRANSLATORS),
+        choices=[*TRANSLATORS, *MODEL_TRANSLATORS],
         required=True,
-        help="stub only pretends (dev and tests); real translators come with the pilot",
+        help="stub only pretends (dev and tests); the others load a model (Colab, GPU)",
     )
     translate.add_argument("--split", choices=list(SPLITS), help="default: both")
     translate.add_argument("--limit", type=int, help="cases per split (default: all fetched)")
     translate.set_defaults(func=_translate)
+
+    show = commands.add_parser(
+        "translations", help="check counts and English next to Persian for a translator's output"
+    )
+    show.add_argument("dataset", choices=["typed-decisions"])
+    _add_profile_args(show)
+    show.add_argument("--translator", required=True, help="the folder under fa/ to read")
+    show.add_argument("--split", choices=list(SPLITS), default="test")
+    show.add_argument("--show", type=int, default=3, help="cases to print side by side")
+    show.set_defaults(func=_translations)
 
     fields = commands.add_parser(
         "fields", help="statistics of the text fields of fetched typed-decisions records"
@@ -354,7 +371,7 @@ def _fetch_helmo(args: argparse.Namespace) -> int:
 
 def _translate(args: argparse.Namespace) -> int:
     profile = _load(args)
-    translator = TRANSLATORS[args.translator]()
+    translator = translator_factory(args.translator)()
     base = profile.data_dir / "typed-decisions"
     failed = 0
     for split in [args.split] if args.split else list(SPLITS):
@@ -368,6 +385,25 @@ def _translate(args: argparse.Namespace) -> int:
         if stats["with_findings"]:
             print(f"  {stats['with_findings']} cases have check findings (checks_passed=false)")
     return 0 if not failed else 1
+
+
+def _translations(args: argparse.Namespace) -> int:
+    profile = _load(args)
+    base = profile.data_dir / "typed-decisions"
+    fa_path = base / "fa" / args.translator / f"{args.split}.jsonl"
+    if not fa_path.exists():
+        raise InspectError(f"{fa_path} does not exist; run `kodoom translate` first")
+    persian = list(read_jsonl(fa_path))
+    english_by_id = {r.id: r for r in read_jsonl(base / "en" / f"{args.split}.jsonl")}
+    summary = summarize(persian)
+    print(f"{fa_path}: {summary['cases']} cases, {summary['decisions']} decisions")
+    print(f"  cases with check findings: {summary['cases_with_findings']}")
+    print(f"  findings by check: {summary['findings_by_check']}")
+    for fa_case in cases(persian)[: args.show]:
+        english = [english_by_id[r.id.removesuffix(":fa")] for r in fa_case]
+        print()
+        print(side_by_side(english, fa_case))
+    return 0
 
 
 def _fields(args: argparse.Namespace) -> int:

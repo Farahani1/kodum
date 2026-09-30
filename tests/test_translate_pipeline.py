@@ -171,3 +171,30 @@ def test_a_translator_that_ignores_the_glossary_is_flagged():
     persian, findings = translate_case(english, StubTranslator(use_glossary=False))
     assert any(f.check == "glossary" and "refund" in f.message for f in findings)
     assert persian[0].checks_passed is False
+
+
+def test_translations_command_reports_counts_and_side_by_side(tmp_path, capsys):
+    import kodoom.cli as cli
+
+    profile = write_profile(tmp_path)
+    en = tmp_path / "data" / "typed-decisions" / "en"
+    write_jsonl(en / "test.jsonl", case("a") + case("b"))
+    base = ["--profile", str(profile), "typed-decisions"]
+    assert (
+        cli.main(
+            ["translate", "typed-decisions", *base[:2], "--translator", "stub", "--split", "test"]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    assert (
+        cli.main(
+            ["translations", "typed-decisions", *base[:2], "--translator", "stub", "--show", "1"]
+        )
+        == 0
+    )
+    out = capsys.readouterr().out
+    assert "2 cases, 6 decisions" in out and "cases with check findings: 0" in out
+    assert "== a  (customer_service)" in out and "EN: Hi, order A-68034" in out
+    assert "== b" not in out  # --show 1
+    assert cli.main(["translations", "typed-decisions", *base[:2], "--translator", "nope"]) != 0
