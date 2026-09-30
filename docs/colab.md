@@ -30,6 +30,17 @@ Edits made directly on Colab are discarded by the next update, on purpose: the c
 
 The *Translation trial* cells run `kodoom translate typed-decisions --translator NAME --split test --limit 10` for TranslateGemma 4B (bf16, then 4-bit weights with 32-bit activations), then `kodoom translations`, which prints how many cases the automatic checks flagged and shows English next to Persian for the first cases. Models download into `/content/hf-cache` (never Drive, see the storage budget); results go to `data_dir/typed-decisions/fa/NAME` on Drive. The command resumes: run it again after a dropped session and finished cases are skipped. It exits with status 1 when some case has check findings; that is information, not a crash. Qwen3-8B (4-bit) ran on the T4 in an earlier trial (a 16 GB download, about three minutes). TranslateGemma 4B loads on the T4 (8.6 GB), but in plain fp16 Gemma overflows and answers with nothing, which `kodoom translate` now reports as a NaN/inf error; use the `-bf16` or `-4bit-fp32` translators. A case the model cannot translate is skipped and its reason goes to `<split>.failures.jsonl` next to the output. TranslateGemma is **gated**: open its Hugging Face page, accept the license, create a read token and store it as the Colab secret `HF_TOKEN` (the *Hugging Face access* cell passes it on); without it the trial stops with a 401 `GatedRepoError`. Whether the TranslateGemma message format is right is still untested: copy any error back.
 
+## Translating outside kodoom (Claude Cowork, or a person)
+
+A translator that cannot run inside `kodoom translate` still goes through the same checks:
+
+1. Run the *Export units* cell. It writes `MyDrive/kodoom/data/.../typed-decisions/exchange/units.jsonl` (each distinct English text once, with its register, context and glossary terms, and an empty `fa`) and `INSTRUCTIONS.md` (the brief).
+2. Give both files to the translator. Claude Cowork works on local files: download them from Drive, ask it to follow `INSTRUCTIONS.md` and fill `fa` in every line, in chunks of about 50 lines. Keep all other fields unchanged.
+3. Save the filled file as `units-filled.jsonl` in the same Drive folder.
+4. Run the *Import units* cell (`kodoom import-units --name cowork`). It reports units that are missing, empty or changed, builds the Persian records in `fa/cowork/`, and runs the usual automatic checks. The result can go into the blind pilot sheet like any model.
+
+Because the question and option texts repeat in every case of a workflow, the units file holds each once, so a sentence gets one Persian rendering everywhere. Check the terms of the tool you use before publishing data it produced, and say on the dataset card which model translated.
+
 ## Disk space during trials
 
 The Colab local disk (about 112 GB) holds the model cache at `/content/hf-cache`, never Drive. Each model stays there until the session ends: Qwen3-8B 16 GB, TranslateGemma 4B 8.6 GB, Gemma 3 4B 7.75 GB, Gemma 3 12B about 24 GB. The *Free disk space* cell removes the Qwen download; run `!du -sh /content/hf-cache/hub/models--*` to see what is left and delete folders you no longer need.

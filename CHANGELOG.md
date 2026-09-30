@@ -12,7 +12,7 @@ table below or adds a user-visible command, module or decision.
 ## Status against the plan
 
 Last updated: Sep 30, 2026, at commit `3505090`. Checks: `ruff check`, `ruff format
---check` and `pytest` (557 tests) pass; CI runs Windows and Ubuntu on Python 3.11 to
+--check` and `pytest` (567 tests) pass; CI runs Windows and Ubuntu on Python 3.11 to
 3.13.
 
 | Plan | Item | State |
@@ -69,6 +69,10 @@ Our checks and glossary are meant to catch this kind of inconsistency.
 
 ### Added
 
+- `kodoom export-units` and `import-units` (`translate/exchange.py`): a translator that cannot run
+  inside kodoom (Claude Cowork, a person) gets each distinct English text once with its
+  register, context and glossary terms and a brief; the filled file comes back through the
+  same checks, failure log and review tools as a model run.
 - Model translators (`translate/hf.py`): TranslateGemma (translation-only prompt) and a chat
   translator for Qwen3-8B (register, glossary and rules in the prompt); `kodoom translations`
   shows check counts and English next to Persian. The English-Persian glossary

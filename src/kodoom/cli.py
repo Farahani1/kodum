@@ -31,6 +31,16 @@ from kodoom.predictions import PredictionError, read_predictions, write_predicti
 from kodoom.runs import RunError, list_runs
 from kodoom.schema import RecordError, read_jsonl, write_jsonl
 from kodoom.sources import SourceError, check_record, get_source
+from kodoom.translate.exchange import (
+    ExchangeError,
+    PrecomputedTranslator,
+    check_filled,
+    read_units,
+    units_for,
+    write_units,
+)
+from kodoom.translate.exchange import instructions as exchange_instructions
+from kodoom.translate.glossary import load as load_glossary
 from kodoom.translate.pilot import (
     PilotError,
     build_sheet,
@@ -43,6 +53,7 @@ from kodoom.translate.pipeline import (
     MODEL_TRANSLATORS,
     TRANSLATORS,
     cases,
+    pick_cases,
     translate_file,
     translator_factory,
 )
@@ -71,6 +82,7 @@ def main(argv: list[str] | None = None) -> int:
         PredictionError,
         TypedDecisionsError,
         RuleError,
+        ExchangeError,
         PilotError,
         CalibrationError,
         MetricError,
@@ -204,6 +216,29 @@ def _parser() -> argparse.ArgumentParser:
         "--sheet", default="sheet-filled.csv", help="file name in the pilot folder on Drive"
     )
     score.set_defaults(func=_pilot_score)
+
+    export = commands.add_parser(
+        "export-units",
+        help="write the distinct texts to translate, for a translator outside kodoom",
+    )
+    export.add_argument("dataset", choices=["typed-decisions"])
+    _add_profile_args(export)
+    export.add_argument("--split", choices=list(SPLITS), default="train")
+    export.add_argument("--limit", type=int, help="cases (default: all fetched)")
+    export.add_argument("--balanced", action="store_true", help="with --limit, all workflows")
+    export.set_defaults(func=_export_units)
+
+    imp = commands.add_parser(
+        "import-units", help="turn a filled units file into checked Persian records"
+    )
+    imp.add_argument("dataset", choices=["typed-decisions"])
+    _add_profile_args(imp)
+    imp.add_argument("--split", choices=list(SPLITS), default="train")
+    imp.add_argument("--name", required=True, help="the translator's name (folder under fa/)")
+    imp.add_argument("--units", default="units-filled.jsonl", help="file in the exchange folder")
+    imp.add_argument("--limit", type=int, help="cases (default: all fetched)")
+    imp.add_argument("--balanced", action="store_true", help="with --limit, all workflows")
+    imp.set_defaults(func=_import_units)
 
     fields = commands.add_parser(
         "fields", help="statistics of the text fields of fetched typed-decisions records"
@@ -481,6 +516,54 @@ def _pilot_score(args: argparse.Namespace) -> int:
     for workflow, counts in result["wins_by_workflow"].items():
         print(f"  {workflow}: {counts}")
     return 0
+
+
+def _exchange_dir(profile: Profile) -> Path:
+    return profile.data_dir / "typed-decisions" / "exchange"
+
+
+def _export_units(args: argparse.Namespace) -> int:
+    profile = _load(args)
+    source = profile.data_dir / "typed-decisions" / "en" / f"{args.split}.jsonl"
+    if not source.exists():
+        raise InspectError(f"{source} does not exist; run `kodoom fetch typed-decisions` first")
+    chosen = pick_cases(cases(read_jsonl(source)), args.limit, args.balanced)
+    units = units_for(chosen, load_glossary())
+    folder = _exchange_dir(profile)
+    write_units(folder / "units.jsonl", units)
+    (folder / "INSTRUCTIONS.md").write_text(exchange_instructions(len(units)), encoding="utf-8")
+    print(f"{folder / 'units.jsonl'}: {len(units)} distinct texts from {len(chosen)} cases")
+    print(f"Give the translator units.jsonl and {folder / 'INSTRUCTIONS.md'}; save the filled file")
+    print(f"as {folder / 'units-filled.jsonl'} and run `kodoom import-units --name NAME`.")
+    return 0
+
+
+def _import_units(args: argparse.Namespace) -> int:
+    profile = _load(args)
+    base = profile.data_dir / "typed-decisions"
+    folder = _exchange_dir(profile)
+    filled, original = folder / args.units, folder / "units.jsonl"
+    for path in (filled, original):
+        if not path.exists():
+            raise InspectError(f"{path} does not exist")
+    units = read_units(filled)
+    problems = check_filled(read_units(original), units)
+    for kind, ids in problems.items():
+        if ids:
+            print(f"{len(ids)} units {kind}: {', '.join(ids[:8])}{' ...' if len(ids) > 8 else ''}")
+    source = base / "en" / f"{args.split}.jsonl"
+    translator = PrecomputedTranslator(units, args.name)
+    out = base / "fa" / args.name / f"{args.split}.jsonl"
+    stats = translate_file(source, out, translator, limit=args.limit, balanced=args.balanced)
+    print(f"{out}: {stats['translated']} cases, {stats['skipped']} already there")
+    if stats["failed"]:
+        print(
+            f"  {stats['failed']} cases could not be built (reasons in {out.with_suffix('')}"
+            ".failures.jsonl)"
+        )
+    if stats["with_findings"]:
+        print(f"  {stats['with_findings']} cases have check findings (checks_passed=false)")
+    return 0 if not (stats["failed"] or stats["with_findings"] or any(problems.values())) else 1
 
 
 def _fields(args: argparse.Namespace) -> int:
