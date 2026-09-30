@@ -57,3 +57,9 @@ Open [`notebooks/colab.ipynb`](notebooks/colab.ipynb) in Colab and Run all. Upda
 | `tests/` | Tests; `pytest` runs them all in about a second |
 
 Datasets, checkpoints and run outputs go in `data/`, `runs/` or Drive and are never committed.
+
+## Licenses
+
+- **Code: [0BSD](LICENSE)**, the least restrictive OSI-approved license: use it for any purpose, with no attribution required.
+- **This project's own data, [CC0-1.0](LICENSE-DATA)** (public-domain dedication): the generated Persian skill data and the templates that produce it.
+- **Data derived from other people's work keeps their license.** For example typed-decisions-fa is a translation of an Apache-2.0 dataset, so it stays Apache-2.0 with attribution. `kodoom.sources` records every source's license and the code enforces which ones may enter training.
