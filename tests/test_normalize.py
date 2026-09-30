@@ -1,6 +1,6 @@
 import pytest
 
-from kodoom.normalize import ZWNJ, normalize, to_latin_digits
+from kodoom.normalize import ZWNJ, clean_orthography, normalize, to_latin_digits
 
 Z = ZWNJ
 
@@ -80,3 +80,39 @@ def test_to_latin_digits_leaves_letters_alone():
 def test_idempotent(text):
     once = normalize(text)
     assert normalize(once) == once
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        # Spelling noise is fixed...
+        ("علي كتاب", "علی کتاب"),
+        ("می خواهم", f"می{Z}خواهم"),
+        ("کتاب ها", f"کتاب{Z}ها"),
+        ("سلام   دنیا", "سلام دنیا"),
+        ("كـــتاب", "کتاب"),
+        # ...but digits, separators, percent signs and diacritics stay as written,
+        # because the published benchmark must test other models on them.
+        ("۱۲٫۵ میلیون ريال", "۱۲٫۵ میلیون ریال"),
+        ("٤٥٦ و 789 و ۱۲۳", "٤٥٦ و 789 و ۱۲۳"),
+        ("۲۰٪", "۲۰٪"),
+        ("حتماً", "حتماً"),
+    ],
+)
+def test_clean_orthography(raw, expected):
+    assert clean_orthography(raw) == expected
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "علي می خواهد ۱۲٫۵ میلیون ريال برای کتاب ها بپردازد.",
+        "حتماً ۲۰٪ تخفیف",
+        f"{Z}  نمی دانم  {Z}",
+    ],
+)
+def test_clean_orthography_is_idempotent_and_compatible_with_normalize(text):
+    cleaned = clean_orthography(text)
+    assert clean_orthography(cleaned) == cleaned
+    # Cleaning published data first never changes what the model sees.
+    assert normalize(cleaned) == normalize(text)
