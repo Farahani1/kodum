@@ -26,7 +26,7 @@ from kodoom.sources import get_source
 REGISTERS = ("formal", "colloquial")
 MIN_TEMPLATES_PER_KIND = 5
 HELD_OUT_PER_KIND = 2  # test-only templates per question kind (plan 1.1)
-DEFAULT_PAIRS_PER_KIND = 100
+DEFAULT_PAIRS_PER_KIND = 150  # about 4,200 items over the five generators (plan: 3-5k)
 MAX_ATTEMPTS = 200  # resamples before a kind is declared exhausted
 
 # Digit scripts a rendered number can use. Real Persian text mixes all three, and

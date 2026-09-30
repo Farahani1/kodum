@@ -25,7 +25,7 @@ Every command that depends on the environment takes an explicit profile: `dev` (
 ```
 kodoom info --profile dev                 # show the resolved settings
 kodoom validate data/some-records.jsonl   # check records against the schema and source rules
-kodoom generate --profile dev             # code-labeled Persian skills (Jalali dates so far) -> data/skills/
+kodoom generate --profile dev             # the five code-labeled Persian skill sets -> data/skills/
 kodoom check --profile dev                # is this machine ready for the profile?
 kodoom runs --profile dev                 # runs on disk and what can be resumed
 ```
