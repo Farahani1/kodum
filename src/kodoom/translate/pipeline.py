@@ -240,6 +240,8 @@ MODEL_TRANSLATORS = (
     "translategemma-4b-bf16-terms",
     "translategemma-4b-4bit-fp32",
     "translategemma-12b-4bit",
+    "gemma3-4b-bf16",
+    "gemma3-12b-4bit",
     "qwen3-8b-4bit",
 )
 
@@ -255,6 +257,8 @@ def translator_factory(name: str) -> Callable[[], Translator]:
             "translategemma-4b-bf16": hf.translategemma_4b_bf16,
             "translategemma-4b-bf16-terms": hf.translategemma_4b_bf16_terms,
             "translategemma-4b-4bit-fp32": hf.translategemma_4b_4bit_fp32,
+            "gemma3-4b-bf16": hf.gemma3_4b_bf16,
+            "gemma3-12b-4bit": hf.gemma3_12b_4bit,
             "translategemma-12b-4bit": hf.translategemma_12b_4bit,
             "qwen3-8b-4bit": hf.qwen3_8b_4bit,
         }[name]

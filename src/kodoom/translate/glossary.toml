@@ -8,6 +8,13 @@
 # Technical terms that stay in English (Latin script), exactly as written.
 terms = ["TLS", "IP", "API", "SKU", "USD", "EUR", "VPN", "SSH", "MFA", "OAuth"]
 
+[context]
+# One sentence per workflow for chat-model prompts, so ambiguous words are read right.
+agent_trace_observability = "The text comes from an observability system that watches the runs of autonomous AI agents (software). An agent is an AI agent, never a person; a trace is the recorded log of one agent run."
+customer_service = "The text comes from a customer-service system. The agent is a human support agent; the customer is the person writing in."
+invoice_processing = "The text comes from an accounts-payable system that checks vendor invoices against purchase orders and deliveries."
+security_incidents = "The text comes from a security operations system that triages alerts about accounts, hosts and access. Keep technical terms and identifiers exact."
+
 [common]
 "refund" = "بازپرداخت"
 "invoice" = "فاکتور"

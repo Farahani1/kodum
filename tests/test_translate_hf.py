@@ -30,7 +30,7 @@ def user_text(messages):
 
 def test_chat_prompt_carries_register_relevant_terms_and_rules():
     prompt = user_text(chat_messages(item(), load()))
-    assert "formal" in prompt.split("\n")[1]
+    assert "formal" in prompt.split("\n")[2]
     assert "refund = بازپرداخت" in prompt and "invoice = فاکتور" in prompt
     assert "ticket" not in prompt  # only terms that occur in the text
     assert "Leave these terms in English: TLS" in prompt
@@ -142,3 +142,16 @@ def test_translategemma_sends_pinned_text_only_when_given_a_glossary():
     TranslateGemmaTranslator("plain", generate).translate([the_item])
     TranslateGemmaTranslator("pinned", generate, load()).translate([the_item])
     assert sent == ["Your refund", f"Your {load().common['refund']}"]
+
+
+def test_the_chat_prompt_says_where_the_text_comes_from():
+    prompt = user_text(
+        chat_messages(item("The agent stopped.", workflow="agent_trace_observability"), load())
+    )
+    lines = prompt.split("\n")
+    assert lines[1].startswith("Context: ") and "never a person" in lines[1]
+    support = user_text(
+        chat_messages(item("The agent stopped.", workflow="customer_service"), load())
+    )
+    assert "human support agent" in support
+    assert "Context:" not in user_text(chat_messages(item("Hi", workflow="unknown"), load()))

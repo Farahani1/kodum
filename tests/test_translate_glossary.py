@@ -60,3 +60,16 @@ def test_bad_glossaries_are_refused():
         parse('[common]\n"refund" = ""\n')
     with pytest.raises(GlossaryError, match="terms must be"):
         parse("[keep]\nterms = [1]\n")
+
+
+def test_every_workflow_has_a_context_sentence(g):
+    for workflow in (
+        "customer_service",
+        "agent_trace_observability",
+        "invoice_processing",
+        "security_incidents",
+    ):
+        assert g.context(workflow), workflow
+    assert g.context("nope") == ""
+    with pytest.raises(GlossaryError, match="context"):
+        parse('[context]\nhr = ""\n')

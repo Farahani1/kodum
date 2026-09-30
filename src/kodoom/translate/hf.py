@@ -48,11 +48,11 @@ RULES = (
 
 def chat_messages(item: Item, glossary: Glossary) -> Messages:
     """The conversation for a chat model: register, glossary terms in the text, rules."""
-    lines = [
-        "Translate the text below from English into Persian.",
-        REGISTERS.get(item.register, REGISTERS["formal"]),
-        *RULES,
-    ]
+    lines = ["Translate the text below from English into Persian."]
+    context = glossary.context(item.workflow)
+    if context:
+        lines.append("Context: " + context)
+    lines += [REGISTERS.get(item.register, REGISTERS["formal"]), *RULES]
     terms = glossary.relevant(item.workflow, item.text)
     if terms:
         lines.append(
@@ -243,6 +243,8 @@ def load_generator(
 TRANSLATEGEMMA_4B = "google/translategemma-4b-it"
 TRANSLATEGEMMA_12B = "google/translategemma-12b-it"
 QWEN3_8B = "Qwen/Qwen3-8B"
+GEMMA3_4B = "google/gemma-3-4b-it"
+GEMMA3_12B = "google/gemma-3-12b-it"
 
 
 def translategemma_4b() -> TranslateGemmaTranslator:
@@ -266,8 +268,18 @@ def translategemma_4b_4bit_fp32() -> TranslateGemmaTranslator:
     return TranslateGemmaTranslator("translategemma-4b-4bit-fp32", generate)
 
 
+def gemma3_4b_bf16() -> ChatTranslator:
+    """Instruction-tuned Gemma 3: takes the glossary and context in its prompt."""
+    return ChatTranslator("gemma3-4b-bf16", load_generator(GEMMA3_4B, dtype="bfloat16"))
+
+
+def gemma3_12b_4bit() -> ChatTranslator:
+    generate = load_generator(GEMMA3_12B, four_bit=True, dtype="bfloat16")
+    return ChatTranslator("gemma3-12b-4bit", generate)
+
+
 def translategemma_12b_4bit() -> TranslateGemmaTranslator:
-    generate = load_generator(TRANSLATEGEMMA_12B, four_bit=True)
+    generate = load_generator(TRANSLATEGEMMA_12B, four_bit=True, dtype="bfloat16")
     return TranslateGemmaTranslator("translategemma-12b-4bit", generate)
 
 

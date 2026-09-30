@@ -30,10 +30,15 @@ class Glossary:
     common: dict[str, str]
     by_workflow: dict[str, dict[str, str]]
     keep: tuple[str, ...]
+    contexts: dict[str, str]
 
     def terms(self, workflow: str) -> dict[str, str]:
         """The English -> Persian terms of a workflow (its own override the common ones)."""
         return {**self.common, **self.by_workflow.get(workflow, {})}
+
+    def context(self, workflow: str) -> str:
+        """A sentence describing where the texts of a workflow come from, or ""."""
+        return self.contexts.get(workflow, "")
 
     def relevant(self, workflow: str, text: str) -> dict[str, str]:
         """The terms that occur in ``text``."""
@@ -76,7 +81,10 @@ def parse(text: str) -> Glossary:
     keep = raw.get("keep", {}).get("terms", [])
     if not isinstance(keep, list) or not all(isinstance(t, str) and t for t in keep):
         raise GlossaryError("[keep] terms must be a list of non-empty strings")
-    tables = {name: table for name, table in raw.items() if name not in {"keep"}}
+    contexts = raw.get("context", {})
+    if not all(isinstance(k, str) and isinstance(v, str) and v for k, v in contexts.items()):
+        raise GlossaryError("[context] needs a workflow name and a sentence for each entry")
+    tables = {name: table for name, table in raw.items() if name not in {"keep", "context"}}
     for name, table in tables.items():
         for en, fa in table.items():
             if not isinstance(fa, str) or not fa.strip() or en != en.strip() or not en:
@@ -84,7 +92,7 @@ def parse(text: str) -> Glossary:
             if en != en.lower():
                 raise GlossaryError(f"[{name}] {en!r}: write English terms in lower case")
     common = dict(tables.pop("common", {}))
-    return Glossary(common, {k: dict(v) for k, v in tables.items()}, tuple(keep))
+    return Glossary(common, {k: dict(v) for k, v in tables.items()}, tuple(keep), dict(contexts))
 
 
 def load() -> Glossary:
