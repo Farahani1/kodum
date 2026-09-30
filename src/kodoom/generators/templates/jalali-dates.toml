@@ -1,0 +1,233 @@
+# Templates for the Jalali-date skills (plan 1.1).
+#
+# Written as people type: plain spaces, no zero-width non-joiners. The loader
+# runs clean_orthography() over every text, which puts the ZWNJ in "می شود" and
+# "کتاب ها", so this file stays free of invisible characters.
+#
+# Placeholders: {a} and {b} (kind "before"), {d} (every other kind). Dates are
+# rendered by the generator in one of three digit scripts and two formats.
+#
+# Rules, checked by tests/test_generators.py:
+#   - every kind has at least 5 templates, exactly 2 of them held_out = true;
+#   - each kind has both registers among train templates and among held-out ones;
+#   - held-out templates only ever produce split "test" items (plan 3.1).
+#
+# STATUS: drafted by the project's assistant, not yet reviewed by a native
+# speaker. Read every template aloud once before the suite is published; a
+# template that sounds unnatural is a bug, not a style choice.
+
+# ---------------------------------------------------------------------------
+# before: "is the first date before / after the second?" (noul)
+# relation = "before": does event a happen before event b?
+# relation = "after":  does event a happen after event b?
+# ---------------------------------------------------------------------------
+
+[[template]]
+kind = "before"
+id = "before-1"
+register = "formal"
+held_out = false
+relation = "before"
+state = "جلسه هیئت مدیره در تاریخ {a} برگزار می شود و مهلت ثبت گزارش مالی {b} است."
+question = "آیا جلسه هیئت مدیره پیش از مهلت ثبت گزارش مالی برگزار می شود؟"
+
+[[template]]
+kind = "before"
+id = "before-2"
+register = "colloquial"
+held_out = false
+relation = "before"
+state = "قرار ملاقاتمون {a} هست و تحویل پروژه {b}."
+question = "قرار ملاقات زودتر از تحویل پروژه هست؟"
+
+[[template]]
+kind = "before"
+id = "before-3"
+register = "formal"
+held_out = false
+relation = "after"
+state = "فاکتور در تاریخ {a} صادر شده و سررسید پرداخت آن {b} تعیین شده است."
+question = "آیا فاکتور بعد از سررسید پرداخت صادر شده است؟"
+
+[[template]]
+kind = "before"
+id = "before-4"
+register = "colloquial"
+held_out = false
+relation = "after"
+state = "بلیطمون برای {a} هست و هتل رو از {b} رزرو کردم."
+question = "بلیط دیرتر از شروع رزرو هتل هست؟"
+
+[[template]]
+kind = "before"
+id = "before-5"
+register = "formal"
+held_out = true
+relation = "before"
+state = "درخواست مرخصی از تاریخ {a} آغاز می شود و قرارداد همکاری در {b} پایان می یابد."
+question = "آیا شروع مرخصی پیش از پایان قرارداد همکاری است؟"
+
+[[template]]
+kind = "before"
+id = "before-6"
+register = "colloquial"
+held_out = true
+relation = "after"
+state = "امتحان من {a} هست و امتحان دوستم {b}."
+question = "امتحان من دیرتر از امتحان دوستمه؟"
+
+# ---------------------------------------------------------------------------
+# weekday: "which day of the week is this date?" (choice, 7 options)
+# ---------------------------------------------------------------------------
+
+[[template]]
+kind = "weekday"
+id = "weekday-1"
+register = "formal"
+held_out = false
+state = "مراسم افتتاحیه در تاریخ {d} برگزار خواهد شد."
+question = "تاریخ برگزاری مراسم افتتاحیه چه روزی از هفته است؟"
+
+[[template]]
+kind = "weekday"
+id = "weekday-2"
+register = "colloquial"
+held_out = false
+state = "تولد دوستم {d} هست."
+question = "اون تاریخ می افته به کدوم روز هفته؟"
+
+[[template]]
+kind = "weekday"
+id = "weekday-3"
+register = "formal"
+held_out = false
+state = "موعد پرداخت قسط {d} است."
+question = "موعد پرداخت قسط در کدام روز هفته قرار دارد؟"
+
+[[template]]
+kind = "weekday"
+id = "weekday-4"
+register = "colloquial"
+held_out = false
+state = "کنسرت {d} هست."
+question = "کنسرت چه روزی از هفته برگزار می شه؟"
+
+[[template]]
+kind = "weekday"
+id = "weekday-5"
+register = "formal"
+held_out = true
+state = "جلسه دادگاه برای تاریخ {d} تعیین شده است."
+question = "روز هفته مربوط به تاریخ جلسه دادگاه کدام است؟"
+
+[[template]]
+kind = "weekday"
+id = "weekday-6"
+register = "colloquial"
+held_out = true
+state = "پرواز من {d} هست."
+question = "پرواز من چه روزی از هفته حرکت می کنه؟"
+
+# ---------------------------------------------------------------------------
+# valid: "is this a real date in the Jalali calendar?" (noul)
+# ---------------------------------------------------------------------------
+
+[[template]]
+kind = "valid"
+id = "valid-1"
+register = "formal"
+held_out = false
+state = "در فرم ثبت نام، تاریخ تولد متقاضی {d} وارد شده است."
+question = "آیا این تاریخ در تقویم شمسی معتبر است؟"
+
+[[template]]
+kind = "valid"
+id = "valid-2"
+register = "colloquial"
+held_out = false
+state = "رفیقم می گه تولدش {d} هست."
+question = "همچین تاریخی تو تقویم شمسی وجود داره؟"
+
+[[template]]
+kind = "valid"
+id = "valid-3"
+register = "formal"
+held_out = false
+state = "قرارداد در تاریخ {d} امضا شده است."
+question = "آیا تاریخ امضای قرارداد یک تاریخ واقعی در تقویم هجری شمسی است؟"
+
+[[template]]
+kind = "valid"
+id = "valid-4"
+register = "colloquial"
+held_out = false
+state = "توی فاکتور تاریخ {d} نوشته."
+question = "این تاریخ اصلا وجود داره؟"
+
+[[template]]
+kind = "valid"
+id = "valid-5"
+register = "formal"
+held_out = true
+state = "تاریخ صدور گواهینامه {d} درج شده است."
+question = "آیا این تاریخ در تقویم شمسی درست است؟"
+
+[[template]]
+kind = "valid"
+id = "valid-6"
+register = "colloquial"
+held_out = true
+state = "تو کارت نوشته {d}."
+question = "این تاریخ تو تقویم شمسی واقعیه؟"
+
+# ---------------------------------------------------------------------------
+# gregorian: "which Gregorian date is this?" (choice, 5 options)
+# ---------------------------------------------------------------------------
+
+[[template]]
+kind = "gregorian"
+id = "gregorian-1"
+register = "formal"
+held_out = false
+state = "تاریخ سررسید در تقویم شمسی {d} است."
+question = "معادل میلادی تاریخ سررسید کدام است؟"
+
+[[template]]
+kind = "gregorian"
+id = "gregorian-2"
+register = "colloquial"
+held_out = false
+state = "قرارمون {d} شمسی هست."
+question = "این تاریخ میلادیش چی می شه؟"
+
+[[template]]
+kind = "gregorian"
+id = "gregorian-3"
+register = "formal"
+held_out = false
+state = "قرارداد بیمه از تاریخ {d} آغاز می شود."
+question = "تاریخ میلادی آغاز قرارداد بیمه کدام یک از موارد زیر است؟"
+
+[[template]]
+kind = "gregorian"
+id = "gregorian-4"
+register = "colloquial"
+held_out = false
+state = "بلیط کنسرت رو برای {d} خریدم."
+question = "تاریخ میلادیش کدومه؟"
+
+[[template]]
+kind = "gregorian"
+id = "gregorian-5"
+register = "formal"
+held_out = true
+state = "پرونده در تاریخ {d} هجری شمسی ثبت شده است."
+question = "کدام گزینه معادل میلادی تاریخ ثبت پرونده است؟"
+
+[[template]]
+kind = "gregorian"
+id = "gregorian-6"
+register = "colloquial"
+held_out = true
+state = "پرواز برگشتم {d} هست."
+question = "اون روز تو تقویم میلادی چه تاریخیه؟"
