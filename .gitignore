@@ -2,6 +2,7 @@
 __pycache__/
 *.py[codz]
 *$py.class
+data/
 
 # C extensions
 *.so
@@ -224,3 +225,4 @@ __marimo__/
 *.safetensors
 *.bin
 *.pt
+.vscode/settings.json
