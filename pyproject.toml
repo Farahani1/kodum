@@ -12,6 +12,9 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.6"]
+# Installed on Colab only. Colab already ships torch with CUDA; CUDA-only
+# packages (e.g. bitsandbytes) are added here when code needs them.
+colab = []
 
 [project.scripts]
 kodoom = "kodoom.cli:main"
