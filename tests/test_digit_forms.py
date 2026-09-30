@@ -6,9 +6,10 @@ from decimal import Decimal
 
 import pytest
 
-from kodoom.generators import digits
+from kodoom.generators import digits, numbers
 from kodoom.generators.common import DIGIT_SCRIPTS, GeneratorError, load_templates
-from kodoom.generators.digits import Style, level, render
+from kodoom.generators.digits import level
+from kodoom.generators.numbers import Style, render
 
 SEED = 1234
 
@@ -78,7 +79,7 @@ def test_parser_agrees_with_render_on_random_values():
 
     rng = random.Random(7)
     for _ in range(500):
-        st = digits._style(rng)
+        st = numbers.draw_style(rng)
         value = rng.randint(11, 999) * 10 ** rng.randint(3, 7)
         assert parse(render(value, st)) == value, (value, st)
 

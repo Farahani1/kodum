@@ -18,8 +18,7 @@ Kinds (every item is half of a minimal pair, see ``dates.py``):
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
-from decimal import Decimal
+from dataclasses import asdict
 
 from kodoom.generators.common import (
     DEFAULT_PAIRS_PER_KIND,
@@ -29,8 +28,8 @@ from kodoom.generators.common import (
     PairSpec,
     Template,
     build_records,
-    to_script,
 )
+from kodoom.generators.numbers import Style, draw_style, render
 from kodoom.schema import Option, Record
 
 NAME = "digit-forms"
@@ -53,39 +52,10 @@ LEVELS = (
 )
 LEVEL_LIMITS = (10**4, 10**5, 10**6, 10**7)
 
-ARABIC_THOUSANDS = chr(0x066C)  # ٬
-ARABIC_DECIMAL = chr(0x066B)  # ٫
-SCALES = ((10**9, "میلیارد"), (10**6, "میلیون"), (10**3, "هزار"))
-
-
-@dataclass(frozen=True)
-class Style:
-    script: str  # latin, fa or ar
-    form: str  # full (1250000) or scaled (1.25 میلیون)
-    sep: str  # thousands separator of the full form: "", "," or "٬"
-    dec: str  # decimal separator of the scaled form: "." or "٫"
-
 
 def level(value: int) -> int:
     """The index of the range ``value`` falls in."""
     return sum(value >= limit for limit in LEVEL_LIMITS)
-
-
-def render(value: int, style: Style) -> str:
-    """Write ``value`` in ``style``; small values fall back to the full form."""
-    scaled = next(((s, w) for s, w in SCALES if value >= s), None)
-    if style.form == "scaled" and scaled:
-        scale, word = scaled
-        text = format((Decimal(value) / scale).normalize(), "f").replace(".", style.dec)
-        return f"{to_script(text, style.script)} {word}"
-    text = str(value)
-    if style.sep:
-        groups = []
-        while text:
-            groups.append(text[-3:])
-            text = text[:-3]
-        text = style.sep.join(reversed(groups))
-    return to_script(text, style.script)
 
 
 def generate(seed: int, pairs_per_kind: int = DEFAULT_PAIRS_PER_KIND) -> list[Record]:
@@ -99,10 +69,10 @@ def generate(seed: int, pairs_per_kind: int = DEFAULT_PAIRS_PER_KIND) -> list[Re
 def _equal(rng, template: Template) -> PairSpec:
     n, p = _mantissa(rng), rng.randint(3, 7)
     other = _change_one_digit(rng, n)
-    style_a = _style(rng)
-    style_b = _style(rng)
+    style_a = draw_style(rng)
+    style_b = draw_style(rng)
     while style_b == style_a:  # the two amounts must be written differently
-        style_b = _style(rng)
+        style_b = draw_style(rng)
     fixed = rng.choice("ab")  # the slot that keeps the true amount in both halves
     styles = {"a": style_a, "b": style_b}
 
@@ -123,7 +93,7 @@ def _equal(rng, template: Template) -> PairSpec:
 def _larger(rng, template: Template) -> PairSpec:
     n, p = _mantissa(rng), rng.randint(3, 7)
     other = _change_one_digit(rng, n)
-    numbers = [(n * 10**p, _style(rng)), (other * 10**p, _style(rng))]
+    numbers = [(n * 10**p, draw_style(rng)), (other * 10**p, draw_style(rng))]
     rng.shuffle(numbers)
     if template.relation not in ("more", "less"):
         raise GeneratorError(f"template {template.id!r}: relation must be 'more' or 'less'")
@@ -153,7 +123,7 @@ def _magnitude(rng, template: Template) -> PairSpec:
         n, p = _mantissa(rng), rng.randint(2, 5)
         if 10**3 <= n * 10**p < 10**7:  # so that ten times as much is still one range up
             break
-    style = _style(rng)
+    style = draw_style(rng)
 
     def half(value: int) -> Half:
         return Half(
@@ -194,21 +164,6 @@ def _change_one_digit(rng, n: int) -> int:
     choices = [d for d in "0123456789" if d != digits[position] and (position or d != "0")]
     digits[position] = rng.choice(choices)
     return int("".join(digits))
-
-
-def _style(rng) -> Style:
-    script = rng.choices(["fa", "latin", "ar"], weights=[40, 35, 25])[0]
-    seps = {
-        "latin": ["", ","],
-        "fa": ["", ",", ARABIC_THOUSANDS],
-        "ar": ["", ARABIC_THOUSANDS, ","],
-    }
-    return Style(
-        script=script,
-        form=rng.choices(["full", "scaled"], weights=[60, 40])[0],
-        sep=rng.choice(seps[script]),
-        dec="." if script == "latin" else rng.choice([".", ARABIC_DECIMAL]),
-    )
 
 
 def _styles(styles: dict[str, Style]) -> dict[str, dict[str, str]]:
