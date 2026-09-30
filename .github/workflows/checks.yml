@@ -9,9 +9,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Windows: the development laptop. Ubuntu: what Colab runs on.
+        # Windows: the development laptop. Ubuntu + 3.13: what Colab runs on.
         os: [windows-latest, ubuntu-latest]
-        python: ["3.11", "3.12"]
+        python: ["3.11", "3.12", "3.13"]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
