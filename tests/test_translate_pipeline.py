@@ -4,7 +4,14 @@ import re
 import pytest
 
 from kodoom.schema import read_jsonl, write_jsonl
-from kodoom.translate.pipeline import Item, StubTranslator, cases, translate_case, translate_file
+from kodoom.translate.pipeline import (
+    Item,
+    StubTranslator,
+    cases,
+    pick_cases,
+    translate_case,
+    translate_file,
+)
 from kodoom.typed_decisions import case_records
 from tests.test_typed_decisions import make_row
 
@@ -240,3 +247,18 @@ def test_the_command_reports_failed_cases(tmp_path, capsys, monkeypatch):
     args = ["translate", "typed-decisions", "--profile", str(profile), "--translator", "stub"]
     assert cli.main([*args, "--split", "test"]) == 1
     assert "1 cases could not be translated; reasons in" in capsys.readouterr().out
+
+
+def test_balanced_selection_takes_cases_from_every_workflow():
+    def many(workflow, n):
+        return [
+            case_records(make_row(f"{workflow[:2]}-{i}", workflow, state=STATE)) for i in range(n)
+        ]
+
+    grouped = many("customer_service", 5) + many("invoice_processing", 5)
+    first = pick_cases(grouped, 4, balanced=False)
+    assert {c[0].extra["workflow"] for c in first} == {"customer_service"}
+    mixed = pick_cases(grouped, 4, balanced=True)
+    assert [c[0].source_id for c in mixed] == ["cu-0", "in-0", "cu-1", "in-1"]
+    assert len(pick_cases(grouped, None, balanced=True)) == 10
+    assert len(pick_cases(grouped, 99, balanced=True)) == 10

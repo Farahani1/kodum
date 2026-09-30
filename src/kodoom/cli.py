@@ -162,6 +162,9 @@ def _parser() -> argparse.ArgumentParser:
     )
     translate.add_argument("--split", choices=list(SPLITS), help="default: both")
     translate.add_argument("--limit", type=int, help="cases per split (default: all fetched)")
+    translate.add_argument(
+        "--balanced", action="store_true", help="with --limit, take cases from every workflow"
+    )
     translate.set_defaults(func=_translate)
 
     show = commands.add_parser(
@@ -379,7 +382,7 @@ def _translate(args: argparse.Namespace) -> int:
         if not source.exists():
             raise InspectError(f"{source} does not exist; run `kodoom fetch typed-decisions` first")
         out = base / "fa" / translator.name / f"{split}.jsonl"
-        stats = translate_file(source, out, translator, limit=args.limit)
+        stats = translate_file(source, out, translator, limit=args.limit, balanced=args.balanced)
         print(f"{out}: {stats['translated']} cases translated, {stats['skipped']} already done")
         failed += stats["with_findings"] + stats["failed"]
         if stats["with_findings"]:

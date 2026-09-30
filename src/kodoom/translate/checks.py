@@ -169,6 +169,32 @@ def repeated_phrase(text: str, times: int = 4) -> str | None:
     return None
 
 
+_LABEL = re.compile(r"^\s*([A-Za-z][A-Za-z \-]{0,30}?)\s*:")
+
+
+def check_option_labels(
+    source: Sequence[str], target: Sequence[str], where: str = ""
+) -> list[Finding]:
+    """Score levels start with a label ("Low: ...", "High: ..."); the labels of the
+    translation must exist and differ, or the levels stop being distinguishable.
+
+    Trial 6: a model turned «Low», «Moderate» and «High» into «سطح», «شدت» and «شدت».
+    """
+    if len(source) != len(target) or sum(bool(_LABEL.match(s)) for s in source) < 2:
+        return []
+    labels = []
+    for s, t in zip(source, target, strict=True):
+        if not _LABEL.match(s):
+            continue
+        head = re.split(r"[:\uff1a]", t, maxsplit=1)
+        labels.append(head[0].strip() if len(head) == 2 else "")
+    if "" in labels:
+        return [Finding("labels", where, "an option lost its label before the colon")]
+    if len(set(labels)) < len(labels):
+        return [Finding("labels", where, f"option labels are not distinct: {labels}")]
+    return []
+
+
 def check_state(workflow: str, source: str, target: str, keep: Sequence[str] = ()) -> list[Finding]:
     """Structure, kept fields and translated fields of a whole state."""
     if workflow not in RULES:

@@ -3,6 +3,7 @@ import json
 import pytest
 
 from kodoom.translate.checks import (
+    check_option_labels,
     check_state,
     check_text,
     foreign_letters,
@@ -148,3 +149,20 @@ def test_names_code_and_keep_terms_may_stay_in_english():
     assert untranslated_words(source, target, keep=("TLS",)) == []
     assert untranslated_words(source, "گواهی TLS", keep=()) == []  # TLS is upper case mid-sentence
     assert untranslated_words("Sent to alice@example.com", "به alice@example.com فرستاده شد") == []
+
+
+def test_score_level_labels_must_survive_and_differ():
+    source = [
+        "Benign: read-only actions.",
+        "Low: routine writes.",
+        "Moderate: irreversible actions.",
+    ]
+    good = ["بی\u200cخطر: فقط خواندنی.", "پایین: نوشتن روتین.", "متوسط: غیرقابل بازگشت."]
+    assert check_option_labels(source, good) == []
+    same = ["بی\u200cخطر: فقط خواندنی.", "شدت: نوشتن روتین.", "شدت: غیرقابل بازگشت."]
+    assert [f.check for f in check_option_labels(source, same, "risk.options")] == ["labels"]
+    assert "not distinct" in check_option_labels(source, same)[0].message
+    lost = ["بی\u200cخطر: فقط خواندنی.", "پایین: نوشتن روتین.", "غیرقابل بازگشت."]
+    assert "lost its label" in check_option_labels(source, lost)[0].message
+    # options without labels (choice questions) are not checked
+    assert check_option_labels(["Stop the agent now.", "Let it run."], ["x", "x"]) == []

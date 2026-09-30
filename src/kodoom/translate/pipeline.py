@@ -25,6 +25,7 @@ from kodoom.translate.checks import (
     _IDENTIFIER,
     _URL,
     Finding,
+    check_option_labels,
     check_state,
     check_text,
     protected_tokens,
@@ -158,6 +159,7 @@ def translate_case(
             own += check_text(o.text, text, f"{name}.option.{o.id}", glossary.keep)
             own += glossary.check(workflow, o.text, text, f"{name}.option.{o.id}")
         own += glossary.check(workflow, r.question_text, question, f"{name}.question")
+        own += check_option_labels([o.text for o in r.options], options, f"{name}.options")
         all_findings += own
         found = state_findings + own
         result.append(
@@ -189,12 +191,36 @@ def cases(records: Iterable[Record]) -> list[list[Record]]:
     return list(grouped.values())
 
 
+def pick_cases(
+    grouped: Sequence[list[Record]], limit: int | None, balanced: bool
+) -> list[list[Record]]:
+    """The first ``limit`` cases; with ``balanced`` they are taken in turn from each
+    workflow (a file lists one workflow after the other, so the plain first N would
+    all come from the first workflow)."""
+    if limit is None:
+        return list(grouped)
+    if not balanced:
+        return list(grouped[:limit])
+    by_workflow: dict[str, list[list[Record]]] = {}
+    for case in grouped:
+        by_workflow.setdefault(case[0].extra["workflow"], []).append(case)
+    picked: list[list[Record]] = []
+    depth = 0
+    while len(picked) < limit and any(depth < len(v) for v in by_workflow.values()):
+        for workflow_cases in by_workflow.values():
+            if depth < len(workflow_cases) and len(picked) < limit:
+                picked.append(workflow_cases[depth])
+        depth += 1
+    return picked
+
+
 def translate_file(
     source: str | Path,
     out: str | Path,
     translator: Translator,
     *,
     limit: int | None = None,
+    balanced: bool = False,
     progress: Callable[[str], None] = lambda _: None,
 ) -> dict[str, int]:
     """Translate every case of ``source`` into ``out``, one case at a time.
@@ -208,9 +234,7 @@ def translate_file(
     out = Path(out)
     done = {r.source_id for r in read_jsonl(out)} if out.exists() else set()
     stats = {"translated": 0, "skipped": 0, "with_findings": 0, "failed": 0}
-    for n, case in enumerate(cases(read_jsonl(source))):
-        if limit is not None and n >= limit:
-            break
+    for case in pick_cases(cases(read_jsonl(source)), limit, balanced):
         if case[0].source_id in done:
             stats["skipped"] += 1
             continue
