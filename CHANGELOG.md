@@ -11,7 +11,7 @@ table below or adds a user-visible command, module or decision.
 
 ## Status against the plan
 
-Last updated: Sep 30, 2026, at commit `aa1ab63`. Checks: `ruff check`, `ruff format
+Last updated: Sep 30, 2026, at commit `3efd504`. Checks: `ruff check`, `ruff format
 --check` and `pytest` (547 tests) pass; CI runs Windows and Ubuntu on Python 3.11 to
 3.13.
 
