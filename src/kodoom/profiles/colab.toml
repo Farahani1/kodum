@@ -1,0 +1,10 @@
+# Colab T4, the real run: full data, real models, outputs on Drive
+# so a dropped session can resume.
+
+[run]
+seed = 1234
+runs_dir = "/content/drive/MyDrive/kodoom/runs"
+
+[compute]
+device = "cuda"
+precision = "fp16"

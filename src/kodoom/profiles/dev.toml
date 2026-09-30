@@ -1,0 +1,14 @@
+# Laptop development: proves the whole pipeline runs, error-free.
+# CPU only (the MX110 is ignored), fp32, tiny data. Budget: under 5 minutes.
+
+[run]
+seed = 1234
+runs_dir = "runs"
+
+[compute]
+device = "cpu"
+precision = "fp32"
+threads = 4  # i3-1005G1: 2 cores, 4 threads
+
+[data]
+max_cases_per_source = 20

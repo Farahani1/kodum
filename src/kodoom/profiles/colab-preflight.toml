@@ -1,0 +1,14 @@
+# Colab T4, real models, a small slice: catches T4-only failures
+# (fp16 overflow, GPU memory, CUDA kernels) in about 5 minutes,
+# before a full session is spent.
+
+[run]
+seed = 1234
+runs_dir = "/content/drive/MyDrive/kodoom/runs/preflight"
+
+[compute]
+device = "cuda"
+precision = "fp16"
+
+[data]
+max_cases_per_source = 200
