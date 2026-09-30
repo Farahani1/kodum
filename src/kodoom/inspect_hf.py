@@ -54,6 +54,17 @@ def parse_json_cells(row: dict[str, Any]) -> dict[str, Any]:
     return parsed
 
 
+def select_jsonl(files: Iterable[str], split: str) -> list[str]:
+    """JSON-lines files for ``split``: those named after it, or the only one there is."""
+    jsonl = sorted(n for n in files if n.lower().endswith((".jsonl", ".ndjson")))
+    named = [n for n in jsonl if split.lower() in Path(n).stem.lower()]
+    if named:
+        return named
+    if len(jsonl) == 1:
+        return jsonl
+    raise InspectError(f"no JSON-lines file for split {split!r}")
+
+
 def format_report(
     repo: str,
     sha: str | None,
@@ -65,6 +76,8 @@ def format_report(
     total_rows: int,
     rows: Sequence[dict[str, Any]],
     max_chars: int = 6000,
+    card: str | None = None,
+    schema_title: str = "columns:",
 ) -> str:
     lines = [
         f"dataset : {repo}",
@@ -75,7 +88,7 @@ def format_report(
         "files:",
         *(f"  {size if size is not None else '?':>10}  {name}" for name, size in files),
         "",
-        "columns:",
+        schema_title,
         *(f"  {line}" for line in schema.splitlines()),
     ]
     for n, row in enumerate(rows, start=1):
@@ -83,6 +96,8 @@ def format_report(
         if len(text) > max_chars:
             text = text[:max_chars] + f"\n... [{len(text) - max_chars} more characters cut]"
         lines += ["", f"row {n} (JSON strings parsed):", text]
+    if card:
+        lines += ["", "dataset card (README.md, start):", card]
     return "\n".join(lines)
 
 
@@ -94,13 +109,12 @@ def inspect_dataset(
     split: str = "test",
     rows: int = 2,
     max_chars: int = 6000,
+    card_lines: int = 0,
     api: Any = None,
     download: Callable[..., str] | None = None,
 ) -> str:
     """Fetch and describe ``repo``. ``api`` and ``download`` are replaceable for tests."""
     try:
-        import pyarrow.parquet as pq
-
         if api is None or download is None:
             from huggingface_hub import HfApi, hf_hub_download
 
@@ -118,33 +132,59 @@ def inspect_dataset(
     if isinstance(license_, list):
         license_ = ", ".join(map(str, license_))
 
+    def fetch(name: str) -> Path:
+        return Path(download(repo_id=repo, filename=name, repo_type="dataset", revision=info.sha))
+
     names = [name for name, _ in files]
     try:
-        chosen = select_parquet(names, split, config)
-    except InspectError as e:  # show what is there, so the reader can pick a file by hand
-        listing = "\n".join(f"  {n}" for n in names[:40])
-        raise InspectError(f"{e}\nfiles in {repo} (first 40):\n{listing}") from e
-    match = PARQUET.match(chosen[0])
-    tables = []
-    for name in chosen:
-        path = download(repo_id=repo, filename=name, repo_type="dataset", revision=info.sha)
-        tables.append(pq.read_table(Path(path)))
-    table = tables[0] if len(tables) == 1 else _concat(tables)
+        chosen, kind = select_parquet(names, split, config), "parquet"
+    except InspectError as parquet_error:
+        try:
+            chosen, kind = select_jsonl(names, split), "jsonl"
+        except InspectError:  # show what is there, so the reader can pick a file by hand
+            listing = "\n".join(f"  {n}" for n in names[:40])
+            raise InspectError(f"{parquet_error}\nfiles in {repo} (first 40):\n{listing}") from None
+
+    readme = None
+    if card_lines > 0 and "README.md" in names:
+        text = fetch("README.md").read_text(encoding="utf-8", errors="replace")
+        readme = "\n".join(text.splitlines()[:card_lines])
+
+    if kind == "parquet":
+        table = _read_parquet([fetch(name) for name in chosen])
+        match = PARQUET.match(chosen[0])
+        config_name, schema, total = match["config"], str(table.schema), table.num_rows
+        sample, title = table.slice(0, rows).to_pylist(), "columns:"
+    else:
+        total, sample = _read_jsonl([fetch(name) for name in chosen], rows)
+        config_name, title = None, "keys of the first row:"
+        schema = "\n".join(
+            f"{k}: {type(v).__name__}" for k, v in (sample[0] if sample else {}).items()
+        )
     return format_report(
-        repo,
-        info.sha,
-        license_,
-        files,
-        match["config"],
-        split,
-        str(table.schema),
-        table.num_rows,
-        table.slice(0, rows).to_pylist(),
-        max_chars,
-    )
+        repo, info.sha, license_, files, config_name, split, schema, total, sample,
+        max_chars, readme, title,
+    )  # fmt: skip
 
 
-def _concat(tables):
-    import pyarrow as pa
+def _read_parquet(paths: Sequence[Path]):
+    try:
+        import pyarrow as pa
+        import pyarrow.parquet as pq
+    except ImportError as e:
+        raise InspectError(f"{e.name} is not installed; on Colab run: pip install pyarrow") from e
+    tables = [pq.read_table(p) for p in paths]
+    return tables[0] if len(tables) == 1 else pa.concat_tables(tables)
 
-    return pa.concat_tables(tables)
+
+def _read_jsonl(paths: Sequence[Path], rows: int) -> tuple[int, list[dict[str, Any]]]:
+    total, sample = 0, []
+    for path in paths:
+        with path.open(encoding="utf-8") as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                total += 1
+                if len(sample) < rows:
+                    sample.append(json.loads(line))
+    return total, sample

@@ -12,6 +12,7 @@ from kodoom.inspect_hf import (  # noqa: E402
     format_report,
     inspect_dataset,
     parse_json_cells,
+    select_jsonl,
     select_parquet,
 )
 
@@ -139,3 +140,50 @@ def test_a_dataset_without_parquet_lists_its_files(fake_hub):
         InspectError, match=r"no parquet file for split 'train'[\s\S]*cfg/test-00000"
     ):
         inspect_dataset("me/data", split="train", api=api, download=download)
+
+
+@pytest.fixture
+def fake_jsonl_hub(tmp_path):
+    lines = [
+        json.dumps({"id": i, "text": f"مثال {i}", "n": i}, ensure_ascii=False) for i in range(7)
+    ]
+    (tmp_path / "data.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    (tmp_path / "card.md").write_text("# Title\nline 2\nline 3\nline 4\n", encoding="utf-8")
+    siblings = [
+        SimpleNamespace(rfilename="README.md", size=10),
+        SimpleNamespace(rfilename="synthetic_train.jsonl", size=99),
+    ]
+    info = SimpleNamespace(sha="cafe", siblings=siblings, card_data={"license": "mit"})
+
+    class Api:
+        def dataset_info(self, repo, revision=None, files_metadata=False):
+            return info
+
+    def download(**kwargs):
+        return str(tmp_path / ("card.md" if kwargs["filename"] == "README.md" else "data.jsonl"))
+
+    return Api(), download
+
+
+def test_a_jsonl_dataset_is_described_when_there_is_no_parquet(fake_jsonl_hub):
+    api, download = fake_jsonl_hub
+    text = inspect_dataset("me/data", split="train", rows=2, api=api, download=download)
+    assert "rows: 7" in text and "keys of the first row:" in text
+    assert "id: int" in text and "text: str" in text
+    assert "مثال 0" in text and "مثال 1" in text and "مثال 2" not in text
+    assert "dataset card" not in text  # off unless asked for
+
+
+def test_the_card_can_be_printed_and_zero_rows_are_allowed(fake_jsonl_hub):
+    api, download = fake_jsonl_hub
+    text = inspect_dataset(
+        "me/data", split="train", rows=0, card_lines=2, api=api, download=download
+    )
+    assert "# Title\nline 2" in text and "line 3" not in text and "row 1" not in text
+
+
+def test_select_jsonl():
+    assert select_jsonl(["a.jsonl", "b_train.jsonl"], "train") == ["b_train.jsonl"]
+    assert select_jsonl(["only.jsonl", "README.md"], "test") == ["only.jsonl"]
+    with pytest.raises(InspectError, match="no JSON-lines file"):
+        select_jsonl(["a.jsonl", "b.jsonl"], "test")

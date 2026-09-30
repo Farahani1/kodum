@@ -111,6 +111,9 @@ def _parser() -> argparse.ArgumentParser:
     )
     inspect.add_argument("--split", default="test")
     inspect.add_argument("--rows", type=int, default=2, help="rows to print in full")
+    inspect.add_argument(
+        "--card-lines", type=int, default=0, help="also print the card's first N lines"
+    )
     inspect.add_argument("--max-chars", type=int, default=6000, help="cut a printed row after this")
     inspect.add_argument("--out", type=Path, help="also write the report to this file")
     inspect.set_defaults(func=_inspect)
@@ -226,6 +229,7 @@ def _inspect(args: argparse.Namespace) -> int:
         split=args.split,
         rows=args.rows,
         max_chars=args.max_chars,
+        card_lines=args.card_lines,
     )
     print(report)
     if args.out:
