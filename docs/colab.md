@@ -7,7 +7,7 @@ The laptop is where code is written and proven (`dev` profile). Colab only runs 
 1. **Open the notebook from GitHub.** In Colab: File → Open notebook → GitHub, then pick `notebooks/colab.ipynb` on your branch. Or open this link directly:
    `https://colab.research.google.com/github/Farahani1/kodum/blob/claude/sweet-franklin-pm0tdm/notebooks/colab.ipynb`
    (replace the branch name if you work on another one). Keep it in Drive with File → Save a copy in Drive if you want it in your Colab list.
-2. **Private repository only:** create a GitHub fine-grained token with read access to this repository, then in Colab open 🔑 Secrets (left sidebar), add `GITHUB_TOKEN` with the token as its value, and turn on notebook access.
+2. **Private repository only:** create a GitHub fine-grained token with read access to this repository, then in Colab open 🔑 Secrets (left sidebar), add a secret named `github-kodoom` (or whatever `TOKEN_SECRET` says in the notebook's Settings cell) with the token as its value, and turn on notebook access.
 3. **Check free space on Drive:** the free plan has 15 GB shared with Gmail and Photos. `kodoom check` warns under 8 GB free; clear space before the main training runs (plan: Storage budget).
 
 ## Every session
@@ -61,4 +61,4 @@ How a checkpoint is saved, so a dead session never leaves a broken one: it is wr
 | `[warn] free space: ... GB free` | Under 8 GB on Drive: delete old runs (`kodoom runs` shows sizes) or push finished models to Hugging Face and delete them. |
 | `NoSpaceError ... the previous checkpoint is intact` | Free space on Drive, then run the same step again; it resumes. |
 | `run ... already exists with a different config` | You changed a setting. Revert it to resume, or use a new run id. |
-| The *Get the code* cell fails with an authentication error | The repository is private: add the `GITHUB_TOKEN` secret (one-time setup, step 2). |
+| The *Get the code* cell fails with an authentication error | The repository is private: add the token secret named in `TOKEN_SECRET` (one-time setup, step 2). |
