@@ -26,6 +26,10 @@ The `kodoom check` cell stops the notebook if Drive is not mounted, no GPU is at
 
 Edits made directly on Colab are discarded by the next update, on purpose: the code on Colab must always be a commit that already ran on the laptop. The commit is recorded in every run's `run.json` (with `-dirty` if it was not clean).
 
+## Translation trial
+
+The *Translation trial* cells run `kodoom translate typed-decisions --translator NAME --split test --limit 10` for TranslateGemma 4B and Qwen3-8B (4-bit), then `kodoom translations`, which prints how many cases the automatic checks flagged and shows English next to Persian for the first cases. Models download into `/content/hf-cache` (never Drive, see the storage budget); results go to `data_dir/typed-decisions/fa/NAME` on Drive. The command resumes: run it again after a dropped session and finished cases are skipped. It exits with status 1 when some case has check findings; that is information, not a crash. The model ids and the TranslateGemma message format have not been run yet, so the first trial may fail: copy the error back.
+
 ## Fetching typed-decisions and reading its fields
 
 The *Fetch typed-decisions* cells run `kodoom fetch typed-decisions`, which downloads the English cases at the pinned commit and writes one record per question to `data_dir/typed-decisions/en` on your Drive (with a manifest and checksums), and `kodoom fields`, which reports every text field of the case state (coverage, distinct values, length, samples). The translate/keep rules are decided from that output, so copy it back to the assistant. Nothing is pushed anywhere.
