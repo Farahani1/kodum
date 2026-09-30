@@ -133,13 +133,21 @@ def _pair(items: Sequence[Item], replies: Sequence[str]) -> list[str]:
 
 
 def load_generator(
-    model_id: str, *, four_bit: bool = False, batch_size: int = 8, max_new_tokens: int = 768
+    model_id: str,
+    *,
+    four_bit: bool = False,
+    dtype: str = "float16",
+    batch_size: int = 8,
+    max_new_tokens: int = 768,
 ) -> Generate:
     """Load a model and return a function that answers a batch of conversations.
 
     Greedy decoding, so a run is repeatable. Conversations are sorted by length to keep
     padding small and answered in the original order. ``four_bit`` needs bitsandbytes
-    (CUDA only, the ``colab`` extra); it is how a 12B or 8B model fits a T4.
+    (CUDA only, the ``colab`` extra); it is how a 12B or 8B model fits a T4. ``dtype`` is
+    the precision of the activations (and of the layers that are not quantized): Gemma
+    models overflow in float16 and then answer with nothing, which is detected and reported;
+    bfloat16 or float32 avoid it.
     """
     try:
         import torch
@@ -157,10 +165,9 @@ def load_generator(
         options["quantization_config"] = BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=torch.float16,  # the T4 has no bf16
+            bnb_4bit_compute_dtype=getattr(torch, dtype),
         )
-    else:
-        options["torch_dtype"] = torch.float16
+    options["dtype"] = getattr(torch, dtype)
     model = AutoModelForCausalLM.from_pretrained(model_id, **options)
     model.eval()
 
@@ -182,9 +189,22 @@ def load_generator(
                 add_special_tokens=False,
             ).to(model.device)
             with torch.no_grad():
-                out = model.generate(**batch, max_new_tokens=max_new_tokens, do_sample=False)
+                out = model.generate(
+                    **batch,
+                    max_new_tokens=max_new_tokens,
+                    do_sample=False,
+                    return_dict_in_generate=True,
+                    output_scores=True,
+                )
+            if not torch.isfinite(out.scores[0]).all():
+                raise RuntimeError(
+                    f"{model_id} produced NaN or infinite scores with dtype {dtype}: the "
+                    "activations overflowed (known for Gemma in float16 on a T4), so every "
+                    "answer would be empty. Use another precision, e.g. the -bf16 or "
+                    "-4bit-fp32 variants of the translator."
+                )
             texts = tokenizer.batch_decode(
-                out[:, batch["input_ids"].shape[1] :], skip_special_tokens=True
+                out.sequences[:, batch["input_ids"].shape[1] :], skip_special_tokens=True
             )
             for i, text in zip(ids, texts, strict=True):
                 replies[i] = text
@@ -201,6 +221,17 @@ QWEN3_8B = "Qwen/Qwen3-8B"
 
 def translategemma_4b() -> TranslateGemmaTranslator:
     return TranslateGemmaTranslator("translategemma-4b", load_generator(TRANSLATEGEMMA_4B))
+
+
+def translategemma_4b_bf16() -> TranslateGemmaTranslator:
+    generate = load_generator(TRANSLATEGEMMA_4B, dtype="bfloat16")
+    return TranslateGemmaTranslator("translategemma-4b-bf16", generate)
+
+
+def translategemma_4b_4bit_fp32() -> TranslateGemmaTranslator:
+    """4-bit weights with float32 activations: fits the T4 and cannot overflow."""
+    generate = load_generator(TRANSLATEGEMMA_4B, four_bit=True, dtype="float32")
+    return TranslateGemmaTranslator("translategemma-4b-4bit-fp32", generate)
 
 
 def translategemma_12b_4bit() -> TranslateGemmaTranslator:

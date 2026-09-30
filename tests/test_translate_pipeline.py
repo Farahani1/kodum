@@ -97,10 +97,10 @@ def test_translate_file_resumes_and_honours_limit(tmp_path):
     src, out = tmp_path / "en.jsonl", tmp_path / "fa" / "train.jsonl"
     write_jsonl(src, [r for cid in ("a", "b", "c") for r in case(cid)])
     stats = translate_file(src, out, StubTranslator(), limit=2)
-    assert stats == {"translated": 2, "skipped": 0, "with_findings": 0}
+    assert stats == {"translated": 2, "skipped": 0, "with_findings": 0, "failed": 0}
     assert len(list(read_jsonl(out))) == 6
     stats = translate_file(src, out, StubTranslator())
-    assert stats == {"translated": 1, "skipped": 2, "with_findings": 0}
+    assert stats == {"translated": 1, "skipped": 2, "with_findings": 0, "failed": 0}
     assert [c[0].source_id for c in cases(read_jsonl(out))] == ["a", "b", "c"]
 
 
@@ -198,3 +198,45 @@ def test_translations_command_reports_counts_and_side_by_side(tmp_path, capsys):
     assert "== a  (customer_service)" in out and "EN: Hi, order A-68034" in out
     assert "== b" not in out  # --show 1
     assert cli.main(["translations", "typed-decisions", *base[:2], "--translator", "nope"]) != 0
+
+
+class EmptyQuestions:
+    """Answers the state fine and every other text with nothing, as a broken model does."""
+
+    name = "empty"
+
+    def translate(self, items):
+        good = StubTranslator().translate(items)
+        return [g if i.kind == "state" else "" for g, i in zip(good, items, strict=True)]
+
+
+def test_an_empty_translation_is_a_clear_error_naming_the_text():
+    from kodoom.translate.pipeline import TranslationError
+
+    with pytest.raises(TranslationError, match="empty text for the question 'Where should it go"):
+        translate_case(case(), EmptyQuestions())
+
+
+def test_a_case_that_cannot_be_translated_is_logged_and_skipped(tmp_path):
+    src, out = tmp_path / "en.jsonl", tmp_path / "fa" / "test.jsonl"
+    write_jsonl(src, case("a") + case("b"))
+    stats = translate_file(src, out, EmptyQuestions())
+    assert stats == {"translated": 0, "skipped": 0, "with_findings": 0, "failed": 2}
+    assert not out.exists()
+    lines = (tmp_path / "fa" / "test.failures.jsonl").read_text(encoding="utf-8").splitlines()
+    assert [json.loads(line)["source_id"] for line in lines] == ["a", "b"]
+    assert "returned an empty text" in json.loads(lines[0])["error"]
+    # the same cases are tried again on the next run (nothing was recorded as done)
+    assert translate_file(src, out, StubTranslator())["translated"] == 2
+
+
+def test_the_command_reports_failed_cases(tmp_path, capsys, monkeypatch):
+    import kodoom.cli as cli
+    import kodoom.translate.pipeline as pipeline
+
+    monkeypatch.setitem(pipeline.TRANSLATORS, "stub", EmptyQuestions)
+    profile = write_profile(tmp_path)
+    write_jsonl(tmp_path / "data" / "typed-decisions" / "en" / "test.jsonl", case("a"))
+    args = ["translate", "typed-decisions", "--profile", str(profile), "--translator", "stub"]
+    assert cli.main([*args, "--split", "test"]) == 1
+    assert "1 cases could not be translated; reasons in" in capsys.readouterr().out

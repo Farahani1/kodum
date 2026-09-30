@@ -103,3 +103,11 @@ def test_model_translators_load_lazily_and_say_what_is_missing(monkeypatch):
 def test_the_registered_model_ids_are_named_constants():
     assert hf.TRANSLATEGEMMA_4B.startswith("google/translategemma")
     assert hf.QWEN3_8B == "Qwen/Qwen3-8B"
+
+
+def test_every_registered_model_translator_has_a_factory():
+    from kodoom.translate.pipeline import MODEL_TRANSLATORS
+
+    for name in MODEL_TRANSLATORS:
+        assert callable(translator_factory(name)), name
+    assert {"translategemma-4b-bf16", "translategemma-4b-4bit-fp32"} <= set(MODEL_TRANSLATORS)

@@ -381,9 +381,12 @@ def _translate(args: argparse.Namespace) -> int:
         out = base / "fa" / translator.name / f"{split}.jsonl"
         stats = translate_file(source, out, translator, limit=args.limit)
         print(f"{out}: {stats['translated']} cases translated, {stats['skipped']} already done")
-        failed += stats["with_findings"]
+        failed += stats["with_findings"] + stats["failed"]
         if stats["with_findings"]:
             print(f"  {stats['with_findings']} cases have check findings (checks_passed=false)")
+        if stats["failed"]:
+            log = out.with_name(out.stem + ".failures.jsonl")
+            print(f"  {stats['failed']} cases could not be translated; reasons in {log}")
     return 0 if not failed else 1
 
 
