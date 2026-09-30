@@ -3,6 +3,7 @@
 An open, Persian-capable decision model based on Jev's interface: choice, score and yes/no questions answered with calibrated probabilities.
 
 The big picture of the whole project is in [docs/project-plan.md](docs/project-plan.md).
+Ideas beyond the current plan are collected in [docs/future-work.md](docs/future-work.md).
 
 ## Setup (laptop)
 
