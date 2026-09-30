@@ -216,3 +216,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# kodoom: datasets, model weights and run outputs never go into git
+/data/
+/runs/
+/models/
+*.safetensors
+*.bin
+*.pt
