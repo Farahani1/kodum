@@ -1,6 +1,6 @@
 # Persian Typed-Decision Model: Project Plan
 
-Version 3 · Sep 30, 2026 · @Shah
+Version 4 · Sep 30, 2026 · @Shah
 
 ## Overview
 
@@ -223,7 +223,7 @@ Not chosen: ParsBERT and XLM-R (superseded by mmBERT), and anything 2B or larger
 
 - Random and majority-class.
 - Untrained mmBERT-base with a fresh head (expected near chance).
-- [Laya](https://github.com/NandhaKishorM/laya)-multilingual, zero-shot: the open reference.
+- [Laya](https://github.com/NandhaKishorM/laya)-multilingual, zero-shot: the open reference. If it does not load or run on the laptop or a T4, prompted Qwen3.5-0.8B takes its place as the reference, including at the decision gate (2.4).
 - Qwen3.5-0.8B prompted, no training.
 - Jev through its API, only if access works. Otherwise cite published third-party numbers and label them so.
 
@@ -237,6 +237,9 @@ Not chosen: ParsBERT and XLM-R (superseded by mmBERT), and anything 2B or larger
 | 3 | mmBERT-base | Mix without translated data | Ablation: did translation help or hurt? |
 | 4 | Qwen3.5-0.8B with LoRA (or Qwen3-0.6B) | Full mix | Challenger, head-to-head with run 2 |
 | 5 (optional) | Best of runs 2 and 4 | Mix without the English slice | Does English data help Persian? |
+| 6 | Laya-multilingual as the starting point (warm start) | Full mix | Does starting from a decision model beat starting from plain mmBERT-base? Compare with run 2. Confirm Laya's license on its repo first. |
+
+Which runs actually happen depends on the decision gate (2.4).
 
 **Settings on the Colab T4**
 
@@ -260,6 +263,44 @@ Keep enough that any number in the final report can be recomputed without retrai
 - **Predictions, not just metrics:** for every evaluation, save per item the ID, gold distribution, predicted distribution, temperature used and latency. Every later metric, chart and error analysis comes from these files, and they can be published as raw results.
 - **Error log:** after each main run, read 50 wrong answers and tag them: translation artifact, ambiguous options, truncated context, number or date reasoning, colloquial text, label noise.
 - **Artifacts kept:** best checkpoint, its tokenizer, its temperature value, the exact training-mix version, and a draft model card.
+
+### 2.4 Decision gate: does Persian need a new model?
+
+After the M2 baselines and before M3's training runs, one planned decision: does Persian need a new decision model, or does it mostly need data and a benchmark? Every outcome still publishes something; the gate only decides where the time goes and what the release leads with.
+
+**Reference model.** Laya-multilingual, zero-shot. It shares mmBERT-base with the main model, so its weaknesses in Persian are this model's reason to exist. If it cannot be run, prompted Qwen3.5-0.8B is the reference.
+
+**Three signals**, all measured with no training:
+
+1. **Language gap.** The reference's accuracy on the English typed-decisions test minus its accuracy on the same 2,000 decisions in Persian. Same items in both languages, so the difference is the cost of Persian alone.
+2. **Held-out native tasks.** The reference on ParsiNLU and Belebele-fa, against the random and majority baselines.
+3. **Persian skills.** The reference on the code-labeled test templates (Jalali dates, digit forms, Toman vs Rial, Iranian formats).
+
+Calibration in Persian and the STT transcripts are measured and reported too, but they do not decide the outcome.
+
+**Thresholds, written down before any baseline runs.** Once the numbers are visible it is easy to argue for the outcome already wanted. Unlike the success criteria in 3.5, which are set after the baselines, these decide how time is spent, so they are fixed first. The values below are placeholders to replace with the project owner's own before M2 starts.
+
+| Signal | Large gap (counts toward A) | Small gap (counts toward C) |
+| --- | --- | --- |
+| Language gap | ≥ _8_ points | < _3_ points |
+| Held-out native tasks | Within _5_ points of majority-class on most tasks | Clearly above chance on every task |
+| Persian skills | Below _60_% accuracy | At or above _80_% accuracy |
+
+**Rules**
+
+- A signal counts only if its 95% confidence interval clears the threshold, using the paired bootstrap from 3.3. With 2,000 decisions, a 2-point gap can be noise.
+- The skills signal counts on its own: a large skills gap alone means outcome B at least, because the skills data alone justifies a small model or a Laya fine-tune.
+- A result on a threshold: spend one session on run 1 (mmBERT-small, full mix) as a probe. Its gain over its own untrained baseline shows whether training pays off.
+
+**Outcomes**
+
+| Outcome | What the baselines show | What M3 does | What the release leads with |
+| --- | --- | --- | --- |
+| **A. Large gap** | Large language gap, weak held-out scores, skills near chance | The full run plan (runs 0–6) | The model, with the dataset as evidence |
+| **B. Middle** | A moderate gap, or a large gap in only some signals (often the skills) | Runs 0–3 and 6; drop the challenger (4) and run 5 | The dataset and the model together, framed around where the gains are |
+| **C. Small gap** | The reference loses little in Persian and does reasonably on held-out tasks | At most a light Persian fine-tune of Laya-multilingual (run 6), mostly on the skills data | typed-decisions-fa, the Persian benchmark, the skills data, and a report comparing open decision models on Persian |
+
+Outcome C is not a failure: a report on how well open decision models handle Persian is useful to every model author in this space, and it still ships a model.
 
 ## Part 3 — Testing and evaluation
 
@@ -303,7 +344,7 @@ The model is judged on Persian it never trained on, on how honest its confidence
 
 ### 3.5 Success criteria
 
-Set exact thresholds after the baselines and before runs 1–4, so results can't move the goalposts.
+Set exact thresholds after the baselines and before runs 1–4, so results can't move the goalposts. (The decision gate's thresholds in 2.4 are different: they are fixed before the baselines.)
 
 - [ ] Fine-tuned mmBERT-base beats Laya-multilingual on held-out native Persian tasks, outside the confidence interval.
 - [ ] ECE after temperature scaling is lower than every baseline's.
@@ -317,6 +358,12 @@ Set exact thresholds after the baselines and before runs 1–4, so results can't
 - An evaluation harness that reads the same request and response format as the community benchmarks ([typed-decision-bench](https://github.com/kyr0/typed-decision-bench), [open-system-one](https://github.com/zhlei07/open-system-one)), so others can run their models on the Persian sets.
 - Model card: training data with licenses, intended use, known limits, and the translation error rate from Part 1.
 
+**Making adoption easy.** For downloads, easy use matters more than a few accuracy points.
+
+- **Recalibration recipe.** A documented step, with a script, that fits a new temperature on 100–300 of a user's own labels. Temperature scaling already exists from 2.2; this makes it usable on someone else's data, where the shipped calibration will not hold. The model card says plainly that the top answer transfers better than the probability.
+- **CPU-friendly export.** An exported model (for example ONNX, optionally int8) with the latency measured on it, so the CPU latency in 3.2 is reproducible by users.
+- **Community request/response format.** The evaluation harness above already reads it; a small adapter lets the model answer in the same format.
+
 ## Failure modes
 
 The likeliest failure is a classifier in disguise; the costliest are silent label errors from translation and leakage between splits. Checks already in Parts 1–3 catch all three early.
@@ -327,6 +374,7 @@ The likeliest failure is a classifier in disguise; the costliest are silent labe
 | Free Colab GPU unavailable, capped, or sessions drop | High | Medium | Runs cut off; no GPU assigned | Runs sized to one session, checkpoints on Drive, resumable training; Kaggle notebooks as a backup if reachable |
 | Label ceiling: typed-decisions labels come from an unnamed \~4B teacher model | High | Medium | Scores plateau; Laya reports a teacher self-agreement ceiling of about 0.735 | Report results against the ceiling; weigh human-labeled native sets more |
 | Scope creep on a solo side project | High | Medium | A milestone slips twice | Each milestone is publishable alone; M1 by itself is a valid finish |
+| Existing open models already handle Persian well, so a new model adds little | Medium | Medium | Small language gap and reasonable held-out scores in the M2 baselines | Decision gate (2.4): lead with the dataset, benchmark and skills data; train little |
 | Jev API not reachable | High | Low | Waitlist or payment fails | Nothing depends on it; cite published third-party numbers, labeled as such |
 | Translation changes meaning, so gold labels become silently wrong | Medium | High | Meaning-check flags; errors in the review sample | Automatic checks, checker model, human sample, published error rate, bad cases dropped |
 | Leakage between splits (a case or its translation on both sides) | Medium | High | Test scores far above baselines, too good to be true | Split by source\_id across languages, deduplicate, freeze test sets before training |
@@ -348,6 +396,11 @@ Likelihood and impact are judgment calls for a solo project on free Colab; revis
 &#91;embedded content: milestones · 4 phases, 3 gates\]
 
 Stopping at any gate still leaves something published; M1 alone is a complete, useful result.
+
+Changes since the milestone diagram was drawn (the diagram itself still needs updating):
+
+- **Gate 2** now also applies the decision gate (2.4): its thresholds are written down before the baselines run, and its outcome (A, B or C) is recorded.
+- **M3's scope depends on the gate outcome**: the full run plan, a reduced one, or a light fine-tune of Laya-multilingual.
 
 ## References
 
@@ -381,5 +434,6 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
+| 4 | Sep 30, 2026 | Added the decision gate after the M2 baselines (2.4): three signals, thresholds fixed before the baselines (placeholders for now), outcomes A/B/C deciding M3's scope. Added run 6 (Laya-multilingual warm start), a fallback reference if Laya cannot run, adoption items in 3.6 (recalibration recipe, CPU export, request/response adapter), a failure mode, and notes on Gate 2 and M3. Ideas outside this plan moved to `docs/future-work.md`. |
 | 3 | Sep 30, 2026 | Added "Environments": laptop development separated from Colab runs, with `dev`, `colab-preflight` and `colab` profiles, tiny random models, a 5-minute smoke run and the laptop's limits. Added the laptop to Constraints, a principle, and a failure mode. |
 | 2 | Sep 30, 2026 | Plan as first added to the repository. |
