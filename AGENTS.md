@@ -43,10 +43,11 @@ Before committing, run the fast checks (below) and commit only when they pass. I
 
 ## Where things are
 
-- `src/kodoom/`: the package. `config.py` + `profiles/` (run profiles), `schema.py` (the record and JSONL I/O), `sources.py` (source registry and license/split rules), `normalize.py` (the one Persian normalizer), `cli.py` (the `kodoom` command).
+- `src/kodoom/`: the package. `config.py` + `profiles/` (run profiles), `schema.py` (the record and JSONL I/O), `sources.py` (source registry and license/split rules), `normalize.py` (the one Persian normalizer), `runs.py` (run directories: logs, checkpoints, resume), `check.py` (`kodoom check`), `cli.py` (the `kodoom` command).
+- `notebooks/colab.ipynb`: the only notebook; thin, tested by `tests/test_notebook.py`. `docs/colab.md` explains the Colab workflow.
 - `tests/`: one test file per module. New code comes with tests in the same commit.
 - `docs/project-plan.md`: the plan.
-- Reuse these instead of re-implementing them: build records with `kodoom.schema.Record`, check them with `kodoom.sources.check_record`, normalize with `kodoom.normalize.normalize`, write with `write_jsonl` / `append_jsonl` (the latter for resumable steps).
+- Reuse these instead of re-implementing them: build records with `kodoom.schema.Record`, check them with `kodoom.sources.check_record`, normalize with `kodoom.normalize.normalize`, write with `write_jsonl` / `append_jsonl` (the latter for resumable steps). Every training or long-running step opens a `kodoom.runs.Run` and saves through `save_latest` / `save_best`, never by writing checkpoints to Drive directly, so resume and the storage budget hold.
 - Write invisible characters (ZWNJ, RLM, NBSP) as `\u` escapes in source; a test enforces it.
 
 ## Development and Colab are separate

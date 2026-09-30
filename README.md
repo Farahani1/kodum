@@ -25,7 +25,13 @@ Every command that depends on the environment takes an explicit profile: `dev` (
 ```
 kodoom info --profile dev                 # show the resolved settings
 kodoom validate data/some-records.jsonl   # check records against the schema and source rules
+kodoom check --profile dev                # is this machine ready for the profile?
+kodoom runs --profile dev                 # runs on disk and what can be resumed
 ```
+
+## Colab
+
+Open [`notebooks/colab.ipynb`](notebooks/colab.ipynb) in Colab and Run all. Updating, resuming after a dead session and what goes on Drive: [docs/colab.md](docs/colab.md).
 
 ## Layout
 
@@ -35,7 +41,10 @@ kodoom validate data/some-records.jsonl   # check records against the schema and
 | `src/kodoom/schema.py` | The one decision record, JSONL I/O (plan 1.3) |
 | `src/kodoom/sources.py` | Data sources, licenses, test-only and excluded rules (plan 2.1) |
 | `src/kodoom/normalize.py` | The Persian normalizer (plan 1.2 step 6) |
+| `src/kodoom/runs.py` | Run directories: crash-safe logs and checkpoints on Drive, resume, registry |
+| `src/kodoom/check.py` | `kodoom check`: Drive mounted, free space, GPU, model cache |
 | `src/kodoom/cli.py` | The `kodoom` command |
+| `notebooks/colab.ipynb` | The thin Colab notebook ([docs/colab.md](docs/colab.md)) |
 | `tests/` | Tests; `pytest` runs them all in about a second |
 
 Datasets, checkpoints and run outputs go in `data/`, `runs/` or Drive and are never committed.

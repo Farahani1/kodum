@@ -1,0 +1,64 @@
+# Running kodoom on Colab
+
+The laptop is where code is written and proven (`dev` profile). Colab only runs it. This page covers moving to Colab, updating the code there, and what happens when a session dies.
+
+## One-time setup
+
+1. **Open the notebook from GitHub.** In Colab: File → Open notebook → GitHub, then pick `notebooks/colab.ipynb` on your branch. Or open this link directly:
+   `https://colab.research.google.com/github/Farahani1/kodum/blob/claude/sweet-franklin-pm0tdm/notebooks/colab.ipynb`
+   (replace the branch name if you work on another one). Keep it in Drive with File → Save a copy in Drive if you want it in your Colab list.
+2. **Private repository only:** create a GitHub fine-grained token with read access to this repository, then in Colab open 🔑 Secrets (left sidebar), add `GITHUB_TOKEN` with the token as its value, and turn on notebook access.
+3. **Check free space on Drive:** the free plan has 15 GB shared with Gmail and Photos. `kodoom check` warns under 8 GB free; clear space before the main training runs (plan: Storage budget).
+
+## Every session
+
+1. Runtime → Change runtime type → **T4 GPU**.
+2. In the *Settings* cell, set `REF` (the branch, tag or commit) and `PROFILE` (`colab-preflight` before any long run, then `colab`).
+3. Runtime → **Run all**.
+
+The `kodoom check` cell stops the notebook if Drive is not mounted, no GPU is attached, or Drive is too full, and lists runs that can be resumed.
+
+## Updating the code
+
+1. Change the code on the laptop, run the fast checks and the `dev` smoke run, commit, push.
+2. On Colab, re-run the **Get the code** cell. It moves to the newest commit of `REF`. Nothing else is needed: the install is editable, and commands run as fresh `kodoom` processes.
+3. Re-run the install cell only if `pyproject.toml` dependencies changed.
+
+Edits made directly on Colab are discarded by the next update, on purpose: the code on Colab must always be a commit that already ran on the laptop. The commit is recorded in every run's `run.json` (with `-dirty` if it was not clean).
+
+## When a session dies
+
+Nothing to rescue: logs and checkpoints are written to Drive while the run goes.
+
+1. Reconnect (or open a new session), T4 GPU, **Run all**.
+2. `kodoom runs` shows each unfinished run and its latest checkpoint step.
+3. Start the same step again with the **same run id and the same settings**. It resumes from the latest checkpoint. With different settings it refuses and names what changed; use a new run id instead.
+
+At most one training step since the last checkpoint is lost, plus one log line.
+
+## What is on Drive
+
+```
+MyDrive/kodoom/runs/
+├── registry.csv          one row per finished run (plan 2.3)
+└── <run id>/
+    ├── run.json          config, git commit, profile, status
+    ├── log.jsonl         one line per event, written as it happens
+    ├── latest/           resumable checkpoint (weights + optimizer); deleted when the run finishes
+    └── best/             best weights so far (fp16, weights only)
+```
+
+Never on Drive: base models, translators and the checker (downloaded to `/content/hf-cache` each session) and checkpoint staging (`/content/kodoom-scratch`). Finished models and datasets go to Hugging Face, then leave Drive.
+
+How a checkpoint is saved, so a dead session never leaves a broken one: it is written to local disk, free space on Drive is checked, it is copied to Drive under a temporary name with a manifest written last, and then swapped in. On the next start, anything half-done is repaired or set aside (`.latest.broken-…`), never deleted.
+
+## Troubleshooting
+
+| Message | Fix |
+| --- | --- |
+| `[FAIL] runs_dir: ... Drive is not mounted` | Run the *Mount Google Drive* cell and accept the prompt. |
+| `[FAIL] device: ... no GPU is visible` | Runtime → Change runtime type → T4 GPU, then Run all. If no GPU is available, try later; the free tier has limits. |
+| `[warn] free space: ... GB free` | Under 8 GB on Drive: delete old runs (`kodoom runs` shows sizes) or push finished models to Hugging Face and delete them. |
+| `NoSpaceError ... the previous checkpoint is intact` | Free space on Drive, then run the same step again; it resumes. |
+| `run ... already exists with a different config` | You changed a setting. Revert it to resume, or use a new run id. |
+| The *Get the code* cell fails with an authentication error | The repository is private: add the `GITHUB_TOKEN` secret (one-time setup, step 2). |
