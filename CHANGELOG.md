@@ -11,8 +11,8 @@ table below or adds a user-visible command, module or decision.
 
 ## Status against the plan
 
-Last updated: Sep 30, 2026, at commit `03e960d`. Checks: `ruff check`, `ruff format
---check` and `pytest` (472 tests) pass; CI runs Windows and Ubuntu on Python 3.11 to
+Last updated: Sep 30, 2026, at commit `8c6a8e7`. Checks: `ruff check`, `ruff format
+--check` and `pytest` (473 tests) pass; CI runs Windows and Ubuntu on Python 3.11 to
 3.13.
 
 | Plan | Item | State |
@@ -104,6 +104,9 @@ Our checks and glossary are meant to catch this kind of inconsistency.
 
 ### Fixed
 
+- The helmo loader no longer stops at rows whose choice gold does not sum to 1 (the
+  first real fetch failed at row 33, sum 0.95): such gold is scaled to 1, the original
+  sum is kept in `extra.gold_sum_in_source`, and `fetch` reports how many there were.
 - The typed-decisions loader accepts yes/no questions that have no `criteria`
   (found on the first real fetch, invoice_processing "duplicate"); they get the
   options "No" and "Yes" with the ids the gold already uses.

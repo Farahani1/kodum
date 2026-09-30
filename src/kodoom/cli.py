@@ -321,6 +321,7 @@ def _fetch_helmo(args: argparse.Namespace) -> int:
         "records": len(records),
         "by_type": dict(Counter(r.question_type for r in records)),
         "topics": len({r.extra["topic"] for r in records}),
+        "gold_rescaled": sum("gold_sum_in_source" in r.extra for r in records),
         "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
     }
     (out_dir / "manifest.json").write_text(
@@ -328,6 +329,7 @@ def _fetch_helmo(args: argparse.Namespace) -> int:
     )
     print(f"{path}: {len(records)} records, {manifest['topics']} topics")
     print(f"  by type: {manifest['by_type']}")
+    print(f"  gold not summing to 1 in the source (rescaled, flagged): {manifest['gold_rescaled']}")
     print(f"commit {revision}")
     return 0
 

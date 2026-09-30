@@ -6,7 +6,8 @@ JSON-lines file, ``synthetic_train.jsonl``, one row per single-question record w
 ``q1``) and ``gold`` (a JSON string). There is no id, so the id is the row's position
 in the pinned file. The gold has a different shape per type (dataset card):
 
-- ``choice``: ``{"probabilities": {"B": 1.0}}``, over the option ids;
+- ``choice``: ``{"probabilities": {"B": 1.0}}``, over the option ids; a few rows sum
+  to less than 1 (0.95), those are scaled to 1 and flagged in ``extra``;
 - ``score``: ``{"mean": 2.0, "variance": 0.0}``, a 0-based level, fractional when
   between two levels; there is no distribution, so it is turned into the two-level
   distribution with exactly that mean (the variance stays in ``extra``);
@@ -88,7 +89,15 @@ def _gold(
         unknown = set(raw) - set(ids)
         if unknown:
             raise TypedDecisionsError(f"{where}: gold names unknown options {sorted(unknown)}")
-        return {i: float(raw.get(i, 0.0)) for i in ids}, {}
+        values = {i: float(raw.get(i, 0.0)) for i in ids}
+        total = math.fsum(values.values())
+        if total <= 0:
+            raise TypedDecisionsError(f"{where}: choice gold has no probability mass")
+        if abs(total - 1.0) <= 1e-6:
+            return values, {}
+        # The source's own gold does not always sum to 1 (row 33: 0.95). It is scaled to
+        # sum to 1 and the original sum is kept, so the record can be found and dropped.
+        return {i: p / total for i, p in values.items()}, {"gold_sum_in_source": total}
     mean = _number(g, "mean", where, high=len(ids) - 1)
     low = math.floor(mean)
     high_share = mean - low

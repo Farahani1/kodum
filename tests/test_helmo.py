@@ -48,6 +48,16 @@ def test_choice_keeps_option_ids_and_fills_missing_probabilities():
     assert r.gold == {"A": 0.0, "B": 1.0, "C": 0.0}
 
 
+def test_choice_gold_that_sums_below_one_is_scaled_and_flagged():
+    gold = {"probabilities": {"A": 0.6, "B": 0.35}}
+    r = row_record(make_row("choice", gold=gold), 0)
+    assert r.gold == pytest.approx({"A": 0.6 / 0.95, "B": 0.35 / 0.95, "C": 0.0})
+    assert r.extra["gold_sum_in_source"] == pytest.approx(0.95)
+    assert "gold_sum_in_source" not in row_record(make_row("choice"), 0).extra
+    with pytest.raises(TypedDecisionsError, match="no probability mass"):
+        row_record(make_row("choice", gold={"probabilities": {"A": 0.0}}), 0)
+
+
 def test_score_mean_becomes_a_distribution_with_that_mean():
     r = row_record(make_row("score"), 0)
     assert r.gold == pytest.approx({"0": 0.0, "1": 0.75, "2": 0.25})
@@ -126,3 +136,4 @@ def test_fetch_helmo_writes_records_and_manifest(fake_hub, tmp_path, monkeypatch
     assert manifest["revision"] == REVISION and manifest["license"] == "MIT"
     assert manifest["by_type"] == {"noul": 2, "choice": 2, "score": 2}
     assert "6 records" in capsys.readouterr().out
+    assert manifest["gold_rescaled"] == 0
