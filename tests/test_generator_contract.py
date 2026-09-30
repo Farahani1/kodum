@@ -32,7 +32,7 @@ def answer(r):
 
 def test_generators_are_registered_under_their_own_names():
     assert all(name == module.NAME for name, module in GENERATORS.items())
-    assert {"jalali-dates", "digit-forms"} <= set(GENERATORS)
+    assert {"jalali-dates", "digit-forms", "toman-rial"} <= set(GENERATORS)
 
 
 @pytest.mark.parametrize("name", NAMES)

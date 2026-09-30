@@ -1,0 +1,175 @@
+# Templates for the Toman and Rial skills (plan 1.1). Same conventions as
+# jalali-dates.toml: written as typed (plain spaces, no ZWNJ), cleaned on load.
+#
+# Placeholders: {a} and {b} (kinds "compare" and "equal"), {d} (kind "convert").
+# Each placeholder is an amount WITH its unit already attached, for example
+# "۱٫۲ میلیون تومان" or "12,000,000 ریال", so templates add no unit words.
+#
+# relation (kind "compare"): "more" asks whether amount a is more than amount b,
+# "less" whether it is less. Amounts in different units are compared by value.
+#
+# STATUS: drafted by the project's assistant, not yet reviewed by a native
+# speaker. Read every template aloud once before the suite is published.
+
+# ---------------------------------------------------------------------------
+# compare: is amount a more / less than amount b? (noul)
+# ---------------------------------------------------------------------------
+
+[[template]]
+kind = "compare"
+id = "compare-1"
+register = "formal"
+held_out = false
+relation = "more"
+state = "قیمت کالای اول {a} و قیمت کالای دوم {b} است."
+question = "آیا قیمت کالای اول بیشتر از قیمت کالای دوم است؟"
+
+[[template]]
+kind = "compare"
+id = "compare-2"
+register = "colloquial"
+held_out = false
+relation = "more"
+state = "این گوشی {a} شد و اون یکی {b}."
+question = "قیمت این گوشی بیشتر از اون یکیه؟"
+
+[[template]]
+kind = "compare"
+id = "compare-3"
+register = "formal"
+held_out = false
+relation = "less"
+state = "هزینه طرح اول {a} و هزینه طرح دوم {b} برآورد شده است."
+question = "آیا هزینه طرح اول کمتر از هزینه طرح دوم است؟"
+
+[[template]]
+kind = "compare"
+id = "compare-4"
+register = "colloquial"
+held_out = false
+relation = "less"
+state = "کرایه ماشین {a} شد و کرایه تاکسی {b}."
+question = "کرایه ماشین کمتر از تاکسی شد؟"
+
+[[template]]
+kind = "compare"
+id = "compare-5"
+register = "formal"
+held_out = true
+relation = "more"
+state = "درآمد ماه گذشته {a} و درآمد این ماه {b} ثبت شده است."
+question = "آیا درآمد ماه گذشته بیشتر از درآمد این ماه است؟"
+
+[[template]]
+kind = "compare"
+id = "compare-6"
+register = "colloquial"
+held_out = true
+relation = "less"
+state = "اجاره خونه {a} هست و اجاره مغازه {b}."
+question = "اجاره خونه کمتر از اجاره مغازه هست؟"
+
+# ---------------------------------------------------------------------------
+# equal: are the two amounts the same money? (noul)
+# ---------------------------------------------------------------------------
+
+[[template]]
+kind = "equal"
+id = "equal-1"
+register = "formal"
+held_out = false
+state = "مبلغ چک {a} و مبلغ قرارداد {b} است."
+question = "آیا مبلغ چک و مبلغ قرارداد با هم برابر است؟"
+
+[[template]]
+kind = "equal"
+id = "equal-2"
+register = "colloquial"
+held_out = false
+state = "فاکتور {a} شد و من {b} واریز کردم."
+question = "پولی که واریز کردم به اندازه فاکتوره؟"
+
+[[template]]
+kind = "equal"
+id = "equal-3"
+register = "formal"
+held_out = false
+state = "حقوق در قرارداد {a} و در فیش حقوقی {b} درج شده است."
+question = "آیا مبلغ قرارداد و فیش حقوقی یکسان است؟"
+
+[[template]]
+kind = "equal"
+id = "equal-4"
+register = "colloquial"
+held_out = false
+state = "قیمت تو سایت {a} هست ولی تو مغازه {b} می گن."
+question = "قیمت سایت و مغازه یکیه؟"
+
+[[template]]
+kind = "equal"
+id = "equal-5"
+register = "formal"
+held_out = true
+state = "مبلغ پیش پرداخت {a} و مبلغ رسید {b} است."
+question = "آیا مبلغ پیش پرداخت و مبلغ رسید برابر است؟"
+
+[[template]]
+kind = "equal"
+id = "equal-6"
+register = "colloquial"
+held_out = true
+state = "دوستم گفت اجاره {a} هست ولی مالک گفت {b}."
+question = "این دو مبلغ با هم برابرن؟"
+
+# ---------------------------------------------------------------------------
+# convert: the amount in the other unit (choice, 6 options)
+# The question is the same for both units, so it names both: Rial or Toman.
+# ---------------------------------------------------------------------------
+
+[[template]]
+kind = "convert"
+id = "convert-1"
+register = "formal"
+held_out = false
+state = "مبلغ فاکتور {d} است."
+question = "معادل این مبلغ در واحد پولی دیگر (ریال یا تومان) کدام است؟"
+
+[[template]]
+kind = "convert"
+id = "convert-2"
+register = "colloquial"
+held_out = false
+state = "قیمت این گوشی {d} شد."
+question = "این مبلغ به واحد دیگه (ریال یا تومان) چقدر می شه؟"
+
+[[template]]
+kind = "convert"
+id = "convert-3"
+register = "formal"
+held_out = false
+state = "مبلغ وام {d} تعیین شده است."
+question = "کدام گزینه معادل این مبلغ در واحد پولی دیگر است؟"
+
+[[template]]
+kind = "convert"
+id = "convert-4"
+register = "colloquial"
+held_out = false
+state = "اجاره خونه {d} هست."
+question = "اگه واحدش رو عوض کنیم (ریال یا تومان) چقدر می شه؟"
+
+[[template]]
+kind = "convert"
+id = "convert-5"
+register = "formal"
+held_out = true
+state = "قیمت مصوب کالا {d} اعلام شده است."
+question = "معادل این قیمت به واحد پولی دیگر چقدر است؟"
+
+[[template]]
+kind = "convert"
+id = "convert-6"
+register = "colloquial"
+held_out = true
+state = "کرایه تاکسی {d} شد."
+question = "این مبلغ تو واحد دیگه (ریال یا تومان) کدومه؟"

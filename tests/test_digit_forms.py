@@ -1,13 +1,12 @@
 import hashlib
 import json
-import re
 from collections import Counter, defaultdict
-from decimal import Decimal
 
 import pytest
+from amounts import AMOUNT, parse
 
 from kodoom.generators import digits, numbers
-from kodoom.generators.common import DIGIT_SCRIPTS, GeneratorError, load_templates
+from kodoom.generators.common import GeneratorError, load_templates
 from kodoom.generators.digits import level
 from kodoom.generators.numbers import Style, render
 
@@ -59,20 +58,6 @@ def test_level_boundaries():
 
 # -- an independent parser reads every amount back from the text -----------------
 
-_NON_LATIN = DIGIT_SCRIPTS["fa"] + DIGIT_SCRIPTS["ar"]
-_TO_LATIN = {ord(c): str(i % 10) for i, c in enumerate(_NON_LATIN)}
-_DIGIT = "0-9\u0660-\u0669\u06f0-\u06f9"
-_AMOUNT = re.compile(rf"[{_DIGIT}][{_DIGIT}.,\u066b\u066c]*(?: (?:هزار|میلیون|میلیارد))?")
-_SCALE = {"هزار": 10**3, "میلیون": 10**6, "میلیارد": 10**9}
-
-
-def parse(text: str) -> int:
-    number, _, word = text.partition(" ")
-    number = number.translate(_TO_LATIN).replace("٬", "").replace("٫", ".")
-    if word:
-        return int(Decimal(number.replace(",", "")) * _SCALE[word])
-    return int(number.replace(",", ""))
-
 
 def test_parser_agrees_with_render_on_random_values():
     import random
@@ -86,7 +71,7 @@ def test_parser_agrees_with_render_on_random_values():
 
 def test_every_amount_in_the_text_parses_to_the_value_the_label_used(records):
     for r in records:
-        found = [parse(m.group()) for m in _AMOUNT.finditer(r.state)]
+        found = [parse(m.group()) for m in AMOUNT.finditer(r.state)]
         facts = r.extra["facts"]
         expected = [facts["value"]] if r.extra["kind"] == "magnitude" else [facts["a"], facts["b"]]
         assert found == expected, (r.id, r.state)
