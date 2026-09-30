@@ -1,6 +1,6 @@
 # Persian Typed-Decision Model: Project Plan
 
-Sep 30, 2026 · @Shah
+Version 3 · Sep 30, 2026 · @Shah
 
 ## Overview
 
@@ -17,6 +17,7 @@ The goal is an open, Persian-capable decision model that speaks Jev's interface:
 
 - Training runs on the free Colab tier: a T4 GPU (16 GB), no bf16, no FlashAttention 2, sessions that drop.
 - Data preparation, generation and small-model evaluation run on the laptop CPU.
+- The laptop is modest: Intel i3-1005G1 (2 cores, 4 threads), about 12 GB RAM, and an NVIDIA MX110 (2 GB) that is not used. It proves the code works; it does not train the real models (see Environments).
 - The Jev API may not be reachable; nothing in the plan depends on it.
 
 **Principles**
@@ -25,10 +26,58 @@ The goal is an open, Persian-capable decision model that speaks Jev's interface:
 - Build a decision model, not a classifier. Options arrive in the request, and whole tasks stay out of training to prove it.
 - Report native Persian results separately from translated data, always.
 - Publish early. Part 1's dataset is the first public output.
+- Develop on the laptop, run on Colab. Nothing reaches Colab until it has run end to end on the laptop.
 
 &#91;embedded content: pipeline · sources through Parts 1–3\]
 
 Translated and native data meet only in the training mix, and only their train splits; every test set reaches Part 3 untouched.
+
+## Environments: laptop development, Colab runs
+
+Development and Colab are separate. The code is written and proven error-free on the laptop, then run for real on Colab. There is one codebase and one pipeline; only a config profile decides which models, data sizes and paths are used.
+
+**Three profiles**, chosen explicitly (for example `--profile dev`); the code never guesses where it is running.
+
+| Setting | `dev` (laptop CPU) | `colab-preflight` (T4) | `colab` (T4) |
+| --- | --- | --- | --- |
+| Purpose | Prove the whole pipeline runs, error-free | Catch T4-only failures before a long run | The real run |
+| Data | 20–50 cases per source, fixed seed | Small slice | Full sets |
+| Translator | Stub (echo or tagged text) or a tiny model | Real translator | TranslateGemma or an API |
+| Checker | Stub with fixed or random flags | Real checker | Qwen3-8B, 4-bit |
+| Encoder / decoder | Tiny random copies (below) | Real models | mmBERT-small / base; Qwen3.5-0.8B with LoRA |
+| Precision | fp32 | fp16 | fp16 |
+| Training length | 10–20 steps | About 20 steps | Full epochs |
+| Output paths | `./runs/` | Drive | Drive |
+
+**Tiny random models.** For the laptop, build a copy of each real model from its own config, shrunk to about 2 layers and hidden size 64, with random weights and the real tokenizer. Only the config and tokenizer are downloaded, never the real weights. Most of the size is the vocabulary table (about 250k tokens × 64, roughly 60 MB), and a training step on a small batch should take well under a second on the laptop (an estimate, to confirm once the code exists). The copies use the same classes, input format, tokenizer and save/load code as the real models, so they catch shape, schema and pipeline bugs.
+
+**The smoke run.** One command runs the whole pipeline on the `dev` profile: prepare → translate → automatic checks → pack → training mix → train → temperature scaling → evaluate → report. It passes when every step finishes and every output file has the expected schema. It also tests resuming: stop it during translation and during training, rerun, and confirm it continues where it stopped. **Budget: under 5 minutes on the laptop.** If it gets slower, shrink the dev data or the tiny models; a slow smoke run stops being run.
+
+**What runs where**
+
+| Task | Laptop | Colab |
+| --- | --- | --- |
+| `dev` smoke run | Yes | — |
+| Data preparation, converters, generators, automatic checks, metrics | Yes | Yes |
+| mmBERT-small / base inference, including the CPU latency test (3.2) | Yes, slow but fine | — |
+| Qwen3.5-0.8B inference | A few examples only (about 3–4 GB RAM) | Yes |
+| mmBERT-small training | Possible but not worth it | Yes |
+| mmBERT-base and Qwen training, TranslateGemma, Qwen3-8B checker | No | Yes |
+
+**Laptop settings**
+
+- CPU only. The MX110 is ignored: 2 GB, an old GPU generation that recent PyTorch builds may no longer support, and unlike a T4 in any case.
+- About 4 threads (`torch.set_num_threads(4)`) and data loading in the main process (`num_workers=0`).
+- Close the browser during the few real-model inference checks; about 12 GB RAM is the limit.
+- The same code runs on Windows and Colab: `pathlib` for paths, no shell-specific steps.
+
+**Colab stays thin.** A notebook only mounts Drive, clones the repo at a fixed commit or tag, installs the pinned requirements, and calls the same command with `--profile colab-preflight` or `--profile colab`. No logic lives in notebooks, so nothing runs on Colab that the laptop has not already run.
+
+**Dependencies.** One pinned requirements set shared by both, plus a Colab-only extra for CUDA packages (such as `bitsandbytes` for 4-bit loading) that the laptop never installs.
+
+**What the laptop cannot catch.** fp16 overflow (the Gemma 3 / TranslateGemma issue), Qwen3.5's Gated DeltaNet layers in fp16, GPU memory at the real batch size and length, and real run times. The `colab-preflight` profile (real models, about 20 steps, about 5 minutes) catches these before a full session is spent.
+
+**Workflow:** laptop `dev` smoke run → Colab `colab-preflight` → Colab full run.
 
 ## Part 1 — Data augmentation
 
@@ -287,6 +336,7 @@ The likeliest failure is a classifier in disguise; the costliest are silent labe
 | Encoder weak on many-option questions (MASSIVE's 60 intents) | Medium | Medium | Intent accuracy far below scenario accuracy | Option sampling, scenario then intent in two steps, compare with the decoder |
 | Persian tokenization: long inputs truncated, answers cut, slow steps | Medium | Medium | Many records hit max length | Measure lengths in 2.1, 384 tokens for QA, truncate around the answer |
 | Checker model unreliable (too many or too few flags) | Medium | Medium | Human review disagrees with its flags | Tune it on the pilot's human review; flags prioritize review, never filter alone |
+| Code passes on the laptop but fails on Colab (fp16, GPU memory, CUDA-only packages) | Medium | Medium | Errors or NaN loss early in a Colab run | `colab-preflight` profile before every long run; Colab-only extras kept separate; same code path in all profiles |
 | Qwen3.5-0.8B won't train on a T4 in fp16 | Medium | Low | Kernel errors, NaN loss, very slow steps | Switch to Qwen3-0.6B |
 | Someone publishes a Persian version first, or the Jev trend fades | Medium | Low | New Persian decision datasets appear | Publish typed-decisions-fa early; the evaluation work stays useful either way |
 | License contamination (non-commercial or GPL data in a release) | Low | High | NC or GPL licenses show up in training records | License field on every record, ParsiNLU test-only, Khayyam excluded, converters published instead of GPL-derived data |
@@ -326,3 +376,10 @@ Licenses marked \* are from memory; confirm them on the page before use.
 | [TypeSafe Jev models page](https://docs.typesafe.ai/models) | Jev customization and language support | — | Overview |
 | [typed-decision-bench](https://github.com/kyr0/typed-decision-bench) | Community benchmark and format | see repo | 3.6 |
 | [open-system-one](https://github.com/zhlei07/open-system-one) | Community benchmark vs Jev | see repo | 3.6 |
+
+## Version history
+
+| Version | Date | Changes |
+| --- | --- | --- |
+| 3 | Sep 30, 2026 | Added "Environments": laptop development separated from Colab runs, with `dev`, `colab-preflight` and `colab` profiles, tiny random models, a 5-minute smoke run and the laptop's limits. Added the laptop to Constraints, a principle, and a failure mode. |
+| 2 | Sep 30, 2026 | Plan as first added to the repository. |
