@@ -25,7 +25,7 @@ Every command that depends on the environment takes an explicit profile: `dev` (
 ```
 kodoom info --profile dev                 # show the resolved settings
 kodoom validate data/some-records.jsonl   # check records against the schema and source rules
-kodoom generate --profile dev             # the five code-labeled Persian skill sets -> data/skills/
+kodoom generate --profile dev             # the five code-labeled Persian skill sets -> <data_dir>/skills (Drive on Colab)
 kodoom baseline uniform --data FILE.jsonl --out preds.jsonl   # trivial baselines: uniform, prior, oracle
 kodoom score --gold FILE.jsonl --pred preds.jsonl --by task_family   # metrics, calibration, minimal pairs
 kodoom calibrate --gold FILE.jsonl --pred preds.jsonl --out calibration.json   # a temperature per question type

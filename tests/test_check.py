@@ -15,6 +15,7 @@ def dev(tmp_path):
         runs_dir=tmp_path / "runs",
         scratch_dir=tmp_path / "scratch",
         cache_dir=tmp_path / "cache",
+        data_dir=tmp_path / "data",
     )
 
 
@@ -60,3 +61,12 @@ def test_cuda_profile_without_torch_warns(dev, monkeypatch):
     monkeypatch.setattr(check_module.importlib.util, "find_spec", lambda name: None)
     checks = by_name(run_checks(replace(dev, device="cuda", precision="fp16")))
     assert checks["device"].status == WARN
+
+
+def test_data_dir_is_checked_like_the_other_directories(dev, tmp_path):
+    checks = by_name(run_checks(dev))
+    assert checks["data_dir"].status == OK and (tmp_path / "data").is_dir()
+    blocker = tmp_path / "file"
+    blocker.write_text("x", encoding="utf-8")
+    broken = by_name(run_checks(replace(dev, data_dir=blocker / "inside")))
+    assert broken["data_dir"].status == FAIL

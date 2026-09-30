@@ -23,7 +23,12 @@ _SCHEMA: dict[str, dict[str, type | tuple[type, ...]]] = {
     "run": {"seed": int, "runs_dir": str},
     "compute": {"device": str, "precision": str, "threads": int},
     "data": {"max_cases_per_source": int},
-    "storage": {"scratch_dir": str, "cache_dir": str, "reserve_gb": (int, float)},
+    "storage": {
+        "scratch_dir": str,
+        "cache_dir": str,
+        "data_dir": str,
+        "reserve_gb": (int, float),
+    },
 }
 
 
@@ -44,6 +49,9 @@ class Profile:
     scratch_dir: Path
     # Where downloaded base models go (HF_HOME). Never on Drive (plan: Storage budget).
     cache_dir: Path
+    # Where generated and converted datasets are written. On Colab this is Drive: data is
+    # never written into the repository checkout and never pushed (plan: Principles).
+    data_dir: Path
     # Space to leave free on the runs_dir disk after any checkpoint write.
     reserve_gb: float
 
@@ -60,7 +68,7 @@ def load_profile(name_or_path: str | Path, *, runs_dir: str | Path | None = None
     storage = raw.get("storage", {})
     for section, key in (("run", "seed"), ("run", "runs_dir"), ("compute", "device"),
                          ("compute", "precision"), ("storage", "scratch_dir"),
-                         ("storage", "cache_dir")):  # fmt: skip
+                         ("storage", "cache_dir"), ("storage", "data_dir")):  # fmt: skip
         if key not in raw.get(section, {}):
             raise ProfileError(f"profile {name!r}: missing [{section}] {key}")
 
@@ -74,6 +82,7 @@ def load_profile(name_or_path: str | Path, *, runs_dir: str | Path | None = None
         max_cases_per_source=data.get("max_cases_per_source"),
         scratch_dir=Path(storage["scratch_dir"]),
         cache_dir=Path(storage["cache_dir"]),
+        data_dir=Path(storage["data_dir"]),
         reserve_gb=float(storage.get("reserve_gb", 1.0)),
     )
     _check_values(profile)

@@ -30,6 +30,12 @@ def test_all_profiles_share_the_seed():
     assert len({load_profile(n).seed for n in BUILTIN_PROFILES}) == 1
 
 
+def test_colab_writes_datasets_to_drive_and_dev_keeps_them_git_ignored():
+    for name in ("colab", "colab-preflight"):
+        assert load_profile(name).data_dir.as_posix().startswith("/content/drive/")
+    assert load_profile("dev").data_dir == Path("data")  # /data/ is in .gitignore
+
+
 def test_colab_keeps_models_and_scratch_off_drive():
     for name in ("colab", "colab-preflight"):
         p = load_profile(name)
@@ -46,7 +52,7 @@ def test_profile_from_file(tmp_path):
     path = tmp_path / "mine.toml"
     path.write_text(
         '[run]\nseed = 7\nruns_dir = "out"\n[compute]\ndevice = "cpu"\nprecision = "fp32"\n'
-        '[storage]\nscratch_dir = "s"\ncache_dir = "c"\n',
+        '[storage]\nscratch_dir = "s"\ncache_dir = "c"\ndata_dir = "d"\n',
         encoding="utf-8",
     )
     profile = load_profile(path)
@@ -61,7 +67,7 @@ def _write(tmp_path, text):
 
 BASE = (
     '[run]\nseed = 1\nruns_dir = "r"\n[compute]\ndevice = "cpu"\nprecision = "fp32"\n'
-    '[storage]\nscratch_dir = "s"\ncache_dir = "c"\n'
+    '[storage]\nscratch_dir = "s"\ncache_dir = "c"\ndata_dir = "d"\n'
 )
 
 

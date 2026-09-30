@@ -17,5 +17,7 @@ max_cases_per_source = 200
 # The runtime's own disk: fast, large, wiped when the session ends.
 scratch_dir = "/content/kodoom-scratch"
 cache_dir = "/content/hf-cache"
+# Datasets live on Drive only: nothing is written into the repository checkout.
+data_dir = "/content/drive/MyDrive/kodoom/data/preflight"
 # Drive is shared with Gmail and Photos (free 15 GB): keep 1 GB free.
 reserve_gb = 1

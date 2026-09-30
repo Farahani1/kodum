@@ -24,6 +24,7 @@ def profile(tmp_path):
         max_cases_per_source=2,
         scratch_dir=tmp_path / "scratch",
         cache_dir=tmp_path / "cache",
+        data_dir=tmp_path / "data",
         reserve_gb=0,
     )
 

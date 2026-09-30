@@ -16,4 +16,5 @@ max_cases_per_source = 20
 [storage]
 scratch_dir = "runs/_scratch"
 cache_dir = ".cache/huggingface"  # dev never downloads real weights; set for completeness
+data_dir = "data"  # git-ignored
 reserve_gb = 1

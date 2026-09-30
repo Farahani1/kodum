@@ -88,7 +88,9 @@ def _parser() -> argparse.ArgumentParser:
         help=f"generators to run (default: all): {', '.join(GENERATORS)}",
     )
     _add_profile_args(generate)
-    generate.add_argument("--out", type=Path, default=Path("data/skills"), help="output directory")
+    generate.add_argument(
+        "--out", type=Path, help="output directory (default: <the profile's data_dir>/skills)"
+    )
     generate.add_argument("--seed", type=int, help="random seed (default: the profile's)")
     generate.add_argument(
         "--pairs-per-kind",
@@ -182,6 +184,7 @@ def _generate(args: argparse.Namespace) -> int:
         raise GeneratorError(
             f"unknown generator {unknown[0]!r}; choose from {', '.join(GENERATORS)}"
         )
+    out_dir = args.out if args.out is not None else profile.data_dir / "skills"
     seed = profile.seed if args.seed is None else args.seed
     pairs = args.pairs_per_kind or DEFAULT_PAIRS_PER_KIND
     if args.pairs_per_kind is None and profile.max_cases_per_source is not None:
@@ -192,7 +195,7 @@ def _generate(args: argparse.Namespace) -> int:
         records = generator.generate(seed, pairs)
         for record in records:
             check_record(record)
-        path = args.out / f"{name}.jsonl"
+        path = out_dir / f"{name}.jsonl"
         write_jsonl(path, records)
         manifest = {
             "generator": name,
@@ -205,7 +208,7 @@ def _generate(args: argparse.Namespace) -> int:
             "by_split": dict(Counter(r.split for r in records)),
             "by_kind": dict(Counter(r.extra["kind"] for r in records)),
         }
-        (args.out / f"{name}.manifest.json").write_text(
+        (out_dir / f"{name}.manifest.json").write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
         print(f"{path}: {len(records)} records (seed {seed}, {pairs} pairs per kind)")

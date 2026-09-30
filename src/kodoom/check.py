@@ -52,6 +52,7 @@ def run_checks(profile: Profile) -> list[Check]:
     ]
     checks += _check_runs_dir(profile)
     checks.append(_check_writable("scratch_dir", profile.scratch_dir))
+    checks.append(_check_writable("data_dir", profile.data_dir))
     checks.append(_check_cache(profile))
     checks.append(_check_device(profile))
     return checks

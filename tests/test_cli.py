@@ -114,3 +114,17 @@ def test_generate_options_and_errors(tmp_path, capsys):
     assert "24 records" in capsys.readouterr().out
     assert main(["generate", "nope", "--profile", "dev", "--out", str(out)]) == 1
     assert "unknown generator" in capsys.readouterr().err
+
+
+def test_generate_writes_into_the_profiles_data_dir_by_default(tmp_path, capsys):
+    profile = tmp_path / "mine.toml"
+    profile.write_text(
+        '[run]\nseed = 5\nruns_dir = "r"\n[compute]\ndevice = "cpu"\nprecision = "fp32"\n'
+        '[storage]\nscratch_dir = "s"\ncache_dir = "c"\ndata_dir = "'
+        + (tmp_path / "drive-data").as_posix()
+        + '"\n[data]\nmax_cases_per_source = 2\n',
+        encoding="utf-8",
+    )
+    assert main(["generate", "jalali-dates", "--profile", str(profile)]) == 0
+    assert (tmp_path / "drive-data" / "skills" / "jalali-dates.jsonl").is_file()
+    assert "drive-data" in capsys.readouterr().out
