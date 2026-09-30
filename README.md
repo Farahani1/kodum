@@ -3,7 +3,7 @@
 Persian Typed Decisions: an open bilingual dataset, a Persian skills suite and an evaluation harness for typed-decision models (choice, score and yes/no questions answered with calibrated probabilities), with CPU-friendly reference models.
 
 The big picture of the whole project is in [docs/project-plan.md](docs/project-plan.md).
-Ideas beyond the current plan are collected in [docs/future-work.md](docs/future-work.md).
+Ideas beyond the current plan are collected in [docs/future-work.md](docs/future-work.md). How our data compares with earlier Persian decision models: [docs/data-comparison.md](docs/data-comparison.md).
 
 ## Setup (laptop)
 
