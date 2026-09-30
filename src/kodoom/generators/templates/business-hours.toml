@@ -1,0 +1,115 @@
+# Templates for the business-hours skills (plan 1.1). Same conventions as
+# jalali-dates.toml: written as typed (plain spaces, no ZWNJ), cleaned on load.
+#
+# Placeholders: {s} is the weekly schedule, for example
+#   "شنبه تا چهارشنبه ۹:۰۰ تا ۱۷:۰۰؛ پنجشنبه ۹:۰۰ تا ۱۳:۰۰؛ جمعه تعطیل"
+# and {v} is the visit: "جمعه ساعت ۲۱:۳۰" (kind "time") or
+# "۱۵ مهر ۱۴۰۵ ساعت ۲۱:۳۰" (kind "date"). Time templates therefore put the word
+# "روز" before {v}, and date templates the words "در تاریخ".
+#
+# STATUS: drafted by the project's assistant, not yet reviewed by a native
+# speaker. Read every template aloud once before the suite is published.
+
+# ---------------------------------------------------------------------------
+# time: a weekday and a time (noul)
+# ---------------------------------------------------------------------------
+
+[[template]]
+kind = "time"
+id = "time-1"
+register = "formal"
+held_out = false
+state = "ساعات کاری شعبه: {s}. مراجعه کننده روز {v} به شعبه مراجعه کرده است."
+question = "آیا شعبه در زمان مراجعه باز است؟"
+
+[[template]]
+kind = "time"
+id = "time-2"
+register = "colloquial"
+held_out = false
+state = "ساعت کاری مغازه این جوریه: {s}. من روز {v} می رم اونجا."
+question = "اون موقع مغازه بازه؟"
+
+[[template]]
+kind = "time"
+id = "time-3"
+register = "formal"
+held_out = false
+state = "دفتر خدمات در این ساعات پذیرش دارد: {s}. درخواست کننده روز {v} به دفتر می رسد."
+question = "آیا دفتر در این زمان پذیرش دارد؟"
+
+[[template]]
+kind = "time"
+id = "time-4"
+register = "colloquial"
+held_out = false
+state = "رستوران این ساعتا بازه: {s}. ما روز {v} می خواییم بریم."
+question = "رستوران اون موقع بازه؟"
+
+[[template]]
+kind = "time"
+id = "time-5"
+register = "formal"
+held_out = true
+state = "ساعات فعالیت داروخانه: {s}. بیمار روز {v} به داروخانه مراجعه می کند."
+question = "آیا داروخانه در زمان مراجعه بیمار باز است؟"
+
+[[template]]
+kind = "time"
+id = "time-6"
+register = "colloquial"
+held_out = true
+state = "بانک این ساعتا کار می کنه: {s}. من روز {v} می رم بانک."
+question = "بانک اون موقع بازه؟"
+
+# ---------------------------------------------------------------------------
+# date: a Jalali date and a time; the weekday has to be worked out (noul)
+# ---------------------------------------------------------------------------
+
+[[template]]
+kind = "date"
+id = "date-1"
+register = "formal"
+held_out = false
+state = "ساعات کاری شعبه: {s}. مراجعه کننده در تاریخ {v} به شعبه مراجعه کرده است."
+question = "آیا شعبه در زمان مراجعه باز است؟"
+
+[[template]]
+kind = "date"
+id = "date-2"
+register = "colloquial"
+held_out = false
+state = "ساعت کاری مغازه این جوریه: {s}. من در تاریخ {v} می رم اونجا."
+question = "اون موقع مغازه بازه؟"
+
+[[template]]
+kind = "date"
+id = "date-3"
+register = "formal"
+held_out = false
+state = "دفتر خدمات در این ساعات پذیرش دارد: {s}. درخواست کننده در تاریخ {v} به دفتر می رسد."
+question = "آیا دفتر در این زمان پذیرش دارد؟"
+
+[[template]]
+kind = "date"
+id = "date-4"
+register = "colloquial"
+held_out = false
+state = "رستوران این ساعتا بازه: {s}. ما در تاریخ {v} می خواییم بریم."
+question = "رستوران اون موقع بازه؟"
+
+[[template]]
+kind = "date"
+id = "date-5"
+register = "formal"
+held_out = true
+state = "ساعات فعالیت داروخانه: {s}. بیمار در تاریخ {v} به داروخانه مراجعه می کند."
+question = "آیا داروخانه در زمان مراجعه بیمار باز است؟"
+
+[[template]]
+kind = "date"
+id = "date-6"
+register = "colloquial"
+held_out = true
+state = "بانک این ساعتا کار می کنه: {s}. من در تاریخ {v} می رم بانک."
+question = "بانک اون موقع بازه؟"
