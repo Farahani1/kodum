@@ -33,6 +33,7 @@ def record(source, split="train", license=None):
 def test_plan_roles():
     assert {n for n, s in SOURCES.items() if s.role == TEST_ONLY} == {
         "persiannlp/parsinlu",
+        "sajjjadayobi/PersianQA",
         "facebook/belebele",
         "own/stt-intent",
     }
@@ -42,7 +43,10 @@ def test_plan_roles():
 
 
 @pytest.mark.parametrize("split", ["train", "validation", "calibration"])
-@pytest.mark.parametrize("source", ["persiannlp/parsinlu", "facebook/belebele", "own/stt-intent"])
+@pytest.mark.parametrize(
+    "source",
+    ["persiannlp/parsinlu", "sajjjadayobi/PersianQA", "facebook/belebele", "own/stt-intent"],
+)
 def test_test_only_sources_never_enter_training(source, split):
     with pytest.raises(SourceError, match="test-only"):
         check_record(record(source, split))
@@ -56,7 +60,7 @@ def test_excluded_source_is_rejected_in_any_split():
 
 def test_license_must_match_the_source():
     with pytest.raises(SourceError, match="does not match"):
-        check_record(record("sajjjadayobi/PersianQA", license="Apache-2.0"))
+        check_record(record("sajjjadayobi/PersianQA", split="test", license="Apache-2.0"))
 
 
 def test_unknown_source():
@@ -67,3 +71,9 @@ def test_unknown_source():
 def test_gpl_and_nc_data_is_not_published():
     assert not SOURCES["sajjjadayobi/PersianQA"].publish_derived_data
     assert not SOURCES["persiannlp/parsinlu"].publish_derived_data
+
+
+def test_every_training_source_has_a_permissive_license():
+    permissive = {"Apache-2.0", "MIT", "CC-BY-4.0"}
+    trainable = [s for s in SOURCES.values() if s.role == "train_and_test"]
+    assert {s.license for s in trainable} <= permissive

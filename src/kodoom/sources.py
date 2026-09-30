@@ -70,7 +70,8 @@ SOURCES: dict[str, Source] = {
             "sajjjadayobi/PersianQA",
             "https://github.com/sajjjadayobi/PersianQA",
             "GPL-3.0",
-            TRAIN_AND_TEST,
+            # GPL training data would put a permissive model license in question.
+            TEST_ONLY,
             publish_derived_data=False,
         ),
         Source(
