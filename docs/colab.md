@@ -30,7 +30,7 @@ Edits made directly on Colab are discarded by the next update, on purpose: the c
 
 The *Fetch typed-decisions* cells run `kodoom fetch typed-decisions`, which downloads the English cases at the pinned commit and writes one record per question to `data_dir/typed-decisions/en` on your Drive (with a manifest and checksums), and `kodoom fields`, which reports every text field of the case state (coverage, distinct values, length, samples). The translate/keep rules are decided from that output, so copy it back to the assistant. Nothing is pushed anywhere.
 
-The *Inspect the other datasets* cell prints the structure and the card of `helmo/synthetic-typed-decisions` and the Russian and Japanese versions. Copy that back too. If a dataset is not stored as parquet or JSON lines, the error lists its files instead.
+The *Fetch helmo* cell (`kodoom fetch helmo`) does the same for `helmo/synthetic-typed-decisions`: 9,879 single-question records, converted to `data_dir/helmo/en`. If a dataset is not stored as parquet or JSON lines, `kodoom inspect` lists its files instead; use it for any new source.
 
 ## When a session dies
 

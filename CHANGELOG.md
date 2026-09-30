@@ -11,8 +11,8 @@ table below or adds a user-visible command, module or decision.
 
 ## Status against the plan
 
-Last updated: Sep 30, 2026, at commit `76f0b80`. Checks: `ruff check`, `ruff format
---check` and `pytest` (456 tests) pass; CI runs Windows and Ubuntu on Python 3.11 to
+Last updated: Sep 30, 2026, at commit `03e960d`. Checks: `ruff check`, `ruff format
+--check` and `pytest` (472 tests) pass; CI runs Windows and Ubuntu on Python 3.11 to
 3.13.
 
 | Plan | Item | State |
@@ -21,7 +21,7 @@ Last updated: Sep 30, 2026, at commit `76f0b80`. Checks: `ruff check`, `ruff for
 | 1.1 | Code-labeled skills: Jalali dates, digit forms, Toman/Rial, business hours, Iranian formats, with minimal pairs, held-out test templates, raw forms | Done: 4,200 items at the default 150 pairs per kind. **Open:** native review of the ~66 Persian templates. |
 | 1.1 | typed-decisions loader, pinned revision `e135720c…`, field statistics | Done. Real data loads: 1,200 train cases (6,000 decisions) and 400 test cases (2,000), matching the dataset card. Preflight caps train at 200 cases per workflow. |
 | 1.1 | Translate/keep rules for each field | Proposed from the field statistics, not yet coded. |
-| 1.1 | helmo/synthetic-typed-decisions: dedupe, sample 3-5k, no overlap with the test split | Not started. Structure not yet seen (inspect output pending). |
+| 1.1 | helmo/synthetic-typed-decisions: dedupe, sample 3-5k, no overlap with the test split | Loader written (`kodoom fetch helmo`) from the real structure: one JSONL file, 9,879 records, MIT, pinned `1827dc0d…`; score gold is a mean, turned into a two-level distribution. Not yet run on Colab. Dedupe, sampling and the overlap check are not started. |
 | 1.2 | Translation: pilot of 50 cases, translator choice, automatic checks, meaning check, human review, orthographic cleanup | Not started. `clean_orthography` exists. Needs Colab. |
 | 1.3 | One record schema, source rules | Done (`schema.py`, `sources.py`). |
 | 1.3 | Publish typed-decisions-fa | Not started, and deliberately on hold: owner decision that no data is pushed anywhere yet, everything stays on the owner's Drive. |
@@ -43,13 +43,24 @@ has not started.
 - Rename the GitHub repository to `kodoom` (Settings).
 - Copyright-holder name in `LICENSE` (currently "the kodoom authors").
 - Confirm: MASSIVE fa-IR locale, the ParsiNLU and mmBERT-base licenses, DibaOne M3's NOTICE file.
-- Paste the output of the three `kodoom inspect` cells (helmo, Russian, Japanese) so the next loader and the translation rules can be written from real fields.
+- Re-run the *Get the code* cell and the new *Fetch helmo* cell on Colab, and paste the output.
 
 ### Next
 
-1. Read the helmo, Russian and Japanese structures; fix or extend the loader.
+1. Check `kodoom fetch helmo` on the real file (choice criteria format is assumed).
 2. Encode the translate/keep rules and the automatic checks (keep-fields byte-identical, numbers and IDs survive, output is Persian, no looping).
 3. Stub translator and a 50-case pilot; the real pilot needs a Colab session.
+
+### What the existing Russian and Japanese versions show
+
+Read from their cards and first rows (`kodoom inspect`, Colab): both keep case ids,
+splits, option ids and gold identical to the English original, and translate the
+state text, question text and option descriptions. Both are Apache-2.0. The Japanese
+version adds a back-translation verifier (`back_translation_match`,
+`mismatch_category`, `verifier_reason`). Their first rows show what to guard
+against: the Japanese score levels keep English labels (" benign:", "Low:") and the
+Japanese `factors` were left in English while the Russian ones were translated.
+Our checks and glossary are meant to catch this kind of inconsistency.
 
 ## Unreleased
 
@@ -59,6 +70,8 @@ has not started.
   record per question (state kept byte-identical, option ids and gold as in the
   source), and per-field statistics that decide what gets translated. Fetched data
   goes to the profile's `data_dir`, never into the repository.
+- `kodoom fetch helmo`: helmo/synthetic-typed-decisions as records (see the status
+  table for the score-gold conversion).
 - `kodoom inspect`: prints the real structure, license and card of a Hugging Face
   dataset (parquet or JSON lines), used once per dataset on Colab.
 - Evaluation harness: `kodoom baseline`, `score`, `calibrate`; prediction files,
