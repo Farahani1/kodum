@@ -1,0 +1,82 @@
+import pytest
+
+from kodoom.normalize import ZWNJ, normalize, to_latin_digits
+
+Z = ZWNJ
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        # Arabic letters to Persian
+        ("علي كتاب", "علی کتاب"),
+        ("مصطفى", "مصطفی"),
+        # Digits: Persian and Arabic-Indic to Latin, separators between digits
+        ("۱۲۳۴", "1234"),
+        ("٤٥٦", "456"),
+        ("۱۲٫۵", "12.5"),
+        ("۱٬۰۰۰٬۰۰۰ ریال", "1,000,000 ریال"),
+        ("۲۰٪", "20%"),
+        # Diacritics and tatweel
+        ("حتماً", "حتما"),
+        ("كـــتاب", "کتاب"),
+        # Verb prefix می / نمی
+        ("می خواهم", f"می{Z}خواهم"),
+        ("نمی دانم", f"نمی{Z}دانم"),
+        ("او می  رود", f"او می{Z}رود"),
+        # Plural suffixes
+        ("کتاب ها", f"کتاب{Z}ها"),
+        ("فاکتور های من", f"فاکتور{Z}های من"),
+        ("درخواست هایشان", f"درخواست{Z}هایشان"),
+        # Spaces and stray ZWNJ
+        ("سلام   دنیا", "سلام دنیا"),
+        ("سلام\u00a0دنیا", "سلام دنیا"),
+        (f"سلام{Z} دنیا", "سلام دنیا"),
+        (f"{Z}سلام{Z}", "سلام"),
+        (f"می{Z}{Z}خواهم", f"می{Z}خواهم"),
+        ("  خط اول  \r\n  خط دوم  ", "خط اول\nخط دوم"),
+        # Invisible marks
+        ("\ufeffسلام\u200f", "سلام"),
+        # Presentation forms (e.g. text copied from old PDFs)
+        ("\ufedf\ufe8e", "لا"),
+    ],
+)
+def test_normalize(raw, expected):
+    assert normalize(raw) == expected
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Refund invoice INV-2291 to billing@example.com",
+        "GET https://api.example.com/v1/tickets?id=42 -> 500",
+        "ERROR 2026-09-30T10:15:00Z worker-3: timeout",
+    ],
+)
+def test_english_and_keep_fields_pass_through(text):
+    assert normalize(text) == text
+
+
+def test_does_not_join_words_that_merely_start_with_mi():
+    # "میز" (table) and "میوه" (fruit) are words, not the verb prefix.
+    assert normalize("میز بزرگ") == "میز بزرگ"
+    assert normalize("میوه ها") == f"میوه{Z}ها"
+    # "ها" inside a word is not a suffix.
+    assert normalize("هادی آمد") == "هادی آمد"
+
+
+def test_to_latin_digits_leaves_letters_alone():
+    assert to_latin_digits("فاکتور ۱۲ كتاب") == "فاکتور 12 كتاب"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "علي می خواهد ۱۲٫۵ میلیون ريال برای کتاب ها بپردازد.",
+        f"{Z}  نمی دانم  {Z}",
+        "حتماً\r\nفردا",
+    ],
+)
+def test_idempotent(text):
+    once = normalize(text)
+    assert normalize(once) == once
