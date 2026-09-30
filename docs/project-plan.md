@@ -1,6 +1,6 @@
 # Persian Typed Decisions: Project Plan
 
-Version 8 · Sep 30, 2026 · @Shah
+Version 9 · Sep 30, 2026 · @Shah
 
 ## Overview
 
@@ -35,6 +35,8 @@ The test for every deliverable: could a developer drop this project's model enti
 - Develop on the laptop, run on Colab. Nothing reaches Colab until it has run end to end on the laptop.
 - The resource is the headline; the model is a reference implementation. The project is worthwhile even if the model turns out average.
 - Clean training data only. A source enters training only if its license allows a permissively licensed model; everything else is test-only or converter-only.
+- Licenses: the least restrictive. The code is 0BSD and the project's own data (the generated skills and their templates) is CC0-1.0. Data derived from other people's work keeps their license: typed-decisions-fa stays Apache-2.0 with attribution, and a source's license is enforced in code (`kodoom.sources`). The choice of license for the trained models is still open, and must respect the attribution terms of what they were trained on (MASSIVE is CC BY 4.0).
+- Data stays on the owner's Drive. Generated, converted and translated datasets are written to the profile's `data_dir` (Drive on Colab), never into the repository checkout and never into git (a test fails if a data file is tracked). Nothing is published to Hugging Face or anywhere else until the owner decides to; the publication steps in Part 1 wait for that decision.
 - Benchmark data is stored as people write it. Normalization is part of a model's input pipeline, not of the published data, so the benchmark still tests how other models handle digit forms and spelling variants.
 
 &#91;embedded content: pipeline · sources through Parts 1–3\]
@@ -233,7 +235,7 @@ Part 2 merges native Persian data with Part 1's output into one training mix, tr
 
 Licenses checked against each repository's LICENSE or NOTICE file (September 2026). Still to confirm: that MASSIVE's release includes the `fa-IR` locale.
 
-**Training sources**, all compatible with a permissively licensed model: MASSIVE (CC BY 4.0, attribution in the model card), FarsTail (Apache-2.0), and Part 1's data (Apache-2.0 and MIT). Everything else is test-only or excluded.
+**Training sources**, all compatible with a permissively licensed model: MASSIVE (CC BY 4.0, attribution in the model card), FarsTail (Apache-2.0), and Part 1's data (Apache-2.0 and MIT sources, and the project's own CC0-1.0 skills data). Everything else is test-only or excluded.
 
 **From Part 1:** typed-decisions-fa train split (soft labels), the Persian synthetic-typed-decisions sample, and the code-labeled Persian data (training templates only).
 
@@ -517,6 +519,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
+| 9 | Sep 30, 2026 | Licenses set to the least restrictive: code 0BSD, the project's own data CC0-1.0; derived data keeps its source's license (typed-decisions-fa: Apache-2.0); the model license stays open. Two principles added: licenses, and data stays on the owner's Drive (`data_dir`, a git guard test, nothing published until the owner decides). |
 | 8 | Sep 30, 2026 | From the data comparison (`docs/data-comparison.md`): a provenance statement on every dataset card (which data involved a model), metrics reported by question language (3.2), and a code-mixing robustness check (3.4). Taarof moved to `future-work.md`. |
 | 7 | Sep 30, 2026 | Added the Google Drive storage constraint (free 15 GB plan, shared with Gmail and Photos): a storage budget in Environments with estimated sizes and rules (no base models on Drive, latest checkpoint plus best as fp16 weights only, Hugging Face as the archive, free-space check before saving, optional frozen embeddings tested in run 1). Updated 2.2 checkpointing, 2.3 artifacts, Constraints, and a failure mode. |
 | 6 | Sep 30, 2026 | Updated from the model and dataset cards of Laya-multilingual, DibaOne X1 and M3, and typed-decisions. Gate: language gap moved to parallel MASSIVE and Belebele items, because Laya is near chance on typed-decisions zero-shot even in English; M3 cannot be the gate reference (trained on ParsiNLU and PersianQA); X1 is choice-only. Baselines: Laya as the primary controlled comparison (same backbone), laya-typed-decisions, M3 as an evaluation-only baseline, every baseline reported raw and recalibrated. Run 7 (Laya start, no Persian data). Metrics: KL from gold, parallel language gap; stated mode (specialist or general) and request shape. Robustness: score position bias, noul vs two-option choice. typed-decisions case structure in 1.1. Licenses confirmed for MASSIVE and Belebele; PersianQA's conflicting licenses noted. A failure mode for baselines trained on test sets. Laya links corrected. Success criteria use the parallel language gap and recalibrated baselines. |
