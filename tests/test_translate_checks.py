@@ -5,6 +5,7 @@ import pytest
 from kodoom.translate.checks import (
     check_state,
     check_text,
+    foreign_letters,
     numbers,
     protected_tokens,
     repeated_phrase,
@@ -110,3 +111,20 @@ def test_findings_say_where():
 def test_unknown_workflow_is_refused():
     with pytest.raises(KeyError):
         check_state("hr", "{}", "{}")
+
+
+def test_a_look_alike_letter_from_another_script_is_flagged():
+    cyrillic = (
+        "هیچگاه \u043c\u043e\u043d\u0438\u0442\u043e\u0440\u0438\u043d\u0433 را غیرفعال نکنید"
+    )
+    findings = check_text("Never disable monitoring or alerting", cyrillic)
+    assert [f.check for f in findings] == ["script"]
+    assert "cyrillic" in findings[0].message
+    assert foreign_letters("سلام hello ۱۲۳ 45 `x_1`") == []
+    assert foreign_letters("漢字 と かな") == [
+        "漢 (cjk)",
+        "字 (cjk)",
+        "と (hiragana)",
+        "か (hiragana)",
+        "な (hiragana)",
+    ]

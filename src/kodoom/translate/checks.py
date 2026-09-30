@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import re
+import unicodedata
 from collections import Counter
 from dataclasses import dataclass
 
@@ -84,6 +85,10 @@ def check_text(source: str, target: str, where: str = "") -> list[Finding]:
     if lost:
         add("numbers", f"numbers lost or changed: {sorted(lost.elements())}")
 
+    foreign = foreign_letters(target)
+    if foreign:
+        add("script", f"letters from another script: {foreign}")
+
     body = _without_protected(target)
     persian, latin = len(_PERSIAN_LETTER.findall(body)), len(_LATIN_LETTER.findall(body))
     if (
@@ -104,6 +109,22 @@ def check_text(source: str, target: str, where: str = "") -> list[Finding]:
     if loop:
         add("looping", f"repeats {loop!r}")
     return findings
+
+
+def foreign_letters(text: str) -> list[str]:
+    """Letters that are neither Persian/Arabic-script nor Latin, with their script.
+
+    A model sometimes slips a look-alike letter of another alphabet into a word (a Cyrillic
+    «о» in «مونیتورینگ»); the word then looks right to a reader and fails every string
+    comparison.
+    """
+    found = []
+    for ch in dict.fromkeys(text):
+        if ch.isalpha():
+            script = unicodedata.name(ch, "UNKNOWN").split()[0]
+            if script not in ("ARABIC", "LATIN"):
+                found.append(f"{ch} ({script.lower()})")
+    return found
 
 
 def repeated_phrase(text: str, times: int = 4) -> str | None:
