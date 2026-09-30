@@ -1,6 +1,6 @@
 # Persian Typed Decisions: Project Plan
 
-Version 9 · Sep 30, 2026 · @Shah
+Version 10 · Sep 30, 2026 · @Shah
 
 ## Overview
 
@@ -171,9 +171,9 @@ Preparation: write 5–10 Persian templates per generator, colloquial and formal
 
 | Candidate | Runs on | Why | Watch out for |
 | --- | --- | --- | --- |
-| [TranslateGemma](https://arxiv.org/pdf/2601.09012) 12B (4-bit) or 4B (fp16) | Colab T4 | Free, open, built for translation; Persian is among its 55 evaluated languages. | Translation-only prompt, so fields go one at a time. Tuned for inputs of about 2K tokens. Gemma 3 models have had fp16 overflow problems on T4-class GPUs. |
-| A frontier model through an API | Cloud | Best Persian quality. Takes a whole case as JSON with rules (keep keys, register). The dataset is small, so cost is low. | Payment and access. Record the exact model for the card. |
-| Qwen3-8B (4-bit) | Colab T4 | The checker, in a separate pass: meaning comparison and consistency. Standard architecture, safe on a T4. | Weaker translator than the two above; use it to judge, not to translate. |
+| [TranslateGemma](https://arxiv.org/pdf/2601.09012) 12B (4-bit) or 4B (fp16) | Colab T4 | Free, open, built for translation; Persian is among its 55 evaluated languages. | Translation-only prompt, so fields go one at a time. Tuned for inputs of about 2K tokens. Gemma 3 models have had fp16 overflow problems on T4-class GPUs. **Gated on Hugging Face** (found on Colab): accept the Gemma license on the model page and give Colab a read token (secret `HF_TOKEN`). Before publishing translations, read the Gemma terms on generated outputs (a dataset made with Gemma may count as its derivative) and confirm that the Apache-2.0 plan for typed-decisions-fa still holds. |
+| A frontier model through an API | Cloud | Best Persian quality. Takes a whole case as JSON with rules (keep keys, register). The dataset is small, so cost is low. | Payment and access. Record the exact model for the card. **Not available**: the owner has no budget for an API. |
+| Qwen3-8B (4-bit) | Colab T4 | The checker, in a separate pass: meaning comparison and consistency. Standard architecture, safe on a T4. | Weaker translator than the two above; use it to judge, not to translate. **Trial on the T4 (Sep 30):** it runs in 4-bit and follows the glossary, but its Persian changed meaning ("expired" became "valid", "irreversible" became "reversible", "benign" became nonsense) and it put Cyrillic letters inside a Persian word. Confirmed as a checker and glossary-following draft at most, not as the translator. |
 | NLLB-200 | — | Not recommended. | Non-commercial weights cloud the license of a dataset meant to be Apache-2.0. |
 
 1. **Pilot, 50 cases.** Translate with two candidates, review both blind, and keep the translator and prompt that win.
@@ -519,6 +519,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
+| 10 | Sep 30, 2026 | From the first Colab translation trial: TranslateGemma is gated (license and token needed) and its terms on generated outputs must be read before publishing; the API candidate is unavailable (no budget); Qwen3-8B (4-bit) ran on the T4 but changed meaning in several places, so it stays a checker only. |
 | 9 | Sep 30, 2026 | Licenses set to the least restrictive: code 0BSD, the project's own data CC0-1.0; derived data keeps its source's license (typed-decisions-fa: Apache-2.0); the model license stays open. Two principles added: licenses, and data stays on the owner's Drive (`data_dir`, a git guard test, nothing published until the owner decides). |
 | 8 | Sep 30, 2026 | From the data comparison (`docs/data-comparison.md`): a provenance statement on every dataset card (which data involved a model), metrics reported by question language (3.2), and a code-mixing robustness check (3.4). Taarof moved to `future-work.md`. |
 | 7 | Sep 30, 2026 | Added the Google Drive storage constraint (free 15 GB plan, shared with Gmail and Photos): a storage budget in Environments with estimated sizes and rules (no base models on Drive, latest checkpoint plus best as fp16 weights only, Hugging Face as the archive, free-space check before saving, optional frozen embeddings tested in run 1). Updated 2.2 checkpointing, 2.3 artifacts, Constraints, and a failure mode. |
