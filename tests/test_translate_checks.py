@@ -9,6 +9,7 @@ from kodoom.translate.checks import (
     numbers,
     protected_tokens,
     repeated_phrase,
+    untranslated_words,
 )
 from kodoom.translate.rules import apply
 
@@ -128,3 +129,22 @@ def test_a_look_alike_letter_from_another_script_is_flagged():
         "か (hiragana)",
         "な (hiragana)",
     ]
+
+
+def test_english_words_left_in_a_translation_are_found():
+    source = "No time pressure; can wait indefinitely. Halt the agent on the load balancer."
+    assert untranslated_words(source, "بدون فوریت؛ می\u200cتوان منتظر ماند indefinitely.") == [
+        "indefinitely"
+    ]
+    target = "آزمایشی (load balancer) را متوقف کنید Halt"
+    assert untranslated_words(source, target) == ["balancer", "halt", "load"]
+    findings = check_text(source, "منتظر ماند indefinitely و متوقف کنید")
+    assert [f.check for f in findings] == ["english"]
+
+
+def test_names_code_and_keep_terms_may_stay_in_english():
+    source = "The vendor Acme Fabrication sent the TLS certificate from `svc_task_1`."
+    target = "فروشنده Acme Fabrication گواهی TLS را از `svc_task_1` فرستاد."
+    assert untranslated_words(source, target, keep=("TLS",)) == []
+    assert untranslated_words(source, "گواهی TLS", keep=()) == []  # TLS is upper case mid-sentence
+    assert untranslated_words("Sent to alice@example.com", "به alice@example.com فرستاده شد") == []

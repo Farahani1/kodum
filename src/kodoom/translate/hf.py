@@ -39,8 +39,10 @@ REGISTERS = {
     "formal": "Use a formal, neutral Persian register, as in business and technical writing.",
 }
 RULES = (
-    "Keep everything inside backticks, identifiers (such as INV-2026-6633 or svc_task_1), "
-    "email addresses, URLs and numbers exactly as written; do not convert digits.",
+    "Code in backticks, identifiers (such as INV-2026-6633 or svc_task_1), email addresses, "
+    "URLs and numbers must be copied exactly as written; do not convert digits.",
+    "Do not put backticks or quotation marks around the translation itself.",
+    "Translate every English word; leave none behind in parentheses or at the end.",
     "Write Persian letters (ی, ک) and the zero-width non-joiner (نیم\u200cفاصله) correctly.",
     "Keep the line breaks. Do not add notes, explanations or quotation marks.",
 )
@@ -119,6 +121,9 @@ def clean_output(reply: str, source: str) -> str:
     if fence:
         text = fence.group(1).strip()
     text = _LABEL.sub("", text)
+    wrapped = len(text) > 2 and text[0] == text[-1] == "`" and text.count("`") == 2
+    if wrapped and not source.lstrip().startswith("`"):
+        text = text[1:-1].strip()  # the model wrapped its whole answer in code quotes
     if len(text) > 1 and text[0] in _QUOTES and text[-1] in _QUOTES and source[:1] not in _QUOTES:
         text = text[1:-1].strip()
     return text

@@ -67,6 +67,9 @@ def test_translategemma_message_is_languages_and_text_only():
         ('"سلام"', '"Hi"', '"سلام"'),
         ("  سلام  \n", "Hi", "سلام"),
         ("", "Hi", ""),
+        ("`سلام دنیا`", "Hello world", "سلام دنیا"),
+        ("`x_1` را ببین", "See `x_1`", "`x_1` را ببین"),
+        ("`x_1`", "`x_1`", "`x_1`"),
     ],
 )
 def test_clean_output(reply, source, expected):

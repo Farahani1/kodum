@@ -142,7 +142,7 @@ def translate_case(
                 f"{item.kind} {item.text!r}"
             )
     state = apply(first.state, {s.location: out[i] for i, s in enumerate(todo)})
-    state_findings = check_state(workflow, first.state, state)
+    state_findings = check_state(workflow, first.state, state, glossary.keep)
     for i, seg in enumerate(todo):
         state_findings += glossary.check(workflow, seg.text, out[i], "state." + seg.path)
     all_findings = list(state_findings)
@@ -153,9 +153,9 @@ def translate_case(
         options = out[cursor + 1 : cursor + 1 + len(r.options)]
         cursor += 1 + len(r.options)
         name = r.extra["question"]
-        own = check_text(r.question_text, question, f"{name}.question")
+        own = check_text(r.question_text, question, f"{name}.question", glossary.keep)
         for o, text in zip(r.options, options, strict=True):
-            own += check_text(o.text, text, f"{name}.option.{o.id}")
+            own += check_text(o.text, text, f"{name}.option.{o.id}", glossary.keep)
             own += glossary.check(workflow, o.text, text, f"{name}.option.{o.id}")
         own += glossary.check(workflow, r.question_text, question, f"{name}.question")
         all_findings += own

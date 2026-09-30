@@ -12,6 +12,7 @@ import json
 import re
 import unicodedata
 from collections import Counter
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from kodoom.normalize import to_latin_digits
@@ -31,6 +32,7 @@ _NUMBER = re.compile(r"\d+(?:[.,]\d+)*")
 _PERSIAN_LETTER = re.compile("[ء-غف-يپچژکگیۀ]")
 _LATIN_LETTER = re.compile("[A-Za-z]")
 _WORD = re.compile(r"\w+")
+_LATIN_WORD = re.compile(r"[A-Za-z]{3,}")
 
 
 @dataclass(frozen=True)
@@ -67,8 +69,33 @@ def _without_protected(text: str) -> str:
     return text
 
 
-def check_text(source: str, target: str, where: str = "") -> list[Finding]:
-    """The checks for one translated text."""
+def untranslated_words(source: str, target: str, keep: Sequence[str] = ()) -> list[str]:
+    """English words of the source that are still in the translation.
+
+    Only words that are common words in the source count (lower case, or first in a
+    sentence); capitalized words inside a sentence are names and may stay. Code,
+    identifiers, emails, URLs and the keep-in-English terms are not counted.
+    """
+
+    def plain(text: str) -> str:
+        text = _without_protected(text)
+        for term in keep:
+            text = re.sub(rf"(?<![A-Za-z0-9]){re.escape(term)}(?![A-Za-z0-9])", " ", text)
+        return text
+
+    source_body, target_body = plain(source), plain(target)
+    common = set()
+    for m in _LATIN_WORD.finditer(source_body):
+        before = source_body[: m.start()].rstrip()
+        if m.group()[0].islower() or not before or before[-1] in ".!?:;\n":
+            common.add(m.group().lower())
+    return sorted({w.lower() for w in _LATIN_WORD.findall(target_body)} & common)
+
+
+def check_text(
+    source: str, target: str, where: str = "", keep: Sequence[str] = ()
+) -> list[Finding]:
+    """The checks for one translated text. ``keep``: terms that stay in English."""
     findings: list[Finding] = []
 
     def add(check: str, message: str) -> None:
@@ -105,6 +132,10 @@ def check_text(source: str, target: str, where: str = "") -> list[Finding]:
                 f"length ratio {ratio:.2f} is outside {MIN_LENGTH_RATIO}-{MAX_LENGTH_RATIO}",
             )
 
+    left = untranslated_words(source, target, keep)
+    if left:
+        add("english", f"English words left in the translation: {left}")
+
     loop = repeated_phrase(target)
     if loop:
         add("looping", f"repeats {loop!r}")
@@ -138,7 +169,7 @@ def repeated_phrase(text: str, times: int = 4) -> str | None:
     return None
 
 
-def check_state(workflow: str, source: str, target: str) -> list[Finding]:
+def check_state(workflow: str, source: str, target: str, keep: Sequence[str] = ()) -> list[Finding]:
     """Structure, kept fields and translated fields of a whole state."""
     if workflow not in RULES:
         raise KeyError(workflow)
@@ -159,7 +190,7 @@ def check_state(workflow: str, source: str, target: str) -> list[Finding]:
         elif not isinstance(translated, str):
             findings.append(Finding("structure", where, "is no longer text"))
         else:
-            findings += check_text(seg.text, translated, where)
+            findings += check_text(seg.text, translated, where, keep)
     findings += _other_leaves(s_tree, t_tree)
     return findings
 
