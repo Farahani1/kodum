@@ -50,7 +50,7 @@ SOURCES: dict[str, Source] = {
         Source(
             "kodoom/code-labeled",
             "https://github.com/Farahani1/kodum",
-            "Apache-2.0",
+            "CC0-1.0",  # the project's own generated data (LICENSE-DATA)
             TRAIN_AND_TEST,
         ),
         Source(

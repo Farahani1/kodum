@@ -200,4 +200,4 @@ def test_fixed_generation_fingerprint():
         json.dumps(r.to_dict(), ensure_ascii=False, sort_keys=True) for r in hours.generate(SEED, 5)
     ]
     digest = hashlib.sha256("\n".join(lines).encode("utf-8")).hexdigest()
-    assert digest == "40d2dfe222fff6373a4658a7fcc6f0969b1603097cb0e01cca0e7505fc464e0f", digest
+    assert digest == "a08fc7bb01eed8d81e8ba2939361e71feb24e8c54c5a0d69f1bdb862d32bcfdf", digest

@@ -176,4 +176,4 @@ def test_fixed_generation_fingerprint():
         for r in currency.generate(SEED, 5)
     ]
     digest = hashlib.sha256("\n".join(lines).encode("utf-8")).hexdigest()
-    assert digest == "db86d29fbd65fbca82d80d7f4b4df5c1a4ae975fba966d7f5283d860b695b0f3", digest
+    assert digest == "fb27f7be4dde309afd96e002eedd851dcf52383928e6eb3eb27cbe87a716dded", digest

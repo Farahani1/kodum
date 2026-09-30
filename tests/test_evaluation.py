@@ -32,7 +32,7 @@ def record(
         source_id=source_id or id_,
         source="kodoom/code-labeled",
         source_revision=None,
-        license="Apache-2.0",
+        license="CC0-1.0",
         split=split,
         origin="synthetic",
         task_family=family,

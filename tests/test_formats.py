@@ -139,4 +139,4 @@ def test_fixed_generation_fingerprint():
         for r in formats.generate(SEED, 5)
     ]
     digest = hashlib.sha256("\n".join(lines).encode("utf-8")).hexdigest()
-    assert digest == "61ac3aeaa8bf3b2ad23b2ca421d771694f3eeda23129cc4027b1b61e5f352467", digest
+    assert digest == "d5c1ab54fe9acf1c048272ea6489294a02212f90aeddcc6ac4ffba63f9dd2e5a", digest

@@ -75,7 +75,7 @@ def test_gpl_and_nc_data_is_not_published():
 
 
 def test_every_training_source_has_a_permissive_license():
-    permissive = {"Apache-2.0", "MIT", "CC-BY-4.0"}
+    permissive = {"Apache-2.0", "MIT", "CC-BY-4.0", "CC0-1.0"}
     trainable = [s for s in SOURCES.values() if s.role == "train_and_test"]
     assert {s.license for s in trainable} <= permissive
 
