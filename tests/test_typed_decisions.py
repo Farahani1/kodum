@@ -238,6 +238,6 @@ def test_fields_command_prints_the_paths(tmp_path, capsys):
     from kodoom.schema import write_jsonl
 
     write_jsonl(tmp_path / "r.jsonl", case_records(make_row()))
-    assert cli.main(["fields", str(tmp_path / "r.jsonl")]) == 0
+    assert cli.main(["fields", "--profile", "dev", str(tmp_path / "r.jsonl")]) == 0
     out = capsys.readouterr().out
     assert "1 cases, 3 decisions" in out and "ticket.text" in out

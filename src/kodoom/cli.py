@@ -31,7 +31,7 @@ from kodoom.predictions import PredictionError, read_predictions, write_predicti
 from kodoom.runs import RunError, list_runs
 from kodoom.schema import RecordError, read_jsonl, write_jsonl
 from kodoom.sources import SourceError, check_record, get_source
-from kodoom.typed_decisions import REVISION, TypedDecisionsError, field_stats, load_records
+from kodoom.typed_decisions import REVISION, SPLITS, TypedDecisionsError, field_stats, load_records
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -139,7 +139,14 @@ def _parser() -> argparse.ArgumentParser:
     fields = commands.add_parser(
         "fields", help="statistics of the text fields of fetched typed-decisions records"
     )
-    fields.add_argument("files", nargs="+", type=Path, metavar="FILE.jsonl")
+    _add_profile_args(fields)
+    fields.add_argument(
+        "files",
+        nargs="*",
+        type=Path,
+        metavar="FILE.jsonl",
+        help="default: the train and test files `kodoom fetch typed-decisions` wrote",
+    )
     fields.add_argument("--samples", type=int, default=3, help="example values per field")
     fields.set_defaults(func=_fields)
 
@@ -286,7 +293,11 @@ def _fetch(args: argparse.Namespace) -> int:
 
 
 def _fields(args: argparse.Namespace) -> int:
-    records = [r for path in args.files for r in read_jsonl(path)]
+    profile = _load(args)
+    files = args.files or [
+        profile.data_dir / "typed-decisions" / "en" / f"{split}.jsonl" for split in SPLITS
+    ]
+    records = [r for path in files for r in read_jsonl(path)]
     print(f"{len({r.source_id for r in records})} cases, {len(records)} decisions")
     for workflow, rows in field_stats(records, samples=args.samples).items():
         print(f"\n== {workflow}")
