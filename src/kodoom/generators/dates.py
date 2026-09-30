@@ -97,6 +97,8 @@ def _before(rng, template: Template) -> PairSpec:
     b = add_days(a, rng.randint(low, high))
     if rng.random() < 0.5:
         a, b = b, a
+    if template.relation not in ("before", "after"):
+        raise GeneratorError(f"template {template.id!r}: relation must be 'before' or 'after'")
     after = template.relation == "after"
 
     def half(x: JDate, y: JDate) -> Half:

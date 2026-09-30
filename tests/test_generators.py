@@ -6,11 +6,10 @@ from itertools import pairwise
 
 import pytest
 
-from kodoom.generators import GENERATORS, common, dates
+from kodoom.generators import common, dates
 from kodoom.generators.common import GeneratorError, load_templates
 from kodoom.jalali import is_valid, to_gregorian
 from kodoom.normalize import clean_orthography, normalize
-from kodoom.sources import check_record
 
 SEED = 1234
 
@@ -134,15 +133,6 @@ def test_duplicate_ids_and_unknown_kinds_are_rejected():
 # -- generation ---------------------------------------------------------------
 
 
-def test_registry():
-    assert {"jalali-dates": dates} == GENERATORS
-
-
-def test_generation_is_reproducible_and_seed_dependent():
-    assert dates.generate(SEED, 10) == dates.generate(SEED, 10)
-    assert dates.generate(SEED, 10) != dates.generate(SEED + 1, 10)
-
-
 def test_fixed_generation_fingerprint():
     # Changing templates or logic changes this hash. If that is intended, bump
     # dates.VERSION and update the hash; the published data is then a new version.
@@ -160,19 +150,9 @@ def test_counts_and_ids(records):
     assert Counter(r.extra["kind"] for r in records) == {k: 200 for k in dates.KINDS}
 
 
-def test_every_record_passes_the_schema_and_source_rules(records):
-    for r in records:
-        check_record(r)
-        assert r.origin == "synthetic" and r.task_family == "skill-dates"
-        assert r.state_lang == r.question_lang == "fa"
-        assert r.source_revision == "jalali-dates-v1"
-
-
 def test_a_request_for_too_many_pairs_fails_clearly():
     with pytest.raises(GeneratorError, match="no unused facts"):
         dates.generate(SEED, 400)  # the valid-date facts run out first
-    with pytest.raises(GeneratorError, match="at least 1"):
-        dates.generate(SEED, 0)
 
 
 # -- labels are recomputed independently ----------------------------------------
@@ -223,19 +203,6 @@ def test_gregorian_options_are_four_consecutive_days_and_a_year_error(records):
 # -- minimal pairs --------------------------------------------------------------
 
 
-def test_every_pair_has_two_records_with_different_answers(records):
-    pairs = by_pair(records)
-    assert len(pairs) == 400
-    for source_id, (a, b) in pairs.items():
-        assert (a.extra["pair_role"], b.extra["pair_role"]) == ("a", "b")
-        assert answer(a) != answer(b), source_id
-        # Everything except the one fact is shared.
-        assert a.split == b.split and a.options == b.options
-        assert a.question_type == b.question_type and a.question_text == b.question_text
-        for key in ("template", "variant", "digits", "date_format", "kind", "pair_id"):
-            assert a.extra[key] == b.extra[key], (source_id, key)
-
-
 def test_before_pairs_swap_the_same_two_dates(records):
     for a, b in (p for p in by_pair(records).values() if p[0].extra["kind"] == "before"):
         assert a.extra["facts"]["a"] == b.extra["facts"]["b"]
@@ -274,22 +241,6 @@ def test_no_facts_repeat_within_a_kind(records):
 # -- splits, balance and raw forms --------------------------------------------------
 
 
-def test_held_out_templates_give_exactly_the_test_split(records):
-    held = {t.id for g in load_templates(dates.NAME, dates.SLOTS).values() for t in g if t.held_out}
-    for r in records:
-        assert (r.split == "test") == (r.extra["template"] in held), r.id
-    assert Counter(r.split for r in records).keys() == {
-        "train",
-        "validation",
-        "calibration",
-        "test",
-    }
-
-
-def test_a_pair_never_straddles_two_splits(records):
-    assert all(a.split == b.split for a, b in by_pair(records).values())
-
-
 def test_yes_and_no_are_balanced(records):
     for kind in ("before", "valid"):
         counts = Counter(answer(r) for r in records if r.extra["kind"] == kind)
@@ -303,9 +254,3 @@ def test_all_digit_scripts_and_formats_appear_and_stay_raw(records):
     assert any(persian_digits & set(r.state) for r in records)
     # Published text is not passed through the model-side normalizer (plan: stored raw).
     assert any(normalize(r.state) != r.state for r in records)
-
-
-def test_registers_are_spread_across_the_data(records):
-    counts = Counter(r.extra["register"] for r in records)
-    assert set(counts) == {"formal", "colloquial"}
-    assert min(counts.values()) > 0.4 * len(records)

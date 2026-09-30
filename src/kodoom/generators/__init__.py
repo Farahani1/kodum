@@ -4,6 +4,6 @@ Each generator module exposes ``NAME``, ``VERSION`` and
 ``generate(seed, pairs_per_kind) -> list[Record]``.
 """
 
-from kodoom.generators import dates
+from kodoom.generators import dates, digits
 
-GENERATORS = {dates.NAME: dates}
+GENERATORS = {module.NAME: module for module in (dates, digits)}

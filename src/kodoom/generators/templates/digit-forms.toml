@@ -1,0 +1,175 @@
+# Templates for the digit-form skills (plan 1.1). Same conventions as
+# jalali-dates.toml: written as typed (plain spaces, no ZWNJ), cleaned on load.
+#
+# Placeholders: {a} and {b} (kinds "equal" and "larger"), {d} (kind "magnitude").
+# The generator writes each amount in one of three digit scripts, with or
+# without separators, in full or scaled ("۲٫۵ میلیون"); templates only supply
+# the unit word "تومان" after it.
+#
+# relation (kind "larger"): "more" asks whether amount a is more than amount b,
+# "less" whether it is less.
+#
+# STATUS: drafted by the project's assistant, not yet reviewed by a native
+# speaker. Read every template aloud once before the suite is published.
+
+# ---------------------------------------------------------------------------
+# equal: are the two amounts the same? (noul)
+# ---------------------------------------------------------------------------
+
+[[template]]
+kind = "equal"
+id = "equal-1"
+register = "formal"
+held_out = false
+state = "مبلغ فاکتور {a} تومان و مبلغ واریز شده {b} تومان است."
+question = "آیا مبلغ واریز شده با مبلغ فاکتور برابر است؟"
+
+[[template]]
+kind = "equal"
+id = "equal-2"
+register = "colloquial"
+held_out = false
+state = "فاکتور {a} تومان شد و من {b} تومان واریز کردم."
+question = "پولی که واریز کردم دقیقا به اندازه فاکتوره؟"
+
+[[template]]
+kind = "equal"
+id = "equal-3"
+register = "formal"
+held_out = false
+state = "حقوق ماهانه در قرارداد {a} تومان و در فیش حقوقی {b} تومان درج شده است."
+question = "آیا مبلغ قرارداد و فیش حقوقی یکسان است؟"
+
+[[template]]
+kind = "equal"
+id = "equal-4"
+register = "colloquial"
+held_out = false
+state = "قیمت تو سایت {a} تومانه ولی تو مغازه {b} تومان می گن."
+question = "قیمت سایت و مغازه یکیه؟"
+
+[[template]]
+kind = "equal"
+id = "equal-5"
+register = "formal"
+held_out = true
+state = "مبلغ چک {a} تومان و مبلغ نوشته شده در قرارداد {b} تومان است."
+question = "آیا مبلغ چک با مبلغ قرارداد یکسان است؟"
+
+[[template]]
+kind = "equal"
+id = "equal-6"
+register = "colloquial"
+held_out = true
+state = "دوستم گفت اجاره {a} تومانه ولی مالک گفت {b} تومان."
+question = "این دو مبلغ با هم برابرن؟"
+
+# ---------------------------------------------------------------------------
+# larger: is amount a more / less than amount b? (noul)
+# ---------------------------------------------------------------------------
+
+[[template]]
+kind = "larger"
+id = "larger-1"
+register = "formal"
+held_out = false
+relation = "more"
+state = "قیمت کالای اول {a} تومان و قیمت کالای دوم {b} تومان است."
+question = "آیا قیمت کالای اول بیشتر از قیمت کالای دوم است؟"
+
+[[template]]
+kind = "larger"
+id = "larger-2"
+register = "colloquial"
+held_out = false
+relation = "more"
+state = "گوشی من {a} تومان شد و گوشی دوستم {b} تومان."
+question = "قیمت گوشی من بیشتر از گوشی دوستمه؟"
+
+[[template]]
+kind = "larger"
+id = "larger-3"
+register = "formal"
+held_out = false
+relation = "less"
+state = "هزینه طرح الف {a} تومان و هزینه طرح ب {b} تومان برآورد شده است."
+question = "آیا هزینه طرح الف کمتر از هزینه طرح ب است؟"
+
+[[template]]
+kind = "larger"
+id = "larger-4"
+register = "colloquial"
+held_out = false
+relation = "less"
+state = "کرایه ماشین {a} تومان شد ولی کرایه تاکسی {b} تومان."
+question = "کرایه ماشین کمتر از تاکسی شد؟"
+
+[[template]]
+kind = "larger"
+id = "larger-5"
+register = "formal"
+held_out = true
+relation = "more"
+state = "درآمد سال گذشته {a} تومان و درآمد امسال {b} تومان ثبت شده است."
+question = "آیا درآمد سال گذشته بیشتر از درآمد امسال است؟"
+
+[[template]]
+kind = "larger"
+id = "larger-6"
+register = "colloquial"
+held_out = true
+relation = "less"
+state = "بلیط اتوبوس {a} تومانه و بلیط قطار {b} تومان."
+question = "بلیط اتوبوس کمتر از بلیط قطاره؟"
+
+# ---------------------------------------------------------------------------
+# magnitude: which range does the amount fall in? (score, 5 ordered ranges)
+# ---------------------------------------------------------------------------
+
+[[template]]
+kind = "magnitude"
+id = "magnitude-1"
+register = "formal"
+held_out = false
+state = "مبلغ فاکتور {d} تومان است."
+question = "مبلغ این فاکتور در کدام محدوده قرار دارد؟"
+
+[[template]]
+kind = "magnitude"
+id = "magnitude-2"
+register = "colloquial"
+held_out = false
+state = "این گوشی {d} تومان شد."
+question = "قیمتش تقریبا تو کدوم محدوده هست؟"
+
+[[template]]
+kind = "magnitude"
+id = "magnitude-3"
+register = "formal"
+held_out = false
+state = "هزینه تعمیرات {d} تومان برآورد شده است."
+question = "هزینه تعمیرات از نظر مقدار در کدام دسته قرار می گیرد؟"
+
+[[template]]
+kind = "magnitude"
+id = "magnitude-4"
+register = "colloquial"
+held_out = false
+state = "کرایه تاکسی {d} تومان شد."
+question = "این مبلغ تو کدوم بازه هست؟"
+
+[[template]]
+kind = "magnitude"
+id = "magnitude-5"
+register = "formal"
+held_out = true
+state = "حقوق پایه کارمند {d} تومان تعیین شده است."
+question = "این مبلغ در کدام بازه قرار می گیرد؟"
+
+[[template]]
+kind = "magnitude"
+id = "magnitude-6"
+register = "colloquial"
+held_out = true
+state = "قسط ماهانه من {d} تومانه."
+question = "اندازه این مبلغ تو کدوم بازه قرار می گیره؟"
