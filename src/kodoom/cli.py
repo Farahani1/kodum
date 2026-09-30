@@ -13,7 +13,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-from kodoom import __version__, baselines
+from kodoom import __version__, baselines, helmo
 from kodoom.calibration import (
     CalibrationError,
     fit_calibration,
@@ -123,16 +123,19 @@ def _parser() -> argparse.ArgumentParser:
     fetch = commands.add_parser(
         "fetch", help="download a source dataset and convert it to records (run on Colab)"
     )
-    fetch.add_argument("dataset", choices=["typed-decisions"])
+    fetch.add_argument("dataset", choices=["typed-decisions", "helmo"])
     _add_profile_args(fetch)
     fetch.add_argument(
-        "--revision", default=REVISION, help="commit to read (default: the pinned one)"
+        "--revision", help="commit to read (default: the one pinned for the dataset)"
     )
     fetch.add_argument(
-        "--limit", type=int, help="cases per workflow and split (default: the profile's cap)"
+        "--limit",
+        type=int,
+        help="typed-decisions: cases per workflow and split; helmo: records "
+        "(default: the profile's cap)",
     )
     fetch.add_argument(
-        "--out", type=Path, help="output directory (default: <data_dir>/typed-decisions/en)"
+        "--out", type=Path, help="output directory (default: <data_dir>/<dataset>/en)"
     )
     fetch.set_defaults(func=_fetch)
 
@@ -253,7 +256,10 @@ def _generate(args: argparse.Namespace) -> int:
 
 
 def _fetch(args: argparse.Namespace) -> int:
+    if args.dataset == "helmo":
+        return _fetch_helmo(args)
     profile = _load(args)
+    args.revision = args.revision or REVISION
     try:
         from huggingface_hub import hf_hub_download
     except ImportError as e:
@@ -289,6 +295,40 @@ def _fetch(args: argparse.Namespace) -> int:
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     print(f"commit {args.revision}")
+    return 0
+
+
+def _fetch_helmo(args: argparse.Namespace) -> int:
+    profile = _load(args)
+    try:
+        from huggingface_hub import hf_hub_download
+    except ImportError as e:
+        raise InspectError(
+            "huggingface_hub is not installed: pip install huggingface_hub pyarrow"
+        ) from e
+    revision = args.revision or helmo.REVISION
+    limit = args.limit if args.limit is not None else profile.max_cases_per_source
+    out_dir = args.out if args.out is not None else profile.data_dir / "helmo" / "en"
+    records = helmo.load_records(hf_hub_download, revision=revision, limit=limit)
+    path = out_dir / "train.jsonl"
+    write_jsonl(path, records)
+    manifest = {
+        "source": helmo.SOURCE,
+        "revision": revision,
+        "license": get_source(helmo.SOURCE).license,
+        "kodoom_version": __version__,
+        "records_limit": limit,
+        "records": len(records),
+        "by_type": dict(Counter(r.question_type for r in records)),
+        "topics": len({r.extra["topic"] for r in records}),
+        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+    }
+    (out_dir / "manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    print(f"{path}: {len(records)} records, {manifest['topics']} topics")
+    print(f"  by type: {manifest['by_type']}")
+    print(f"commit {revision}")
     return 0
 
 

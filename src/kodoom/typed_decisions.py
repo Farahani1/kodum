@@ -119,8 +119,9 @@ def _options(spec: Mapping[str, Any], qtype: str, where: str) -> tuple[Option, .
         if not isinstance(criteria, list) or len(criteria) < 2:
             raise TypedDecisionsError(f"{where}: a score question needs a list of levels")
         return tuple(Option(str(i), str(text)) for i, text in enumerate(criteria))
-    if qtype == "noul" and criteria is None:
-        # Real rows (invoice_processing "duplicate") give a yes/no question no criteria.
+    if qtype == "noul" and not criteria:
+        # Real rows give a yes/no question no criteria (invoice_processing "duplicate": the
+        # key is missing; helmo: it is empty).
         return (Option("false", "No"), Option("true", "Yes"))
     if not isinstance(criteria, dict) or len(criteria) < 2:
         raise TypedDecisionsError(f"{where}: {qtype} criteria must map option ids to text")
