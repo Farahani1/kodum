@@ -11,8 +11,8 @@ table below or adds a user-visible command, module or decision.
 
 ## Status against the plan
 
-Last updated: Sep 30, 2026, at commit `fb81dcd`. Checks: `ruff check`, `ruff format
---check` and `pytest` (533 tests) pass; CI runs Windows and Ubuntu on Python 3.11 to
+Last updated: Sep 30, 2026, at commit `a74e037`. Checks: `ruff check`, `ruff format
+--check` and `pytest` (534 tests) pass; CI runs Windows and Ubuntu on Python 3.11 to
 3.13.
 
 | Plan | Item | State |
@@ -22,7 +22,7 @@ Last updated: Sep 30, 2026, at commit `fb81dcd`. Checks: `ruff check`, `ruff for
 | 1.1 | typed-decisions loader, pinned revision `e135720c…`, field statistics | Done. Real data loads: 1,200 train cases (6,000 decisions) and 400 test cases (2,000), matching the dataset card. Preflight caps train at 200 cases per workflow. |
 | 1.1 | Translate/keep rules for each field | Done (`translate/rules.py`), decided from all 1,200 cases; a text field with no rule is an error. |
 | 1.1 | helmo/synthetic-typed-decisions: dedupe, sample 3-5k, no overlap with the test split | Loader written (`kodoom fetch helmo`) from the real structure: one JSONL file, 9,879 records, MIT, pinned `1827dc0d…`; score gold is a mean, turned into a two-level distribution. Ran on Colab (preflight, 200 records, 132 topics: 71 yes/no, 71 choice, 58 score); 7 of 200 had gold not summing to 1 and were rescaled and flagged. Dedupe, sampling and the overlap check are not started. |
-| 1.2 | Automatic checks, pipeline, orthographic cleanup | Done and tested with a stub translator (`kodoom translate --translator stub`): keep-fields, identifiers, numbers, script, length, looping; resumable per case. Glossary (draft, needs a native reader) and its consistency check done. Model translators written (TranslateGemma 4B/12B, Qwen3-8B chat) but **never run**: model ids and message format unverified, first Colab trial pending. **Not done:** the trial and the 50-case pilot, meaning check, human review. The TPU trial is optional. |
+| 1.2 | Automatic checks, pipeline, orthographic cleanup | Done and tested with a stub translator (`kodoom translate --translator stub`): keep-fields, identifiers, numbers, script, length, looping; resumable per case. Glossary (draft, needs a native reader) and its consistency check done. Model translators written. **Trial 1 (Colab, T4):** Qwen3-8B (4-bit) ran, and all automatic checks passed, yet its translations changed meaning ("expired" became "valid", "irreversible" became "reversible") and one word contained Cyrillic letters (now caught by a new check). TranslateGemma failed to load: the repo is gated (license and `HF_TOKEN` needed). **Not done:** TranslateGemma trial, the 50-case pilot, meaning check, human review. The TPU trial is optional. |
 | 1.3 | One record schema, source rules | Done (`schema.py`, `sources.py`). |
 | 1.3 | Publish typed-decisions-fa | Not started, and deliberately on hold: owner decision that no data is pushed anywhere yet, everything stays on the owner's Drive. |
 | 2.1-2.3 | Training mix, training, logs | Not started. Run manager, profiles and checkpoint rules are ready. |
@@ -47,7 +47,7 @@ has not started.
 
 ### Next
 
-1. Run the *Translation trial* cells on Colab (10 cases, two candidates) and fix what breaks: model ids, message format, T4 memory and fp16.
+1. Accept the Gemma license on Hugging Face, add the `HF_TOKEN` Colab secret and re-run the TranslateGemma trial cell (message format, T4 memory and fp16 still untested). Read the Gemma terms on generated outputs (plan v10).
 2. Have the glossary read by a native speaker.
 3. The 50-case pilot on Colab with two candidates, reviewed blind.
 4. Optional: a v5e TPU trial (TranslateGemma 4B in bf16, ten sentences) and, if it works, a `colab-tpu` profile.
@@ -114,6 +114,8 @@ Our checks and glossary are meant to catch this kind of inconsistency.
 
 ### Fixed
 
+- The script check now flags letters from another alphabet (found in trial 1: Cyrillic
+  letters inside a Persian word passed every check).
 - The helmo loader no longer stops at rows whose choice gold does not sum to 1 (the
   first real fetch failed at row 33, sum 0.95): such gold is scaled to 1, the original
   sum is kept in `extra.gold_sum_in_source`, and `fetch` reports how many there were.
