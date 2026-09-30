@@ -31,6 +31,8 @@ from kodoom.predictions import PredictionError, read_predictions, write_predicti
 from kodoom.runs import RunError, list_runs
 from kodoom.schema import RecordError, read_jsonl, write_jsonl
 from kodoom.sources import SourceError, check_record, get_source
+from kodoom.translate.pipeline import TRANSLATORS, translate_file
+from kodoom.translate.rules import RuleError
 from kodoom.typed_decisions import REVISION, SPLITS, TypedDecisionsError, field_stats, load_records
 
 
@@ -53,6 +55,7 @@ def main(argv: list[str] | None = None) -> int:
         InspectError,
         PredictionError,
         TypedDecisionsError,
+        RuleError,
         CalibrationError,
         MetricError,
     ) as e:
@@ -138,6 +141,21 @@ def _parser() -> argparse.ArgumentParser:
         "--out", type=Path, help="output directory (default: <data_dir>/<dataset>/en)"
     )
     fetch.set_defaults(func=_fetch)
+
+    translate = commands.add_parser(
+        "translate", help="translate fetched typed-decisions cases into Persian (resumable)"
+    )
+    translate.add_argument("dataset", choices=["typed-decisions"])
+    _add_profile_args(translate)
+    translate.add_argument(
+        "--translator",
+        choices=list(TRANSLATORS),
+        required=True,
+        help="stub only pretends (dev and tests); real translators come with the pilot",
+    )
+    translate.add_argument("--split", choices=list(SPLITS), help="default: both")
+    translate.add_argument("--limit", type=int, help="cases per split (default: all fetched)")
+    translate.set_defaults(func=_translate)
 
     fields = commands.add_parser(
         "fields", help="statistics of the text fields of fetched typed-decisions records"
@@ -332,6 +350,24 @@ def _fetch_helmo(args: argparse.Namespace) -> int:
     print(f"  gold not summing to 1 in the source (rescaled, flagged): {manifest['gold_rescaled']}")
     print(f"commit {revision}")
     return 0
+
+
+def _translate(args: argparse.Namespace) -> int:
+    profile = _load(args)
+    translator = TRANSLATORS[args.translator]()
+    base = profile.data_dir / "typed-decisions"
+    failed = 0
+    for split in [args.split] if args.split else list(SPLITS):
+        source = base / "en" / f"{split}.jsonl"
+        if not source.exists():
+            raise InspectError(f"{source} does not exist; run `kodoom fetch typed-decisions` first")
+        out = base / "fa" / translator.name / f"{split}.jsonl"
+        stats = translate_file(source, out, translator, limit=args.limit)
+        print(f"{out}: {stats['translated']} cases translated, {stats['skipped']} already done")
+        failed += stats["with_findings"]
+        if stats["with_findings"]:
+            print(f"  {stats['with_findings']} cases have check findings (checks_passed=false)")
+    return 0 if not failed else 1
 
 
 def _fields(args: argparse.Namespace) -> int:
