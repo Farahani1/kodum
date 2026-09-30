@@ -23,18 +23,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, timedelta
-from typing import Any
 
-from kodoom import __version__
 from kodoom.generators.common import (
     DEFAULT_PAIRS_PER_KIND,
-    MAX_ATTEMPTS,
     GeneratorError,
+    GeneratorSpec,
+    Half,
+    PairSpec,
     Template,
-    assign_split,
-    item_rng,
-    load_templates,
-    pick_template,
+    build_records,
     to_script,
 )
 from kodoom.jalali import (
@@ -48,8 +45,7 @@ from kodoom.jalali import (
     to_gregorian,
     weekday_index,
 )
-from kodoom.schema import Option, Record, one_hot
-from kodoom.sources import get_source
+from kodoom.schema import Option, Record
 
 NAME = "jalali-dates"
 VERSION = 1  # bump whenever templates or generation logic change
@@ -86,53 +82,16 @@ class Style:
     fmt: str  # numeric (1405/07/15) or named (15 مهر 1405)
 
 
-@dataclass(frozen=True)
-class Half:
-    slots: dict[str, str]  # placeholder -> rendered text
-    answer: str  # id of the correct option
-    facts: dict[str, Any]  # what the answer was computed from, for audits
-
-
-@dataclass(frozen=True)
-class PairSpec:
-    variant: str
-    key: tuple  # identifies the facts, so no two pairs repeat them
-    options: tuple[Option, ...]
-    halves: tuple[Half, Half]
-
-
 def generate(seed: int, pairs_per_kind: int = DEFAULT_PAIRS_PER_KIND) -> list[Record]:
     """All records: ``pairs_per_kind`` pairs (two records each) for every kind."""
-    if pairs_per_kind < 1:
-        raise GeneratorError("pairs_per_kind must be at least 1")
-    templates = load_templates(NAME, SLOTS)
-    records: list[Record] = []
-    for kind in KINDS:
-        seen: set[tuple] = set()
-        for i in range(pairs_per_kind):
-            template = pick_template(templates[kind], i)
-            for attempt in range(MAX_ATTEMPTS):
-                rng = item_rng(seed, NAME, kind, i, attempt)
-                style = Style(
-                    script=rng.choices(["fa", "latin", "ar"], weights=[45, 45, 10])[0],
-                    fmt=rng.choice(["numeric", "named"]),
-                )
-                spec = _BUILDERS[kind](rng, style, template)
-                if spec.key not in seen:
-                    break
-            else:
-                raise GeneratorError(
-                    f"{NAME}/{kind}: no unused facts left for item {i}; ask for fewer pairs"
-                )
-            seen.add(spec.key)
-            records += _records(seed, kind, i, template, style, spec)
-    return records
+    return build_records(SPEC, seed, pairs_per_kind)
 
 
 # -- builders: one per kind -----------------------------------------------------
 
 
-def _before(rng, style: Style, template: Template) -> PairSpec:
+def _before(rng, template: Template) -> PairSpec:
+    style = _style(rng)
     a = _random_date(rng)
     low, high = rng.choices([(1, 3), (4, 40), (41, 400)], weights=[3, 4, 3])[0]
     b = add_days(a, rng.randint(low, high))
@@ -150,10 +109,11 @@ def _before(rng, style: Style, template: Template) -> PairSpec:
 
     gap = abs((to_gregorian(*a) - to_gregorian(*b)).days)
     variant = "gap-short" if gap <= 3 else "gap-medium" if gap <= 40 else "gap-long"
-    return PairSpec(variant, tuple(sorted((a, b))), YES_NO, (half(a, b), half(b, a)))
+    return PairSpec(variant, tuple(sorted((a, b))), YES_NO, (half(a, b), half(b, a)), _extra(style))
 
 
-def _weekday(rng, style: Style, template: Template) -> PairSpec:
+def _weekday(rng, template: Template) -> PairSpec:
+    style = _style(rng)
     first = _random_date(rng)
     options = list(WEEKDAY_OPTIONS)
     rng.shuffle(options)
@@ -167,10 +127,11 @@ def _weekday(rng, style: Style, template: Template) -> PairSpec:
 
     halves = [half(first), half(add_days(first, 1))]
     rng.shuffle(halves)
-    return PairSpec("next-day", (first,), tuple(options), (halves[0], halves[1]))
+    return PairSpec("next-day", (first,), tuple(options), (halves[0], halves[1]), _extra(style))
 
 
-def _valid(rng, style: Style, template: Template) -> PairSpec:
+def _valid(rng, template: Template) -> PairSpec:
+    style = _style(rng)
     variant = rng.choice(["month-end", "day-31", "esfand-30"])
     year = rng.randint(*YEARS)
     if variant == "month-end":  # Shahrivar has 31 days, Mehr has 30
@@ -190,10 +151,11 @@ def _valid(rng, style: Style, template: Template) -> PairSpec:
     halves = (half(pair[0]), half(pair[1]))
     if {h.answer for h in halves} != {"yes", "no"}:  # pragma: no cover - guards the variants
         raise GeneratorError(f"valid/{variant}: {pair} is not a minimal pair")
-    return PairSpec(variant, (variant, *sorted(pair)), YES_NO, halves)
+    return PairSpec(variant, (variant, *sorted(pair)), YES_NO, halves, _extra(style))
 
 
-def _gregorian(rng, style: Style, template: Template) -> PairSpec:
+def _gregorian(rng, template: Template) -> PairSpec:
+    style = _style(rng)
     first = _random_date(rng)
     g0 = to_gregorian(*first)
     days = [g0 + timedelta(days=n) for n in (-1, 0, 1, 2)] + [g0 + timedelta(days=365)]
@@ -208,10 +170,20 @@ def _gregorian(rng, style: Style, template: Template) -> PairSpec:
 
     halves = [half(first), half(add_days(first, 1))]
     rng.shuffle(halves)
-    return PairSpec("next-day", (first,), tuple(options), (halves[0], halves[1]))
+    return PairSpec("next-day", (first,), tuple(options), (halves[0], halves[1]), _extra(style))
 
 
 _BUILDERS = {"before": _before, "weekday": _weekday, "valid": _valid, "gregorian": _gregorian}
+
+SPEC = GeneratorSpec(
+    name=NAME,
+    version=VERSION,
+    source=SOURCE,
+    task_family=TASK_FAMILY,
+    slots=SLOTS,
+    question_types=QUESTION_TYPE,
+    builders=_BUILDERS,
+)
 
 
 # -- rendering and assembly -----------------------------------------------------
@@ -236,44 +208,12 @@ def _gregorian_text(d: date, style: Style) -> str:
     return to_script(f"{d.day} {GREGORIAN_MONTHS[d.month - 1]} {d.year}", style.script)
 
 
-def _records(
-    seed: int, kind: str, index: int, template: Template, style: Style, spec: PairSpec
-) -> list[Record]:
-    source_id = f"{NAME}-{kind}-{index:04d}"
-    split = assign_split(seed, source_id, template.held_out)
-    license_ = get_source(SOURCE).license
-    records = []
-    for role, half in zip("ab", spec.halves, strict=True):
-        records.append(
-            Record(
-                id=f"{source_id}-{role}",
-                source_id=source_id,
-                source=SOURCE,
-                source_revision=f"{NAME}-v{VERSION}",
-                license=license_,
-                split=split,
-                origin="synthetic",
-                task_family=TASK_FAMILY,
-                state_lang="fa",
-                question_lang="fa",
-                state=template.state.format(**half.slots),
-                question_type=QUESTION_TYPE[kind],
-                question_text=template.question.format(**half.slots),
-                options=spec.options,
-                gold=one_hot([o.id for o in spec.options], half.answer),
-                extra={
-                    "kind": kind,
-                    "variant": spec.variant,
-                    "template": template.id,
-                    "register": template.register,
-                    "pair_id": source_id,
-                    "pair_role": role,
-                    "digits": style.script,
-                    "date_format": style.fmt,
-                    "generator": f"{NAME}-v{VERSION}",
-                    "kodoom": __version__,
-                    "facts": half.facts,
-                },
-            )
-        )
-    return records
+def _style(rng) -> Style:
+    return Style(
+        script=rng.choices(["fa", "latin", "ar"], weights=[45, 45, 10])[0],
+        fmt=rng.choice(["numeric", "named"]),
+    )
+
+
+def _extra(style: Style) -> dict[str, str]:
+    return {"digits": style.script, "date_format": style.fmt}
