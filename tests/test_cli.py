@@ -80,3 +80,37 @@ def test_runs_lists_resumable_runs(tmp_path, capsys, monkeypatch):
     assert main(["runs", "--profile", "dev"]) == 0
     out = capsys.readouterr().out
     assert "smoke-1" in out and "running" in out
+
+
+def test_generate_writes_records_and_a_manifest(tmp_path, capsys):
+    out = tmp_path / "skills"
+    assert main(["generate", "--profile", "dev", "--out", str(out)]) == 0
+    text = capsys.readouterr().out
+    assert "jalali-dates.jsonl: 160 records" in text  # dev caps pairs at 20 per kind
+    assert main(["validate", str(out / "jalali-dates.jsonl")]) == 0
+
+    import hashlib
+    import json
+
+    manifest = json.loads((out / "jalali-dates.manifest.json").read_text(encoding="utf-8"))
+    assert manifest["seed"] == 1234 and manifest["pairs_per_kind"] == 20
+    assert (
+        manifest["sha256"] == hashlib.sha256((out / "jalali-dates.jsonl").read_bytes()).hexdigest()
+    )
+
+
+def test_generate_is_reproducible_byte_for_byte(tmp_path):
+    first, second = tmp_path / "a", tmp_path / "b"
+    for out in (first, second):
+        assert main(["generate", "jalali-dates", "--profile", "dev", "--out", str(out)]) == 0
+    assert (first / "jalali-dates.jsonl").read_bytes() == (
+        second / "jalali-dates.jsonl"
+    ).read_bytes()
+
+
+def test_generate_options_and_errors(tmp_path, capsys):
+    out = tmp_path / "o"
+    assert main(["generate", "--profile", "colab", "--pairs-per-kind", "3", "--out", str(out)]) == 0
+    assert "24 records" in capsys.readouterr().out
+    assert main(["generate", "nope", "--profile", "dev", "--out", str(out)]) == 1
+    assert "unknown generator" in capsys.readouterr().err

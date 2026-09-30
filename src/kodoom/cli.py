@@ -7,6 +7,8 @@ default, so a Colab run can never start with laptop settings or the reverse.
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import sys
 from collections import Counter
 from pathlib import Path
@@ -14,8 +16,10 @@ from pathlib import Path
 from kodoom import __version__
 from kodoom.check import FAIL, apply_environment, run_checks
 from kodoom.config import BUILTIN_PROFILES, Profile, ProfileError, load_profile
+from kodoom.generators import GENERATORS
+from kodoom.generators.common import DEFAULT_PAIRS_PER_KIND, GeneratorError
 from kodoom.runs import RunError, list_runs
-from kodoom.schema import RecordError, read_jsonl
+from kodoom.schema import RecordError, read_jsonl, write_jsonl
 from kodoom.sources import SourceError, check_record
 
 
@@ -29,7 +33,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         return args.func(args)
-    except (ProfileError, RecordError, SourceError, RunError) as e:
+    except (ProfileError, RecordError, SourceError, RunError, GeneratorError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
 
@@ -52,6 +56,27 @@ def _parser() -> argparse.ArgumentParser:
     runs = commands.add_parser("runs", help="list runs under runs_dir and what can be resumed")
     _add_profile_args(runs)
     runs.set_defaults(func=_runs)
+
+    generate = commands.add_parser(
+        "generate",
+        help="generate the code-labeled Persian skill data (plan 1.1); needs no GPU or download",
+    )
+    generate.add_argument(
+        "names",
+        nargs="*",
+        metavar="NAME",
+        help=f"generators to run (default: all): {', '.join(GENERATORS)}",
+    )
+    _add_profile_args(generate)
+    generate.add_argument("--out", type=Path, default=Path("data/skills"), help="output directory")
+    generate.add_argument("--seed", type=int, help="random seed (default: the profile's)")
+    generate.add_argument(
+        "--pairs-per-kind",
+        type=int,
+        help=f"minimal pairs per question kind (default {DEFAULT_PAIRS_PER_KIND}, or the "
+        "profile's max_cases_per_source if that is smaller)",
+    )
+    generate.set_defaults(func=_generate)
 
     validate = commands.add_parser(
         "validate", help="check record files against the schema and source rules"
@@ -81,6 +106,45 @@ def _info(args: argparse.Namespace) -> int:
     print(f"kodoom {__version__}")
     for key, value in vars(profile).items():
         print(f"{key:>22}: {value}")
+    return 0
+
+
+def _generate(args: argparse.Namespace) -> int:
+    profile = _load(args)
+    unknown = [n for n in args.names if n not in GENERATORS]
+    if unknown:
+        raise GeneratorError(
+            f"unknown generator {unknown[0]!r}; choose from {', '.join(GENERATORS)}"
+        )
+    seed = profile.seed if args.seed is None else args.seed
+    pairs = args.pairs_per_kind or DEFAULT_PAIRS_PER_KIND
+    if args.pairs_per_kind is None and profile.max_cases_per_source is not None:
+        pairs = min(pairs, profile.max_cases_per_source)
+
+    for name in args.names or list(GENERATORS):
+        generator = GENERATORS[name]
+        records = generator.generate(seed, pairs)
+        for record in records:
+            check_record(record)
+        path = args.out / f"{name}.jsonl"
+        write_jsonl(path, records)
+        manifest = {
+            "generator": name,
+            "generator_version": generator.VERSION,
+            "kodoom_version": __version__,
+            "seed": seed,
+            "pairs_per_kind": pairs,
+            "records": len(records),
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            "by_split": dict(Counter(r.split for r in records)),
+            "by_kind": dict(Counter(r.extra["kind"] for r in records)),
+        }
+        (args.out / f"{name}.manifest.json").write_text(
+            json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+        print(f"{path}: {len(records)} records (seed {seed}, {pairs} pairs per kind)")
+        print(f"  splits: {manifest['by_split']}")
+        print(f"  sha256: {manifest['sha256']}")
     return 0
 
 
