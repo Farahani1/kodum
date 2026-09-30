@@ -25,6 +25,7 @@ from kodoom.config import BUILTIN_PROFILES, Profile, ProfileError, load_profile
 from kodoom.evaluation import evaluate, format_table
 from kodoom.generators import GENERATORS
 from kodoom.generators.common import DEFAULT_PAIRS_PER_KIND, GeneratorError
+from kodoom.inspect_hf import InspectError, inspect_dataset
 from kodoom.metrics import MetricError
 from kodoom.predictions import PredictionError, read_predictions, write_predictions
 from kodoom.runs import RunError, list_runs
@@ -48,6 +49,7 @@ def main(argv: list[str] | None = None) -> int:
         SourceError,
         RunError,
         GeneratorError,
+        InspectError,
         PredictionError,
         CalibrationError,
         MetricError,
@@ -95,6 +97,21 @@ def _parser() -> argparse.ArgumentParser:
         "profile's max_cases_per_source if that is smaller)",
     )
     generate.set_defaults(func=_generate)
+
+    inspect = commands.add_parser(
+        "inspect", help="print the structure of a Hugging Face dataset (run once on Colab)"
+    )
+    inspect.add_argument("repo", help="dataset id, e.g. LocalLLaMA/typed-decisions")
+    _add_profile_args(inspect)
+    inspect.add_argument("--revision", help="branch, tag or commit (default: main)")
+    inspect.add_argument(
+        "--config", help="config (folder) to read; default: the first with the split"
+    )
+    inspect.add_argument("--split", default="test")
+    inspect.add_argument("--rows", type=int, default=2, help="rows to print in full")
+    inspect.add_argument("--max-chars", type=int, default=6000, help="cut a printed row after this")
+    inspect.add_argument("--out", type=Path, help="also write the report to this file")
+    inspect.set_defaults(func=_inspect)
 
     baseline = commands.add_parser(
         "baseline", help="write trivial-baseline predictions (uniform, prior, oracle)"
@@ -194,6 +211,23 @@ def _generate(args: argparse.Namespace) -> int:
         print(f"{path}: {len(records)} records (seed {seed}, {pairs} pairs per kind)")
         print(f"  splits: {manifest['by_split']}")
         print(f"  sha256: {manifest['sha256']}")
+    return 0
+
+
+def _inspect(args: argparse.Namespace) -> int:
+    _load(args)  # points HF_HOME at the profile's cache_dir before anything downloads
+    report = inspect_dataset(
+        args.repo,
+        revision=args.revision,
+        config=args.config,
+        split=args.split,
+        rows=args.rows,
+        max_chars=args.max_chars,
+    )
+    print(report)
+    if args.out:
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(report + "\n", encoding="utf-8")
     return 0
 
 

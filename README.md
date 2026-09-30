@@ -26,6 +26,10 @@ Every command that depends on the environment takes an explicit profile: `dev` (
 kodoom info --profile dev                 # show the resolved settings
 kodoom validate data/some-records.jsonl   # check records against the schema and source rules
 kodoom generate --profile dev             # the five code-labeled Persian skill sets -> data/skills/
+kodoom baseline uniform --data FILE.jsonl --out preds.jsonl   # trivial baselines: uniform, prior, oracle
+kodoom score --gold FILE.jsonl --pred preds.jsonl --by task_family   # metrics, calibration, minimal pairs
+kodoom calibrate --gold FILE.jsonl --pred preds.jsonl --out calibration.json   # a temperature per question type
+kodoom inspect LocalLLaMA/typed-decisions --profile colab-preflight   # structure of a Hugging Face dataset (Colab)
 kodoom check --profile dev                # is this machine ready for the profile?
 kodoom runs --profile dev                 # runs on disk and what can be resumed
 ```
@@ -44,6 +48,8 @@ Open [`notebooks/colab.ipynb`](notebooks/colab.ipynb) in Colab and Run all. Upda
 | `src/kodoom/normalize.py` | The Persian normalizer (plan 1.2 step 6) |
 | `src/kodoom/jalali.py` | The Jalali calendar: leap years, validity, conversion, weekdays |
 | `src/kodoom/generators/` | Code-labeled skill generators with minimal pairs; `templates/*.toml` are the Persian templates (plan 1.1) |
+| `src/kodoom/metrics.py`, `evaluation.py`, `predictions.py`, `calibration.py`, `baselines.py` | The scoring harness: metrics, prediction files, `calibration.json`, baselines (plan 3.2, 3.6) |
+| `src/kodoom/inspect_hf.py` | `kodoom inspect`: the exact structure of a Hugging Face dataset |
 | `src/kodoom/runs.py` | Run directories: crash-safe logs and checkpoints on Drive, resume, registry |
 | `src/kodoom/check.py` | `kodoom check`: Drive mounted, free space, GPU, model cache |
 | `src/kodoom/cli.py` | The `kodoom` command |

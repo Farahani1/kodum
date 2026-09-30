@@ -11,10 +11,11 @@ requires-python = ">=3.11"
 dependencies = []
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff>=0.6"]
+dev = ["pytest>=8", "ruff>=0.6", "pyarrow>=15"]
 # Installed on Colab only. Colab already ships torch with CUDA; CUDA-only
-# packages (e.g. bitsandbytes) are added here when code needs them.
-colab = []
+# packages (e.g. bitsandbytes) are added here when code needs them. The two below
+# are for "kodoom inspect", which reads a dataset from the Hugging Face hub.
+colab = ["huggingface_hub>=0.24", "pyarrow>=15"]
 
 [project.scripts]
 kodoom = "kodoom.cli:main"

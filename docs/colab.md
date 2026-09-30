@@ -26,6 +26,10 @@ The `kodoom check` cell stops the notebook if Drive is not mounted, no GPU is at
 
 Edits made directly on Colab are discarded by the next update, on purpose: the code on Colab must always be a commit that already ran on the laptop. The commit is recorded in every run's `run.json` (with `-dirty` if it was not clean).
 
+## Inspecting a source dataset (once)
+
+The *Inspect a source dataset* cell runs `kodoom inspect` on the typed-decisions workflows and the synthetic-typed-decisions dataset. It prints the pinned commit, the license from the dataset card, the files, the columns and types, and the first row of each in full. Copy the whole output back to the assistant: the loader and the translation rules are written from these real fields, not from a guess. If a dataset is not stored as parquet, the error lists its files instead.
+
 ## When a session dies
 
 Nothing to rescue: logs and checkpoints are written to Drive while the run goes.
