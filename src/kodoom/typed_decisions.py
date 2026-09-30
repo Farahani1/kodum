@@ -8,7 +8,8 @@ real dataset with ``kodoom inspect`` (commit ``REVISION``), not assumed:
 - ``state``: a JSON string; kept byte-identical as the record's ``state``;
 - ``questions``: JSON ``{name: {type, instructions, criteria}}``; for ``choice`` and
   ``noul`` the criteria map option id -> description (yes/no uses ``"false"`` and
-  ``"true"``), for ``score`` the criteria is the list of level descriptions and the
+  ``"true"``; a yes/no question may have no criteria at all, then the options are
+  "No" and "Yes"), for ``score`` the criteria is the list of level descriptions and the
   option ids are the level indexes ``"0"``, ``"1"``, ...;
 - ``gold``: JSON ``{name: {label, confidence, probabilities, ...}}``, a full
   distribution per question over the same option ids;
@@ -118,6 +119,9 @@ def _options(spec: Mapping[str, Any], qtype: str, where: str) -> tuple[Option, .
         if not isinstance(criteria, list) or len(criteria) < 2:
             raise TypedDecisionsError(f"{where}: a score question needs a list of levels")
         return tuple(Option(str(i), str(text)) for i, text in enumerate(criteria))
+    if qtype == "noul" and criteria is None:
+        # Real rows (invoice_processing "duplicate") give a yes/no question no criteria.
+        return (Option("false", "No"), Option("true", "Yes"))
     if not isinstance(criteria, dict) or len(criteria) < 2:
         raise TypedDecisionsError(f"{where}: {qtype} criteria must map option ids to text")
     if qtype == "noul" and set(criteria) != {"false", "true"}:

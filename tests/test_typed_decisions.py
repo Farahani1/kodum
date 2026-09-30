@@ -147,6 +147,15 @@ def test_bad_question_shapes_are_refused():
         case_records(with_question({"type": "choice", "instructions": "x", "criteria": ["a", "b"]}))
 
 
+def test_a_yes_no_question_without_criteria_gets_the_default_options():
+    row = make_row()
+    questions = json.loads(row["questions"])
+    del questions["urgent"]["criteria"]  # as in invoice_processing "duplicate"
+    urgent = case_records({**row, "questions": json.dumps(questions)})[1]
+    assert [(o.id, o.text) for o in urgent.options] == [("false", "No"), ("true", "Yes")]
+    assert urgent.gold == {"false": 0.6, "true": 0.4}
+
+
 def _write_parquet(path, rows):
     pa = pytest.importorskip("pyarrow")
     import pyarrow.parquet as pq
