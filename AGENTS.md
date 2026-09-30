@@ -43,12 +43,13 @@ Before committing, run the fast checks (below) and commit only when they pass. I
 
 ## Where things are
 
-- `src/kodoom/`: the package. `config.py` + `profiles/` (run profiles), `schema.py` (the record and JSONL I/O), `sources.py` (source registry and license/split rules), `normalize.py` (the one Persian normalizer), `runs.py` (run directories: logs, checkpoints, resume), `check.py` (`kodoom check`), `cli.py` (the `kodoom` command).
+- `src/kodoom/`: the package. `config.py` + `profiles/` (run profiles), `schema.py` (the record and JSONL I/O), `sources.py` (source registry and license/split rules), `normalize.py` (the one Persian normalizer), `jalali.py` (the Jalali calendar), `generators/` (code-labeled skill generators: `common.py` helpers, one module per generator, Persian templates in `templates/*.toml`), `runs.py` (run directories: logs, checkpoints, resume), `check.py` (`kodoom check`), `cli.py` (the `kodoom` command).
 - `notebooks/colab.ipynb`: the only notebook; thin, tested by `tests/test_notebook.py`. `docs/colab.md` explains the Colab workflow.
 - `tests/`: one test file per module. New code comes with tests in the same commit.
 - `docs/project-plan.md`: the plan.
 - Reuse these instead of re-implementing them: build records with `kodoom.schema.Record`, check them with `kodoom.sources.check_record`, normalize with `kodoom.normalize.normalize`, write with `write_jsonl` / `append_jsonl` (the latter for resumable steps). Every training or long-running step opens a `kodoom.runs.Run` and saves through `save_latest` / `save_best`, never by writing checkpoints to Drive directly, so resume and the storage budget hold.
-- Write invisible characters (ZWNJ, RLM, NBSP) as `\u` escapes in source; a test enforces it.
+- Write invisible characters (ZWNJ, RLM, NBSP) as `\u` escapes in source; a test enforces it. Persian templates are written with plain spaces and cleaned on load.
+- A new skill generator: labels come from code, every item is one half of a minimal pair, digits stay raw, held-out templates give exactly the test split, and it registers in `generators/__init__.py`. Changing templates or logic means bumping the generator's `VERSION` and the fingerprint test.
 
 ## Development and Colab are separate
 

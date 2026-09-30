@@ -25,6 +25,7 @@ Every command that depends on the environment takes an explicit profile: `dev` (
 ```
 kodoom info --profile dev                 # show the resolved settings
 kodoom validate data/some-records.jsonl   # check records against the schema and source rules
+kodoom generate --profile dev             # code-labeled Persian skills (Jalali dates so far) -> data/skills/
 kodoom check --profile dev                # is this machine ready for the profile?
 kodoom runs --profile dev                 # runs on disk and what can be resumed
 ```
@@ -41,6 +42,8 @@ Open [`notebooks/colab.ipynb`](notebooks/colab.ipynb) in Colab and Run all. Upda
 | `src/kodoom/schema.py` | The one decision record, JSONL I/O (plan 1.3) |
 | `src/kodoom/sources.py` | Data sources, licenses, test-only and excluded rules (plan 2.1) |
 | `src/kodoom/normalize.py` | The Persian normalizer (plan 1.2 step 6) |
+| `src/kodoom/jalali.py` | The Jalali calendar: leap years, validity, conversion, weekdays |
+| `src/kodoom/generators/` | Code-labeled skill generators with minimal pairs; `templates/*.toml` are the Persian templates (plan 1.1) |
 | `src/kodoom/runs.py` | Run directories: crash-safe logs and checkpoints on Drive, resume, registry |
 | `src/kodoom/check.py` | `kodoom check`: Drive mounted, free space, GPU, model cache |
 | `src/kodoom/cli.py` | The `kodoom` command |
