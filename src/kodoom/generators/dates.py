@@ -21,7 +21,6 @@ Kinds:
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import date, timedelta
 
 from kodoom.generators.common import (
@@ -34,8 +33,8 @@ from kodoom.generators.common import (
     build_records,
     to_script,
 )
+from kodoom.generators.numbers import DateStyle, draw_date_style, render_jalali
 from kodoom.jalali import (
-    MONTH_NAMES,
     WEEKDAY_NAMES,
     JDate,
     add_days,
@@ -76,12 +75,6 @@ GREGORIAN_MONTHS = (
 )
 
 
-@dataclass(frozen=True)
-class Style:
-    script: str  # digit script: latin, fa or ar
-    fmt: str  # numeric (1405/07/15) or named (15 مهر 1405)
-
-
 def generate(seed: int, pairs_per_kind: int = DEFAULT_PAIRS_PER_KIND) -> list[Record]:
     """All records: ``pairs_per_kind`` pairs (two records each) for every kind."""
     return build_records(SPEC, seed, pairs_per_kind)
@@ -91,7 +84,7 @@ def generate(seed: int, pairs_per_kind: int = DEFAULT_PAIRS_PER_KIND) -> list[Re
 
 
 def _before(rng, template: Template) -> PairSpec:
-    style = _style(rng)
+    style = draw_date_style(rng)
     a = _random_date(rng)
     low, high = rng.choices([(1, 3), (4, 40), (41, 400)], weights=[3, 4, 3])[0]
     b = add_days(a, rng.randint(low, high))
@@ -104,7 +97,7 @@ def _before(rng, template: Template) -> PairSpec:
     def half(x: JDate, y: JDate) -> Half:
         truth = x > y if after else x < y
         return Half(
-            {"a": _jalali(x, style), "b": _jalali(y, style)},
+            {"a": render_jalali(x, style), "b": render_jalali(y, style)},
             "yes" if truth else "no",
             {"a": list(x), "b": list(y), "relation": template.relation},
         )
@@ -115,14 +108,14 @@ def _before(rng, template: Template) -> PairSpec:
 
 
 def _weekday(rng, template: Template) -> PairSpec:
-    style = _style(rng)
+    style = draw_date_style(rng)
     first = _random_date(rng)
     options = list(WEEKDAY_OPTIONS)
     rng.shuffle(options)
 
     def half(d: JDate) -> Half:
         return Half(
-            {"d": _jalali(d, style)},
+            {"d": render_jalali(d, style)},
             WEEKDAY_IDS[weekday_index(d)],
             {"date": list(d), "gregorian": to_gregorian(*d).isoformat()},
         )
@@ -133,7 +126,7 @@ def _weekday(rng, template: Template) -> PairSpec:
 
 
 def _valid(rng, template: Template) -> PairSpec:
-    style = _style(rng)
+    style = draw_date_style(rng)
     variant = rng.choice(["month-end", "day-31", "esfand-30"])
     year = rng.randint(*YEARS)
     if variant == "month-end":  # Shahrivar has 31 days, Mehr has 30
@@ -148,7 +141,9 @@ def _valid(rng, template: Template) -> PairSpec:
 
     def half(d: JDate) -> Half:
         ok = is_valid(*d)
-        return Half({"d": _jalali(d, style)}, "yes" if ok else "no", {"date": list(d), "valid": ok})
+        return Half(
+            {"d": render_jalali(d, style)}, "yes" if ok else "no", {"date": list(d), "valid": ok}
+        )
 
     halves = (half(pair[0]), half(pair[1]))
     if {h.answer for h in halves} != {"yes", "no"}:  # pragma: no cover - guards the variants
@@ -157,7 +152,7 @@ def _valid(rng, template: Template) -> PairSpec:
 
 
 def _gregorian(rng, template: Template) -> PairSpec:
-    style = _style(rng)
+    style = draw_date_style(rng)
     first = _random_date(rng)
     g0 = to_gregorian(*first)
     days = [g0 + timedelta(days=n) for n in (-1, 0, 1, 2)] + [g0 + timedelta(days=365)]
@@ -167,7 +162,9 @@ def _gregorian(rng, template: Template) -> PairSpec:
     def half(d: JDate) -> Half:
         g = to_gregorian(*d)
         return Half(
-            {"d": _jalali(d, style)}, g.isoformat(), {"date": list(d), "gregorian": g.isoformat()}
+            {"d": render_jalali(d, style)},
+            g.isoformat(),
+            {"date": list(d), "gregorian": g.isoformat()},
         )
 
     halves = [half(first), half(add_days(first, 1))]
@@ -197,25 +194,9 @@ def _random_date(rng) -> JDate:
     return year, month, rng.randint(1, month_length(year, month))
 
 
-def _jalali(d: JDate, style: Style) -> str:
-    year, month, day = d
-    if style.fmt == "numeric":
-        text = f"{year:04d}/{month:02d}/{day:02d}"
-    else:
-        text = f"{day} {MONTH_NAMES[month - 1]} {year}"
-    return to_script(text, style.script)
-
-
-def _gregorian_text(d: date, style: Style) -> str:
+def _gregorian_text(d: date, style: DateStyle) -> str:
     return to_script(f"{d.day} {GREGORIAN_MONTHS[d.month - 1]} {d.year}", style.script)
 
 
-def _style(rng) -> Style:
-    return Style(
-        script=rng.choices(["fa", "latin", "ar"], weights=[45, 45, 10])[0],
-        fmt=rng.choice(["numeric", "named"]),
-    )
-
-
-def _extra(style: Style) -> dict[str, str]:
+def _extra(style: DateStyle) -> dict[str, str]:
     return {"digits": style.script, "date_format": style.fmt}
