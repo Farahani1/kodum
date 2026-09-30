@@ -88,13 +88,13 @@ T = used for training, E = used for evaluation only, ? = not in the card's parti
 
 ## 5. What this means for the plan
 
-Most points are already handled in plan v6/v7. Three are new.
+Most points were already handled in plan v6/v7; the three new ones were added in plan v8.
 
 | Finding | Status in the plan |
 | --- | --- |
 | M3 trained on ParsiNLU and PersianQA, our held-out sets | Handled (v6): M3's scores there are in-domain and excluded from held-out comparisons. |
 | M3's full source list is unknown | Open: read M3's `NOTICE` before reporting M3 on MASSIVE, FarsTail or Belebele. |
-| X1 is choice-only and built without third-party LLMs | Handled (v6) for evaluation. **New:** the typed-decisions-fa card should state which parts of our data involve a model (translator, teacher labels) and which do not (skills). |
+| X1 is choice-only and built without third-party LLMs | Handled (v6) for evaluation. **Added (plan v8):** every dataset card states which data involved a model (translator, teacher labels) and which did not (the skills suite). |
 | Nobody else has paired English–Persian decision data or code-labeled minimal pairs | These are the project's clearest data contributions; the plan already leads with them (v5). |
-| laya-fa-bench found instruction language changes results | **New:** report results by `question_lang` (Persian vs English questions over the same state). The schema already records it. |
-| laya-fa-bench tests Finglish, taarof, sarcasm and code-mixing | **New:** taarof and code-mixing are not in the plan or in `future-work.md`; candidates for future work, or for a small robustness check (3.4). |
+| laya-fa-bench found instruction language changes results | **Added (plan v8, 3.2):** every metric reported by question language (`question_lang`, already in the schema). |
+| laya-fa-bench tests Finglish, taarof, sarcasm and code-mixing | **Added (plan v8):** code-mixing as a robustness check (3.4); taarof and sarcasm in `future-work.md` (they need native writers); Finglish already there. |
