@@ -41,6 +41,14 @@ Plan: <section, e.g. 1.2 step 6>   (when it relates to the plan)
 
 Before committing, run the fast checks (below) and commit only when they pass. If a check fails for a reason outside your change, say so in the message.
 
+## Where things are
+
+- `src/kodoom/`: the package. `config.py` + `profiles/` (run profiles), `schema.py` (the record and JSONL I/O), `sources.py` (source registry and license/split rules), `normalize.py` (the one Persian normalizer), `cli.py` (the `kodoom` command).
+- `tests/`: one test file per module. New code comes with tests in the same commit.
+- `docs/project-plan.md`: the plan.
+- Reuse these instead of re-implementing them: build records with `kodoom.schema.Record`, check them with `kodoom.sources.check_record`, normalize with `kodoom.normalize.normalize`, write with `write_jsonl` / `append_jsonl` (the latter for resumable steps).
+- Write invisible characters (ZWNJ, RLM, NBSP) as `\u` escapes in source; a test enforces it.
+
 ## Development and Colab are separate
 
 Read "Environments" in the plan. In short:
