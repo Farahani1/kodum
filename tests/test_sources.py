@@ -78,3 +78,9 @@ def test_every_training_source_has_a_permissive_license():
     permissive = {"Apache-2.0", "MIT", "CC-BY-4.0"}
     trainable = [s for s in SOURCES.values() if s.role == "train_and_test"]
     assert {s.license for s in trainable} <= permissive
+
+
+def test_licenses_confirmed_against_their_repositories():
+    # MASSIVE: NOTICE.md; Belebele: README; both checked in September 2026.
+    assert SOURCES["alexa/massive"].license_confirmed
+    assert SOURCES["facebook/belebele"].license_confirmed

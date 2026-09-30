@@ -58,7 +58,6 @@ SOURCES: dict[str, Source] = {
             "https://github.com/alexa/massive",
             "CC-BY-4.0",
             TRAIN_AND_TEST,
-            license_confirmed=False,
         ),
         Source(
             "dml-qom/FarsTail",
@@ -86,7 +85,6 @@ SOURCES: dict[str, Source] = {
             "https://huggingface.co/datasets/facebook/belebele",
             "CC-BY-SA-4.0",
             TEST_ONLY,
-            license_confirmed=False,
         ),
         Source("own/stt-intent", "", "private", TEST_ONLY, publish_derived_data=False),
         Source(
