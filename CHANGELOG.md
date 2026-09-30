@@ -21,7 +21,7 @@ Last updated: Sep 30, 2026, at commit `8c6a8e7`. Checks: `ruff check`, `ruff for
 | 1.1 | Code-labeled skills: Jalali dates, digit forms, Toman/Rial, business hours, Iranian formats, with minimal pairs, held-out test templates, raw forms | Done: 4,200 items at the default 150 pairs per kind. **Open:** native review of the ~66 Persian templates. |
 | 1.1 | typed-decisions loader, pinned revision `e135720c…`, field statistics | Done. Real data loads: 1,200 train cases (6,000 decisions) and 400 test cases (2,000), matching the dataset card. Preflight caps train at 200 cases per workflow. |
 | 1.1 | Translate/keep rules for each field | Proposed from the field statistics, not yet coded. |
-| 1.1 | helmo/synthetic-typed-decisions: dedupe, sample 3-5k, no overlap with the test split | Loader written (`kodoom fetch helmo`) from the real structure: one JSONL file, 9,879 records, MIT, pinned `1827dc0d…`; score gold is a mean, turned into a two-level distribution. Not yet run on Colab. Dedupe, sampling and the overlap check are not started. |
+| 1.1 | helmo/synthetic-typed-decisions: dedupe, sample 3-5k, no overlap with the test split | Loader written (`kodoom fetch helmo`) from the real structure: one JSONL file, 9,879 records, MIT, pinned `1827dc0d…`; score gold is a mean, turned into a two-level distribution. Ran on Colab (preflight, 200 records, 132 topics: 71 yes/no, 71 choice, 58 score); 7 of 200 had gold not summing to 1 and were rescaled and flagged. Dedupe, sampling and the overlap check are not started. |
 | 1.2 | Translation: pilot of 50 cases, translator choice, automatic checks, meaning check, human review, orthographic cleanup | Not started. `clean_orthography` exists. Needs Colab. |
 | 1.3 | One record schema, source rules | Done (`schema.py`, `sources.py`). |
 | 1.3 | Publish typed-decisions-fa | Not started, and deliberately on hold: owner decision that no data is pushed anywhere yet, everything stays on the owner's Drive. |
@@ -47,7 +47,7 @@ has not started.
 
 ### Next
 
-1. Check `kodoom fetch helmo` on the real file (choice criteria format is assumed).
+1. Run `kodoom fetch helmo` with the `colab` profile (all 9,879 records) to get the full rescaled count.
 2. Encode the translate/keep rules and the automatic checks (keep-fields byte-identical, numbers and IDs survive, output is Persian, no looping).
 3. Stub translator and a 50-case pilot; the real pilot needs a Colab session.
 
