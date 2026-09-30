@@ -20,6 +20,7 @@ def record(source, split="train", license=None):
         license=license or SOURCES[source].license,
         split=split,
         origin="native",
+        task_family="reading",
         state_lang="fa",
         question_lang="fa",
         state="متن",

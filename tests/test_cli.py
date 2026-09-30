@@ -15,6 +15,7 @@ def record(**overrides):
         license="Apache-2.0",
         split="train",
         origin="native",
+        task_family="entailment",
         state_lang="fa",
         question_lang="fa",
         state="متن",

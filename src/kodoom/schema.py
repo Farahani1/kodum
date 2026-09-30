@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import re
 from collections.abc import Iterable, Iterator
 from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
@@ -19,6 +20,9 @@ QUESTION_TYPES = ("choice", "score", "noul")
 SPLITS = ("train", "validation", "calibration", "test")
 ORIGINS = ("translated", "native", "synthetic")
 LANGS = ("fa", "en")
+
+# Task families are lowercase words joined by hyphens, e.g. "skill-dates".
+TASK_FAMILY = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 
 # Soft labels from source datasets may be rounded (0.33 + 0.33 + 0.33).
 GOLD_SUM_TOLERANCE = 1e-3
@@ -43,6 +47,9 @@ class Record:
     license: str
     split: str
     origin: str
+    # What kind of task this is (plan 1.1), so results can be split by
+    # families seen in training vs held out.
+    task_family: str
     state_lang: str
     question_lang: str
     state: str
@@ -97,6 +104,8 @@ def _validate(r: Record) -> None:
     ):
         if getattr(r, name) not in allowed:
             fail(f"{name} must be one of {allowed}, got {getattr(r, name)!r}")
+    if not isinstance(r.task_family, str) or not TASK_FAMILY.fullmatch(r.task_family):
+        fail(f"task_family must look like 'skill-dates', got {r.task_family!r}")
 
     ids = [o.id for o in r.options]
     if len(ids) < 2:

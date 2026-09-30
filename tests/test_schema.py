@@ -23,6 +23,7 @@ def make(**overrides):
         license="Apache-2.0",
         split="train",
         origin="translated",
+        task_family="workflow",
         state_lang="fa",
         question_lang="fa",
         state="مشتری درخواست بازپرداخت برای فاکتور INV-2291 دارد.",
@@ -54,6 +55,8 @@ def test_jsonl_keeps_persian_readable_and_round_trips(tmp_path):
     ("overrides", "message"),
     [
         (dict(split="dev"), "split must be one of"),
+        (dict(task_family=""), "task_family"),
+        (dict(task_family="Skill Dates"), "task_family"),
         (dict(origin="machine"), "origin must be one of"),
         (dict(question_type="multi"), "question_type must be one of"),
         (dict(state_lang="ar"), "state_lang must be one of"),
