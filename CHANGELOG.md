@@ -1,7 +1,7 @@
 # Changelog and project status
 
 This file records what changed in kodoom and where the project stands against
-`docs/project-plan.md` (currently version 9, the source of truth). Format follows
+`docs/project-plan.md` (currently version 11, the source of truth). Format follows
 [Keep a Changelog](https://keepachangelog.com/): newest first, grouped by kind of
 change. The project has no releases yet; everything is under "Unreleased" until the
 first published dataset (typed-decisions-fa v0.1, plan 1.3).
@@ -18,7 +18,7 @@ Last updated: Sep 30, 2026, at commit `3505090`. Checks: `ruff check`, `ruff for
 | Plan | Item | State |
 | --- | --- | --- |
 | Environments | `dev`, `colab-preflight`, `colab` profiles, storage keys, crash-safe run directories, `kodoom check`, thin notebook, Colab guide | Done. Preflight ran on a real T4 (Python 3.13): check, generate, fetch and fields all ran. |
-| 1.1 | Code-labeled skills: Jalali dates, digit forms, Toman/Rial, business hours, Iranian formats, with minimal pairs, held-out test templates, raw forms | Done: 4,200 items at the default 150 pairs per kind. **Open:** native review of the ~66 Persian templates. |
+| 1.1 | Code-labeled skills: Jalali dates, digit forms, Toman/Rial, business hours, Iranian formats, with minimal pairs, held-out test templates, raw forms | Done: 4,200 items at the default 150 pairs per kind. **Open:** native review of the 84 Persian templates (`kodoom review-pack` writes them for reading). |
 | 1.1 | typed-decisions loader, pinned revision `e135720c…`, field statistics | Done. Real data loads: 1,200 train cases (6,000 decisions) and 400 test cases (2,000), matching the dataset card. Preflight caps train at 200 cases per workflow. |
 | 1.1 | Translate/keep rules for each field | Done (`translate/rules.py`), decided from all 1,200 cases; a text field with no rule is an error. |
 | 1.1 | helmo/synthetic-typed-decisions: dedupe, sample 3-5k, no overlap with the test split | Loader written (`kodoom fetch helmo`) from the real structure: one JSONL file, 9,879 records, MIT, pinned `1827dc0d…`; score gold is a mean, turned into a two-level distribution. Ran on Colab (preflight, 200 records, 132 topics: 71 yes/no, 71 choice, 58 score); 7 of 200 had gold not summing to 1 and were rescaled and flagged. Dedupe, sampling and the overlap check are not started. |
@@ -39,7 +39,7 @@ has not started.
 ### Open items for the owner
 
 - Choose the gate thresholds in plan 2.4 before the M2 baselines run.
-- Native review of the Persian generator templates.
+- Native review of the glossary and the 84 Persian generator templates (`kodoom review-pack`).
 - Rename the GitHub repository to `kodoom` (Settings).
 - Copyright-holder name in `LICENSE` (currently "the kodoom authors").
 - Confirm: MASSIVE fa-IR locale, the ParsiNLU and mmBERT-base licenses, DibaOne M3's NOTICE file.
@@ -69,6 +69,14 @@ Our checks and glossary are meant to catch this kind of inconsistency.
 
 ### Added
 
+- `kodoom review-pack` (`review.py`): the glossary and all 84 generator templates, each with a
+  generated example, as right-to-left HTML pages and CSV sheets with feedback columns, in
+  `<data_dir>/review/`, for the native review. The notebook also gained a `pilot-score` cell.
+- `<data_dir>/README.md`, kept current by every command that writes data (`datadir.py`): the
+  file tree with sizes, record counts and what each folder holds, what the last update made
+  or changed, and the last 20 updates with their command lines. `kodoom tree --start` and
+  `kodoom tree` bracket a notebook run; the last notebook cell prints the tree with the files
+  that run generated or updated marked.
 - `kodoom export-units` and `import-units` (`translate/exchange.py`): a translator that cannot run
   inside kodoom (Claude Cowork, a person) gets each distinct English text once with its
   register, context and glossary terms and a brief; the filled file comes back through the

@@ -13,7 +13,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-from kodoom import __version__, baselines, helmo
+from kodoom import __version__, baselines, datadir, helmo
 from kodoom.calibration import (
     CalibrationError,
     fit_calibration,
@@ -28,6 +28,7 @@ from kodoom.generators.common import DEFAULT_PAIRS_PER_KIND, GeneratorError
 from kodoom.inspect_hf import InspectError, inspect_dataset
 from kodoom.metrics import MetricError
 from kodoom.predictions import PredictionError, read_predictions, write_predictions
+from kodoom.review import write_review_pack
 from kodoom.runs import RunError, list_runs
 from kodoom.schema import RecordError, read_jsonl, write_jsonl
 from kodoom.sources import SourceError, check_record, get_source
@@ -89,6 +90,26 @@ def main(argv: list[str] | None = None) -> int:
     ) as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
+    finally:
+        # Also after a failure: a partly written step still changed files.
+        if getattr(args, "writes_data", False):
+            _refresh_readme(args, argv)
+
+
+def _refresh_readme(args: argparse.Namespace, argv: list[str] | None) -> None:
+    """Keep <data_dir>/README.md in step with what the command wrote."""
+    words = sys.argv[1:] if argv is None else argv
+    try:
+        profile = load_profile(args.profile, runs_dir=args.runs_dir)
+        changes = datadir.update_readme(profile.data_dir, " ".join(["kodoom", *words]))
+    except (ProfileError, OSError, ValueError) as e:
+        print(f"warning: {datadir.README} in data_dir not updated: {e}", file=sys.stderr)
+        return
+    if changes:
+        print(
+            f"{profile.data_dir / datadir.README}: updated ({len(changes.new)} new, "
+            f"{len(changes.updated)} updated, {len(changes.removed)} removed)"
+        )
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -131,7 +152,15 @@ def _parser() -> argparse.ArgumentParser:
         help=f"minimal pairs per question kind (default {DEFAULT_PAIRS_PER_KIND}, or the "
         "profile's max_cases_per_source if that is smaller)",
     )
-    generate.set_defaults(func=_generate)
+    generate.set_defaults(func=_generate, writes_data=True)
+
+    review = commands.add_parser(
+        "review-pack",
+        help="write the glossary and generator templates for a native reader to <data_dir>/review",
+    )
+    _add_profile_args(review)
+    review.add_argument("--seed", type=int, help="seed of the examples (default: the profile's)")
+    review.set_defaults(func=_review_pack, writes_data=True)
 
     inspect = commands.add_parser(
         "inspect", help="print the structure of a Hugging Face dataset (run once on Colab)"
@@ -168,7 +197,7 @@ def _parser() -> argparse.ArgumentParser:
     fetch.add_argument(
         "--out", type=Path, help="output directory (default: <data_dir>/<dataset>/en)"
     )
-    fetch.set_defaults(func=_fetch)
+    fetch.set_defaults(func=_fetch, writes_data=True)
 
     translate = commands.add_parser(
         "translate", help="translate fetched typed-decisions cases into Persian (resumable)"
@@ -186,7 +215,7 @@ def _parser() -> argparse.ArgumentParser:
     translate.add_argument(
         "--balanced", action="store_true", help="with --limit, take cases from every workflow"
     )
-    translate.set_defaults(func=_translate)
+    translate.set_defaults(func=_translate, writes_data=True)
 
     show = commands.add_parser(
         "translations", help="check counts and English next to Persian for a translator's output"
@@ -207,7 +236,7 @@ def _parser() -> argparse.ArgumentParser:
     sheet.add_argument("--b", required=True, metavar="TRANSLATOR", help="the other translator")
     sheet.add_argument("--split", choices=list(SPLITS), default="train")
     sheet.add_argument("--seed", type=int, default=1234, help="draws which one is A or B")
-    sheet.set_defaults(func=_pilot_sheet)
+    sheet.set_defaults(func=_pilot_sheet, writes_data=True)
 
     score = commands.add_parser("pilot-score", help="tally a filled review sheet against its key")
     score.add_argument("dataset", choices=["typed-decisions"])
@@ -226,7 +255,7 @@ def _parser() -> argparse.ArgumentParser:
     export.add_argument("--split", choices=list(SPLITS), default="train")
     export.add_argument("--limit", type=int, help="cases (default: all fetched)")
     export.add_argument("--balanced", action="store_true", help="with --limit, all workflows")
-    export.set_defaults(func=_export_units)
+    export.set_defaults(func=_export_units, writes_data=True)
 
     imp = commands.add_parser(
         "import-units", help="turn a filled units file into checked Persian records"
@@ -238,7 +267,7 @@ def _parser() -> argparse.ArgumentParser:
     imp.add_argument("--units", default="units-filled.jsonl", help="file in the exchange folder")
     imp.add_argument("--limit", type=int, help="cases (default: all fetched)")
     imp.add_argument("--balanced", action="store_true", help="with --limit, all workflows")
-    imp.set_defaults(func=_import_units)
+    imp.set_defaults(func=_import_units, writes_data=True)
 
     fields = commands.add_parser(
         "fields", help="statistics of the text fields of fetched typed-decisions records"
@@ -284,6 +313,16 @@ def _parser() -> argparse.ArgumentParser:
     calibrate.add_argument("--split", default="calibration", help="split to fit on (never test)")
     calibrate.add_argument("--out", type=Path, required=True)
     calibrate.set_defaults(func=_calibrate)
+
+    tree = commands.add_parser(
+        "tree",
+        help="print the files in data_dir, marking those made or changed since --start",
+    )
+    _add_profile_args(tree)
+    tree.add_argument(
+        "--start", action="store_true", help="record the files now (first cell of a notebook run)"
+    )
+    tree.set_defaults(func=_tree, writes_data=True)
 
     validate = commands.add_parser(
         "validate", help="check record files against the schema and source rules"
@@ -353,6 +392,17 @@ def _generate(args: argparse.Namespace) -> int:
         print(f"{path}: {len(records)} records (seed {seed}, {pairs} pairs per kind)")
         print(f"  splits: {manifest['by_split']}")
         print(f"  sha256: {manifest['sha256']}")
+    return 0
+
+
+def _review_pack(args: argparse.Namespace) -> int:
+    profile = _load(args)
+    out = profile.data_dir / "review"
+    counts = write_review_pack(out, profile.seed if args.seed is None else args.seed)
+    print(f"{out}: {counts['terms']} glossary terms, {counts['templates']} templates")
+    print("  read glossary.html and templates.html in a browser; mark glossary.csv and")
+    print("  templates.csv (ok, suggestion, note) and save them under a new name, e.g.")
+    print("  templates-reviewed.csv, because this command rewrites the originals")
     return 0
 
 
@@ -700,6 +750,29 @@ def _runs(args: argparse.Namespace) -> int:
             f"{r['best_step'] or '':>7} {metric:>9} {r['size_bytes'] / 1024**3:>7.2f}GB  "
             f"{r['updated']}"
         )
+    return 0
+
+
+def _tree(args: argparse.Namespace) -> int:
+    profile = _load(args)
+    root = profile.data_dir
+    if args.start:
+        # Bring the README up to date first, so it is not marked as changed by this run.
+        datadir.update_readme(root, "kodoom tree --start")
+        count = datadir.save_start(root)
+        print(f"{root}: {count} files recorded; `kodoom tree` will mark what changes from now")
+        return 0
+    since = datadir.changes_since_start(root)
+    changes = since[1] if since else datadir.Changes()
+    for line in datadir.tree_lines(root, datadir.snapshot(root), changes.marks()):
+        print(line)
+    if since is None:
+        print("\nno start recorded: run `kodoom tree --start` first to mark this run's files")
+        return 0
+    print(f"\nsince {since[0]}: {len(changes.new)} new, {len(changes.updated)} updated")
+    for kind in ("new", "updated", "removed"):
+        for path in getattr(changes, kind):
+            print(f"  {kind:<8} {path}")
     return 0
 
 
