@@ -520,7 +520,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
-| 11 | Oct 1, 2026 | Accepted from `docs/proposed_plan.md`: a principle that `data_dir` describes itself (a kodoom-written `README.md` refreshed by every data-writing command, and a notebook that ends with the tree of files the run generated or updated). |
+| 11 | Oct 1, 2026 | A principle that `data_dir` describes itself (a kodoom-written `README.md` refreshed by every data-writing command, and a notebook that ends with the tree of files the run generated or updated). |
 | 10 | Sep 30, 2026 | From the first Colab translation trial: TranslateGemma is gated (license and token needed) and its terms on generated outputs must be read before publishing; the API candidate is unavailable (no budget); Qwen3-8B (4-bit) ran on the T4 but changed meaning in several places, so it stays a checker only. |
 | 9 | Sep 30, 2026 | Licenses set to the least restrictive: code 0BSD, the project's own data CC0-1.0; derived data keeps its source's license (typed-decisions-fa: Apache-2.0); the model license stays open. Two principles added: licenses, and data stays on the owner's Drive (`data_dir`, a git guard test, nothing published until the owner decides). |
 | 8 | Sep 30, 2026 | From the data comparison (`docs/data-comparison.md`): a provenance statement on every dataset card (which data involved a model), metrics reported by question language (3.2), and a code-mixing robustness check (3.4). Taarof moved to `future-work.md`. |
