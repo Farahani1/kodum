@@ -1,6 +1,6 @@
 # Persian Typed Decisions: Project Plan
 
-Version 10 · Sep 30, 2026 · @Shah
+Version 11 · Oct 1, 2026 · @Shah
 
 ## Overview
 
@@ -37,6 +37,7 @@ The test for every deliverable: could a developer drop this project's model enti
 - Clean training data only. A source enters training only if its license allows a permissively licensed model; everything else is test-only or converter-only.
 - Licenses: the least restrictive. The code is 0BSD and the project's own data (the generated skills and their templates) is CC0-1.0. Data derived from other people's work keeps their license: typed-decisions-fa stays Apache-2.0 with attribution, and a source's license is enforced in code (`kodoom.sources`). The choice of license for the trained models is still open, and must respect the attribution terms of what they were trained on (MASSIVE is CC BY 4.0).
 - Data stays on the owner's Drive. Generated, converted and translated datasets are written to the profile's `data_dir` (Drive on Colab), never into the repository checkout and never into git (a test fails if a data file is tracked). Nothing is published to Hugging Face or anywhere else until the owner decides to; the publication steps in Part 1 wait for that decision.
+- `data_dir` describes itself. It carries a `README.md` written by kodoom: the file tree with sizes, record counts and what each folder holds, the files the last update made or changed, and the history of updates with their command lines. Every command that writes data refreshes it. The Colab notebook records the files when a run starts and ends by printing the tree with the files that run generated or updated marked. Data stays on Drive and out of git, so nothing else records which command or translator produced a file, or when; the README keeps the folder readable on its own, and the end-of-run tree shows whether a run wrote what it was meant to.
 - Benchmark data is stored as people write it. Normalization is part of a model's input pipeline, not of the published data, so the benchmark still tests how other models handle digit forms and spelling variants.
 
 &#91;embedded content: pipeline · sources through Parts 1–3\]
@@ -519,6 +520,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
+| 11 | Oct 1, 2026 | Accepted from `docs/proposed_plan.md`: a principle that `data_dir` describes itself (a kodoom-written `README.md` refreshed by every data-writing command, and a notebook that ends with the tree of files the run generated or updated). |
 | 10 | Sep 30, 2026 | From the first Colab translation trial: TranslateGemma is gated (license and token needed) and its terms on generated outputs must be read before publishing; the API candidate is unavailable (no budget); Qwen3-8B (4-bit) ran on the T4 but changed meaning in several places, so it stays a checker only. |
 | 9 | Sep 30, 2026 | Licenses set to the least restrictive: code 0BSD, the project's own data CC0-1.0; derived data keeps its source's license (typed-decisions-fa: Apache-2.0); the model license stays open. Two principles added: licenses, and data stays on the owner's Drive (`data_dir`, a git guard test, nothing published until the owner decides). |
 | 8 | Sep 30, 2026 | From the data comparison (`docs/data-comparison.md`): a provenance statement on every dataset card (which data involved a model), metrics reported by question language (3.2), and a code-mixing robustness check (3.4). Taarof moved to `future-work.md`. |
