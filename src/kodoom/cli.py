@@ -28,6 +28,7 @@ from kodoom.generators.common import DEFAULT_PAIRS_PER_KIND, GeneratorError
 from kodoom.inspect_hf import InspectError, inspect_dataset
 from kodoom.metrics import MetricError
 from kodoom.predictions import PredictionError, read_predictions, write_predictions
+from kodoom.review import write_review_pack
 from kodoom.runs import RunError, list_runs
 from kodoom.schema import RecordError, read_jsonl, write_jsonl
 from kodoom.sources import SourceError, check_record, get_source
@@ -152,6 +153,14 @@ def _parser() -> argparse.ArgumentParser:
         "profile's max_cases_per_source if that is smaller)",
     )
     generate.set_defaults(func=_generate, writes_data=True)
+
+    review = commands.add_parser(
+        "review-pack",
+        help="write the glossary and generator templates for a native reader to <data_dir>/review",
+    )
+    _add_profile_args(review)
+    review.add_argument("--seed", type=int, help="seed of the examples (default: the profile's)")
+    review.set_defaults(func=_review_pack, writes_data=True)
 
     inspect = commands.add_parser(
         "inspect", help="print the structure of a Hugging Face dataset (run once on Colab)"
@@ -383,6 +392,17 @@ def _generate(args: argparse.Namespace) -> int:
         print(f"{path}: {len(records)} records (seed {seed}, {pairs} pairs per kind)")
         print(f"  splits: {manifest['by_split']}")
         print(f"  sha256: {manifest['sha256']}")
+    return 0
+
+
+def _review_pack(args: argparse.Namespace) -> int:
+    profile = _load(args)
+    out = profile.data_dir / "review"
+    counts = write_review_pack(out, profile.seed if args.seed is None else args.seed)
+    print(f"{out}: {counts['terms']} glossary terms, {counts['templates']} templates")
+    print("  read glossary.html and templates.html in a browser; mark glossary.csv and")
+    print("  templates.csv (ok, suggestion, note) and save them under a new name, e.g.")
+    print("  templates-reviewed.csv, because this command rewrites the originals")
     return 0
 
 

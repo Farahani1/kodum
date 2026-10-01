@@ -36,6 +36,7 @@ DESCRIPTIONS = {
     "typed-decisions/fa/*": "one translator's output (`kodoom translate` or `kodoom import-units`)",
     "typed-decisions/pilot": "blind review sheet and its key (`kodoom pilot-sheet`)",
     "typed-decisions/exchange": "units for a translator outside kodoom (`kodoom export-units`)",
+    "review": "glossary and templates for a native reader (`kodoom review-pack`)",
     "helmo": "helmo/synthetic-typed-decisions",
     "helmo/en": "English records at the pinned commit (`kodoom fetch helmo`)",
 }

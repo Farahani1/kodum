@@ -26,6 +26,10 @@ The `kodoom check` cell stops the notebook if Drive is not mounted, no GPU is at
 
 Edits made directly on Colab are discarded by the next update, on purpose: the code on Colab must always be a commit that already ran on the laptop. The commit is recorded in every run's `run.json` (with `-dirty` if it was not clean).
 
+## Native review of the glossary and templates
+
+The *Review pack* cell (`kodoom review-pack`) writes `MyDrive/kodoom/data/.../review/`: `glossary.html` and `templates.html` show the glossary and every Persian template next to an item generated from it, right to left, ready to read in a browser (download them from Drive and open them). `glossary.csv` and `templates.csv` hold the same rows with empty `ok`, `suggestion` and `note` columns; they open in Excel or Google Sheets with the Persian intact. Save the filled sheets under a new name, because the cell rewrites the originals, and bring the suggestions back to the assistant; the TOML files in the repository stay the source of truth.
+
 ## Translation trial
 
 The *Translation trial* cells run `kodoom translate typed-decisions --translator NAME --split test --limit 10` for TranslateGemma 4B (bf16, then 4-bit weights with 32-bit activations), then `kodoom translations`, which prints how many cases the automatic checks flagged and shows English next to Persian for the first cases. Models download into `/content/hf-cache` (never Drive, see the storage budget); results go to `data_dir/typed-decisions/fa/NAME` on Drive. The command resumes: run it again after a dropped session and finished cases are skipped. It exits with status 1 when some case has check findings; that is information, not a crash. Qwen3-8B (4-bit) ran on the T4 in an earlier trial (a 16 GB download, about three minutes). TranslateGemma 4B loads on the T4 (8.6 GB), but in plain fp16 Gemma overflows and answers with nothing, which `kodoom translate` now reports as a NaN/inf error; use the `-bf16` or `-4bit-fp32` translators. A case the model cannot translate is skipped and its reason goes to `<split>.failures.jsonl` next to the output. TranslateGemma is **gated**: open its Hugging Face page, accept the license, create a read token and store it as the Colab secret `HF_TOKEN` (the *Hugging Face access* cell passes it on); without it the trial stops with a 401 `GatedRepoError`. Whether the TranslateGemma message format is right is still untested: copy any error back.
@@ -78,6 +82,7 @@ MyDrive/kodoom/data/      (data/preflight/ for the colab-preflight profile)
 ├── README.md             what each file is, sizes, record counts, history of updates
 ├── .kodoom/              bookkeeping for README.md and `kodoom tree` (hidden)
 ├── skills/               kodoom generate
+├── review/               kodoom review-pack: glossary and templates for a native reader
 ├── typed-decisions/      en/ (fetch), fa/<translator>/ (translate, import-units), pilot/, exchange/
 └── helmo/en/             kodoom fetch helmo
 ```
