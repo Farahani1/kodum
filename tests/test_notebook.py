@@ -36,3 +36,14 @@ def test_no_training_logic_in_the_notebook():
 def test_outputs_are_not_committed():
     nb = json.loads(NOTEBOOK.read_text(encoding="utf-8"))
     assert all(not c.get("outputs") for c in nb["cells"] if c["cell_type"] == "code")
+
+
+def test_data_tree_brackets_every_data_command():
+    commands = [
+        line for src in cells("code") for line in src.splitlines() if line.startswith("!kodoom")
+    ]
+    start = commands.index("!kodoom tree --profile {PROFILE} --start")
+    writers = ("generate", "fetch", "translate ", "pilot-sheet", "export-units", "import-units")
+    first_writer = min(i for i, c in enumerate(commands) if any(w in c for w in writers))
+    assert start < first_writer
+    assert commands[-1] == "!kodoom tree --profile {PROFILE}"

@@ -69,6 +69,11 @@ Our checks and glossary are meant to catch this kind of inconsistency.
 
 ### Added
 
+- `<data_dir>/README.md`, kept current by every command that writes data (`datadir.py`): the
+  file tree with sizes, record counts and what each folder holds, what the last update made
+  or changed, and the last 20 updates with their command lines. `kodoom tree --start` and
+  `kodoom tree` bracket a notebook run; the last notebook cell prints the tree with the files
+  that run generated or updated marked.
 - `kodoom export-units` and `import-units` (`translate/exchange.py`): a translator that cannot run
   inside kodoom (Claude Cowork, a person) gets each distinct English text once with its
   register, context and glossary terms and a brief; the filled file comes back through the
