@@ -1,7 +1,7 @@
 # Changelog and project status
 
 This file records what changed in kodoom and where the project stands against
-`docs/project-plan.md` (currently version 13, the source of truth). Format follows
+`docs/project-plan.md` (currently version 14, the source of truth). Format follows
 [Keep a Changelog](https://keepachangelog.com/): newest first, grouped by kind of
 change. The project has no releases yet; everything is under "Unreleased" until the
 first published dataset (typed-decisions-fa v0.1, plan 1.3).
@@ -38,6 +38,7 @@ has not started.
 
 ### Open items for the owner
 
+- Decide before M3 whether Gemma-made translations may enter the training mix: Gemma's terms count a model trained on Gemma synthetic data as a Model Derivative (plan v14, Licenses). Publishing the dataset under Apache-2.0 appears fine.
 - Choose the gate thresholds in plan 2.4 before the M2 baselines run.
 - Rename the GitHub repository to `kodoom` (Settings).
 - Copyright-holder name in `LICENSE` (currently "the kodoom authors").
@@ -46,7 +47,7 @@ has not started.
 
 ### Next
 
-1. Run the pilot cells (two translators on 50 balanced training cases), review the blind sheet, run `kodoom pilot-score`. Read the Gemma terms on generated outputs (plan v10).
+1. Run the pilot cells (two translators on 50 balanced training cases), review the blind sheet, run `kodoom pilot-score`.
 2. The meaning check (plan 1.2 step 4): the checks cannot see "agent" turning into "person", so a checker model must compare English and Persian per case.
 3. The 50-case pilot on Colab with two candidates, reviewed blind.
 4. Optional: a v5e TPU trial (TranslateGemma 4B in bf16, ten sentences) and, if it works, a `colab-tpu` profile.
