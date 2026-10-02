@@ -1,6 +1,6 @@
 # Persian Typed Decisions: Project Plan
 
-Version 12 · Oct 1, 2026 · @Shah
+Version 13 · Oct 2, 2026 · @Shah
 
 ## Overview
 
@@ -130,7 +130,7 @@ Part 1 turns English typed-decision data and code-generated examples into Persia
 | Dataset | Size | License | Why this one | Preparation needed |
 | --- | --- | --- | --- | --- |
 | [LocalLLaMA/typed-decisions](https://huggingface.co/datasets/LocalLLaMA/typed-decisions) | 1,200 train cases (6,000 decisions); 400 test cases (2,000) | Apache-2.0 | Already in Jev's shape. Gold labels are probability distributions, which suits calibration. Covers four business workflows Persian data lacks (agent traces, customer service, invoices, security incidents). Russian and Japanese versions exist, so a Persian one joins a set people already run. | Pin the dataset revision. Map the schema. Mark every text field as translate or keep. Flag cases with money, dates or numeric thresholds. Keep the original splits and case IDs. |
-| [helmo/synthetic-typed-decisions](https://huggingface.co/datasets/helmo/synthetic-typed-decisions) | 9,879 single-question records, 207 topic domains | MIT | Topic breadth the four workflows lack. One question per record makes translation simpler. | Deduplicate. Sample 3–5k, balanced across choice, score and yes/no. Confirm no overlap with the typed-decisions test split. |
+| [helmo/synthetic-typed-decisions](https://huggingface.co/datasets/helmo/synthetic-typed-decisions) | 9,879 single-question records, 207 topic domains | MIT | Topic breadth the four workflows lack. One question per record makes translation simpler. | Deduplicate. Confirm no overlap with the typed-decisions test split before sampling. Train only; never in test. Enters the full run only after it passes the helmo gate (1.2 step 1). Start with 1.5–2k, balanced across choice, score and yes/no and spread across topics; grow toward 3–5k only if the review error rate (1.2 step 5) stays low. Published as its own config, so users can leave it out. |
 
 **What a typed-decisions case looks like** (from its dataset card): one `state` and five `questions`, which together are exactly the body of a System One request (`POST /v1/systemone`), plus `gold` with the full distribution for every question. Every option carries a written description in `criteria`, and those descriptions are model input, so they are translated. A state is free text where the artefact is textual and structured (JSON) where it is structured; only text values are translated. `factors` and `label_agreement` describe how a case was built, are not model input, and are not translated. Parquet files, one config per workflow plus `all`.
 
@@ -173,26 +173,35 @@ Preparation: write 5–10 Persian templates per generator, colloquial and formal
 | Candidate | Runs on | Why | Watch out for |
 | --- | --- | --- | --- |
 | [TranslateGemma](https://arxiv.org/pdf/2601.09012) 12B (4-bit) or 4B (fp16) | Colab T4 | Free, open, built for translation; Persian is among its 55 evaluated languages. | Translation-only prompt, so fields go one at a time. Tuned for inputs of about 2K tokens. Gemma 3 models have had fp16 overflow problems on T4-class GPUs. **Gated on Hugging Face** (found on Colab): accept the Gemma license on the model page and give Colab a read token (secret `HF_TOKEN`). Before publishing translations, read the Gemma terms on generated outputs (a dataset made with Gemma may count as its derivative) and confirm that the Apache-2.0 plan for typed-decisions-fa still holds. |
-| [Gemma 3](https://huggingface.co/google/gemma-3-12b-it) 12B (4-bit) or 4B (bf16), prompted to translate | Colab T4 | **Chosen in the pilot (Sep 30).** 12B had the best free-text accuracy and no meaning changes; 4B is effectively tied and is the fallback. See [translation-eval-plan.md](translation-eval-plan.md). | Wraps most output in stray backticks, so strip them after translating. 12B mistranslates the risk-scale labels (Benign, Low, Moderate, High), so fix those by hand. Gemma terms apply, the same as for TranslateGemma. |
+| [Gemma 3](https://huggingface.co/google/gemma-3-12b-it) 12B (4-bit) or 4B (bf16), prompted to translate | Colab T4 | **4B (bf16) is the translator for the full run (decided Oct 2), because it is far faster on the T4.** In the pilot (Sep 30) it tied 12B overall (accuracy 4.62 vs 4.47, overall 4.44 vs 4.46, no meaning changes for either), but it was weaker on free text (4.23 vs 4.57: "backfill" became "return", English words left in). That pilot covered only agent-trace records, so 4B must pass the free-text gate (step 1) before helmo and the free-text workflows go in; 12B stays the fallback for whatever fails it. See [translation-eval-plan.md](translation-eval-plan.md). | Wraps output in stray backticks (4B in 54% of units, 12B in 97%), so strip them after translating. 4B leaves English words in the Persian. 12B mistranslates the risk-scale labels (Benign, Low, Moderate, High), so fix those by hand. Gemma terms apply, the same as for TranslateGemma. |
 | A frontier model through an API | Cloud | Best Persian quality. Takes a whole case as JSON with rules (keep keys, register). The dataset is small, so cost is low. | Payment and access. Record the exact model for the card. **Not available**: the owner has no budget for an API. |
 | Qwen3-8B (4-bit) | Colab T4 | The checker, in a separate pass: meaning comparison and consistency. Standard architecture, safe on a T4. | Weaker translator than the two above; use it to judge, not to translate. **Trial on the T4 (Sep 30):** it runs in 4-bit and follows the glossary, but its Persian changed meaning ("expired" became "valid", "irreversible" became "reversible", "benign" became nonsense) and it put Cyrillic letters inside a Persian word. Confirmed as a checker and glossary-following draft at most, not as the translator. |
 | NLLB-200 | — | Not recommended. | Non-commercial weights cloud the license of a dataset meant to be Apache-2.0. |
 
-1. **Pilot, 50 cases.** Translate with two candidates, review both blind, and keep the translator and prompt that win. **Done (Sep 30):** five candidates were rated blind on 50 test records from one workflow. Claude Cowork running Claude Opus 5.5 did the rating, as a single LLM rater; no human rated. Gemma 3 12B (4-bit) won. Before the full run, spot-check its free text from the other workflows (customer threads, security alerts), because the pilot sample did not cover them. Method, scores and caveats: [translation-eval-plan.md](translation-eval-plan.md).
-2. **Full run.** All 1,600 typed-decisions cases plus the synthetic-typed-decisions sample. Save each finished case to Drive at once, so a dropped session resumes where it stopped.
+1. **Pilot, 50 cases.** Translate with two candidates, review both blind, and keep the translator and prompt that win. **Done (Sep 30):** five candidates were rated blind on 50 test records from one workflow. Claude Cowork running Claude Opus 5.5 did the rating, as a single LLM rater; no human rated. Gemma 3 12B (4-bit) won narrowly; Gemma 3 4B was effectively tied and, for speed, is the translator for the full run (decided Oct 2). Method, scores and caveats: [translation-eval-plan.md](translation-eval-plan.md).
+   - **Free-text gate, before the full run.** The pilot covered only `agent_trace_observability`, whose text is short and templated. The other workflows and helmo have not been translated by any model. Helmo is the biggest risk: every state is a unique technical paragraph (about 650 characters, 130+ topics in a 200-record sample) and the gold answer depends on one fact in it, so a translation that changes that fact leaves a wrong label that nothing downstream detects.
+   - Sample: about 40 helmo records from the local sample, split evenly across choice, score and yes/no and spread over as many topics as possible, plus 15–20 customer_service and security_incidents cases. Translate them with Gemma 3 4B, using the exact prompt and settings of the full run, and rate them the same way as the pilot.
+   - Pass bar, fixed before rating: at most 1 meaning change in the 40 helmo records, and at most 10–15% of records needing any edit. The same bar applies to the workflow cases.
+   - If 4B passes: the full run uses 4B for everything. If it fails only on helmo: translate helmo with Gemma 3 12B (a few thousand short records, so the slowdown is small) and the workflows with 4B. If 12B also fails on helmo: keep only the topics that pass, or leave helmo out of v1; the four workflows stand on their own.
+2. **Full run.** All 1,600 typed-decisions cases plus the synthetic-typed-decisions sample, with the translator chosen at the gate (step 1). Save each finished case to Drive at once, so a dropped session resumes where it stopped.
+   - Translate each helmo record in one call: the state, the question and the option descriptions together, not field by field, so a technical term is rendered the same way in the state and in the options that refer to it.
+   - Tell the translator to keep acronyms, symbols, units, amounts and times as in the source (for example SSRI, 5-HT1A, LTV:CAC, $50k MRR, 0.5 pounds, 8 PM).
 3. **Automatic checks on every case:**
    - Keep-fields are byte-identical to the source.
    - Every number, ID and amount survives (convert Persian digits to Latin, then compare).
-   - Output is Persian, not empty, not looping, with no extreme length ratio.
+   - Every Latin-script token of the source (acronyms, units, symbols such as SERT, 5-HT1A, LTV:CAC) appears unchanged in the Persian. In helmo these usually carry the fact the answer depends on.
+   - Output is Persian, not empty, not looping, with no extreme length ratio. For helmo's long states the length bounds come from the gate sample, because a dropped clause shows up as a short translation.
    - Glossary terms match between a state and its options.
 4. **Meaning check.** The checker compares English and Persian for each case. It flags any change in meaning, urgency, negation, or who did what.
+   - For helmo, also an answer comparison: the checker answers the question once from the English record and once from the Persian one, and a large difference between the two answers flags the record. This targets exactly the error that makes a label wrong.
 5. **Human review.**
    - **Test split: all 400 cases**, English and Persian side by side, for meaning, negation, urgency and who did what. The dataset card can then say every benchmark case was reviewed, and reports how many needed a fix. At 2–4 minutes a case this is roughly 15–25 hours, the largest single cost of M1.
    - **Train split:** every flagged case plus 100–150 random unflagged ones. The error rate in the random sample goes into the dataset card.
+   - **Helmo:** about 100 random unflagged records of its own, spread across topics, on top of the typed-decisions sample, because no fixed template covers its text. Its error rate is reported on its own line in the dataset card, never blended with typed-decisions.
    - Fix or drop cases; never change the gold.
 6. **Orthographic cleanup only.** Fix translator noise: Persian ی/ک instead of Arabic ي/ك, the zero-width non-joiner (نیم‌فاصله) where it belongs, invisible marks and stray spaces. Digits stay as in the source. The full normalizer, including one digit policy, is part of the reference model's input pipeline at training and inference; it is not applied to the published data.
 
-Output: typed-decisions-fa (train and test, original gold unchanged) and a Persian sample of synthetic-typed-decisions.
+Output: typed-decisions-fa (train and test, original gold unchanged) and a Persian sample of synthetic-typed-decisions as a separate, train-only config.
 
 ### 1.3 Packing
 
@@ -459,6 +468,7 @@ The likeliest failure is a classifier in disguise; the costliest are silent labe
 | Existing open models already handle Persian well, so a new model adds little | Medium | Medium | Small language gap and reasonable held-out scores in the M2 baselines | Decision gate (2.4): lead with the dataset, benchmark and skills data; train little |
 | Jev API not reachable | High | Low | Waitlist or payment fails | Nothing depends on it; cite published third-party numbers, labeled as such |
 | Translation changes meaning, so gold labels become silently wrong | Medium | High | Meaning-check flags; errors in the review sample | Automatic checks, checker model, human sample, published error rate, bad cases dropped |
+| Gemma 3 4B mistranslates helmo's technical paragraphs (unique text across 200+ topics, the answer resting on one fact; 4B was weaker than 12B on free text in the pilot) | Medium | High | Meaning changes or many edits in the free-text gate; checker answers differ between English and Persian | Free-text gate before the full run (1.2 step 1); 12B for helmo, fewer topics or no helmo in v1 if 4B fails; whole-record translation, Latin-token check, answer comparison, larger helmo review sample reported separately |
 | Leakage between splits (a case or its translation on both sides) | Medium | High | Test scores far above baselines, too good to be true | Split by source\_id across languages, deduplicate, freeze test sets before training |
 | Translationese: the model fits translated Persian, not native text | Medium | Medium | Run 3 (no translation) beats run 2 on native tests | Colloquial register rule, native results reported separately, the run 2 vs 3 ablation |
 | Overconfident probabilities | Medium | Medium | High ECE; wrong answers at 0.99 | Soft labels, log-loss early stopping, temperature scaling |
@@ -513,7 +523,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 | [Dohnuts-0.1.0-0.8B](https://huggingface.co/PsiACE/Dohnuts-0.1.0-0.8B) | Decision model on Qwen3.5-0.8B, evidence | see card | 2.2 |
 | [Tiny-Jev](https://huggingface.co/lostargon/Tiny-Jev) | Decision model on Qwen3-0.6B, evidence | see card | 2.2 |
 | [TranslateGemma](https://arxiv.org/pdf/2601.09012) ([vLLM guide](https://docs.vllm.ai/projects/recipes/en/latest/Google/TranslateGemma.html)) | Translation model | Gemma terms | 1.2 |
-| [Gemma 3](https://huggingface.co/google/gemma-3-12b-it) | Prompted translator (chosen in the pilot) | Gemma terms | 1.2 |
+| [Gemma 3](https://huggingface.co/google/gemma-3-12b-it) | Prompted translator (4B for the full run, 12B as fallback) | Gemma terms | 1.2 |
 | [TypeSafe Jev models page](https://docs.typesafe.ai/models) | Jev customization and language support | — | Overview |
 | [typed-decision-bench](https://github.com/kyr0/typed-decision-bench) | Community benchmark and format | see repo | 3.6 |
 | [open-system-one](https://github.com/zhlei07/open-system-one) | Community benchmark vs Jev | see repo | 3.6 |
@@ -522,6 +532,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
+| 13 | Oct 2, 2026 | Gemma 3 4B (bf16) is the translator for the full run, for speed; 12B is the fallback. Because 4B was weaker on free text and the pilot covered only agent traces, a free-text gate before the full run: about 40 helmo records plus customer_service and security_incidents cases, with a pass bar fixed in advance and outcomes for passing and failing (1.2 step 1). Helmo: whole-record translation, a Latin-token check, an answer comparison in the meaning check, its own review sample of about 100 with a separate error rate, a 1.5–2k start, and a separate train-only config. A failure mode for 4B on helmo. |
 | 12 | Oct 1, 2026 | A principle that `data_dir` describes itself (a kodoom-written `README.md` refreshed by every data-writing command, and a notebook that ends with the tree of files the run generated or updated). |
 | 11 | Sep 30, 2026 | Translation pilot done (1.2 step 1). Claude Cowork (Claude Opus 5.5) rated five candidates blind on 50 records, and Gemma 3 12B (4-bit) was chosen, with backticks stripped. Gemma 3 added as a candidate and a reference. The dataset card must say the choice came from an LLM rating. Details in `docs/translation-eval-plan.md`. |
 | 10 | Sep 30, 2026 | From the first Colab translation trial: TranslateGemma is gated (license and token needed) and its terms on generated outputs must be read before publishing; the API candidate is unavailable (no budget); Qwen3-8B (4-bit) ran on the T4 but changed meaning in several places, so it stays a checker only. |

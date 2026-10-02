@@ -1,7 +1,7 @@
 # Changelog and project status
 
 This file records what changed in kodoom and where the project stands against
-`docs/project-plan.md` (currently version 11, the source of truth). Format follows
+`docs/project-plan.md` (currently version 13, the source of truth). Format follows
 [Keep a Changelog](https://keepachangelog.com/): newest first, grouped by kind of
 change. The project has no releases yet; everything is under "Unreleased" until the
 first published dataset (typed-decisions-fa v0.1, plan 1.3).
@@ -126,6 +126,21 @@ Our checks and glossary are meant to catch this kind of inconsistency.
   test split (v5); baselines and gate grounded in the published model cards (v6);
   the 15 GB Drive budget (v7); provenance statement, question-language metrics,
   code-mixing check (v8); least restrictive licenses and data kept on Drive (v9).
+- Plan v13: Gemma 3 4B (bf16) is the translator for the full run, for speed, with
+  12B as the fallback, not dropped. The pilot showed 4B tied 12B overall (4.62 vs
+  4.47) but weaker on free text (4.23 vs 4.57: "backfill" became "return", English
+  words left in), and it covered only `agent_trace_observability`. Because helmo is
+  all free text and its gold rests on one fact per record, a free-text gate now runs
+  before the full run (1.2 step 1): about 40 helmo records plus 15-20
+  customer_service/security_incidents cases, translated by 4B with the full-run
+  prompt, against a pass bar fixed in advance (at most 1 meaning change in 40, at
+  most 10-15% needing an edit); 12B is the fallback for whatever fails it, with
+  helmo's affected topics or all of helmo dropped from v1 if 12B also fails. Helmo
+  translates state, question and options in one call, keeps acronyms and units
+  unchanged (checked automatically), gets an answer-comparison meaning check, its
+  own ~100-record review sample with a separately reported error rate, and starts
+  at 1,500-2,000 records as a train-only config. A new failure-mode row covers 4B
+  on helmo.
 - Licenses: code 0BSD, the project's own data CC0-1.0; data derived from others
   keeps the upstream license (typed-decisions-fa stays Apache-2.0).
 - The default is 150 pairs per kind (about 4,200 skill items), inside the plan's
