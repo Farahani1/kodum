@@ -35,9 +35,9 @@ def test_relevant_matches_whole_words_and_plurals_only(g):
 
 
 def test_check_passes_when_the_persian_term_is_used(g):
-    ok = "بازپرداخت فاکتور شما انجام شد"
+    ok = "استرداد وجه فاکتور شما انجام شد"
     assert g.check("customer_service", "Your refund of the invoice is done", ok) == []
-    assert g.check("customer_service", "Refunds", "بازپرداخت\u200cها") == []  # inflection
+    assert g.check("customer_service", "Refunds", "استرداد وجه\u200cها") == []  # inflection
     assert g.check("customer_service", "Your vendor", "تأمین کننده") == []  # ZWNJ ignored
 
 

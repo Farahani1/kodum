@@ -1,7 +1,8 @@
 # English -> Persian terms for the typed-decisions workflows (plan 1.1, "Glossary and
 # register"). One Persian term per English term, so a state and its options name the
-# same thing the same way. DRAFT: written by the assistant, waiting for review by a
-# native speaker; the terms below are the ones the plan's dataset card will publish.
+# same thing the same way. Reviewed on Oct 2, 2026 (data/review/glossary-reviewed.csv,
+# an assistant review accepted by the owner); the terms below are the ones the plan's
+# dataset card will publish.
 # Zero-width non-joiners are written as \u200c.
 
 [keep]
@@ -16,7 +17,7 @@ invoice_processing = "The text comes from an accounts-payable system that checks
 security_incidents = "The text comes from a security operations system that triages alerts about accounts, hosts and access. Keep technical terms and identifiers exact."
 
 [common]
-"refund" = "بازپرداخت"
+"refund" = "استرداد وجه"
 "invoice" = "فاکتور"
 "purchase order" = "سفارش خرید"
 "ticket" = "تیکت"
@@ -43,7 +44,7 @@ security_incidents = "The text comes from a security operations system that tria
 "tool" = "ابزار"
 
 [invoice_processing]
-"freight" = "حمل"
+"freight" = "هزینه حمل"
 
 [security_incidents]
 "service account" = "حساب سرویس"

@@ -31,7 +31,7 @@ def user_text(messages):
 def test_chat_prompt_carries_register_relevant_terms_and_rules():
     prompt = user_text(chat_messages(item(), load()))
     assert "formal" in prompt.split("\n")[2]
-    assert "refund = بازپرداخت" in prompt and "invoice = فاکتور" in prompt
+    assert "refund = استرداد وجه" in prompt and "invoice = فاکتور" in prompt
     assert "ticket" not in prompt  # only terms that occur in the text
     assert "Leave these terms in English: TLS" in prompt
     assert "backticks" in prompt and "do not convert digits" in prompt
