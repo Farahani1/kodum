@@ -57,6 +57,20 @@ def side_by_side(english: Sequence[Record], persian: Sequence[Record]) -> str:
     return "\n".join(lines)
 
 
+def side_by_side_helmo(english: Record, persian: Record) -> str:
+    """One helmo record: state, question and options, English then Persian."""
+    lines = [f"== {english.source_id}  ({english.extra['topic']}, {english.question_type})"]
+    lines += ["[state]", f"  EN: {english.state}", f"  FA: {persian.state}"]
+    lines += ["[question]", f"  EN: {english.question_text}", f"  FA: {persian.question_text}"]
+    for eo, po in zip(english.options, persian.options, strict=True):
+        lines.append(f"    {eo.id}: {eo.text}  ->  {po.text}")
+    findings = sorted(
+        {(f["check"], f["where"], f["message"]) for f in persian.extra.get("check_findings", [])}
+    )
+    lines += [f"  ! {check} at {where}: {message}" for check, where, message in findings]
+    return "\n".join(lines)
+
+
 def _leaf(state: str, location):
     import json
 

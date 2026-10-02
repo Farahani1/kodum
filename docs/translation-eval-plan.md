@@ -113,8 +113,12 @@ with the score before it in brackets. Free-text accuracy covers the `task` and
 | translategemma-4b-bf16-terms | 4.00 | 4.08 | 3.54 | 3.87 | 4.00 | 20 |
 | qwen3-8b-4bit | 3.84 | 3.35 | 4.18 | 3.79 | 3.27 | 38 |
 
-**Decision: Gemma 3 12B (4-bit) is the translator for the full run.** Its output is
-post-processed to strip the stray backticks.
+**Decision (Sep 30, this pilot): Gemma 3 12B (4-bit) is the translator for the full run.**
+Its output is post-processed to strip the stray backticks. **Superseded Oct 2** (see
+`project-plan.md` v15, 1.2): 12B is too slow on a free Colab T4 for this project's
+session budget, so Gemma 3 4B is the translator for the whole dataset instead, with
+no 12B fallback. This page keeps the pilot's own numbers and reasoning as the record
+of what was measured.
 
 - **Why Gemma 3 12B:** it translated free text most accurately, and it is the text
   in `state` that varies from case to case. None of its outputs changed meaning.

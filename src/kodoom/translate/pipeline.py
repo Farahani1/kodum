@@ -183,6 +183,115 @@ def translate_case(
     return result, all_findings
 
 
+def translate_helmo_record(record: Record, translator: Translator) -> tuple[Record, list[Finding]]:
+    """The Persian record for one helmo row (plan 1.2 step 2).
+
+    helmo has no workflows or per-field keep rules: ``state`` is one free-text
+    paragraph, not a JSON tree. The whole record (state, question, options) is sent
+    to the translator in one call, so a term is rendered the same way in the state
+    and in the options that refer to it, and checked with the same text-level checks
+    used for a typed-decisions question or option.
+    """
+    items = [Item(record.state, FORMAL, STATE)]
+    items.append(Item(record.question_text, FORMAL, QUESTION))
+    items += [Item(o.text, FORMAL, OPTION) for o in record.options]
+    out = [clean_orthography(t) for t in translator.translate(items)]
+    if len(out) != len(items):
+        raise ValueError(f"translator returned {len(out)} texts for {len(items)} items")
+    for item, text in zip(items, out, strict=True):
+        if not text.strip():
+            raise TranslationError(
+                f"record {record.source_id}: {translator.name} returned an empty text for "
+                f"the {item.kind} {item.text!r}"
+            )
+    state, question, *options = out
+
+    findings = check_text(record.state, state, "state")
+    findings += check_text(record.question_text, question, "question")
+    for o, text in zip(record.options, options, strict=True):
+        findings += check_text(o.text, text, f"option.{o.id}")
+    findings += check_option_labels([o.text for o in record.options], options, "options")
+
+    translated = replace(
+        record,
+        id=f"{record.id}:fa",
+        origin="translated",
+        state_lang="fa",
+        question_lang="fa",
+        state=state,
+        question_text=question,
+        options=tuple(Option(o.id, t) for o, t in zip(record.options, options, strict=True)),
+        checks_passed=not findings,
+        extra={
+            **record.extra,
+            "translator": translator.name,
+            **({"check_findings": [vars(f) for f in findings]} if findings else {}),
+        },
+    )
+    return translated, findings
+
+
+def pick_helmo_records(
+    records: Sequence[Record], limit: int | None, balanced: bool
+) -> list[Record]:
+    """The first ``limit`` records; with ``balanced`` they are taken in turn from each
+    question type (choice, score, noul), so a sample stays even across types the way
+    the free-text gate needs (plan 1.2 step 1) instead of favouring whichever type the
+    source file lists first."""
+    if limit is None:
+        return list(records)
+    if not balanced:
+        return list(records[:limit])
+    by_type: dict[str, list[Record]] = {}
+    for r in records:
+        by_type.setdefault(r.question_type, []).append(r)
+    picked: list[Record] = []
+    depth = 0
+    while len(picked) < limit and any(depth < len(v) for v in by_type.values()):
+        for type_records in by_type.values():
+            if depth < len(type_records) and len(picked) < limit:
+                picked.append(type_records[depth])
+        depth += 1
+    return picked
+
+
+def translate_helmo_file(
+    source: str | Path,
+    out: str | Path,
+    translator: Translator,
+    *,
+    limit: int | None = None,
+    balanced: bool = False,
+    progress: Callable[[str], None] = lambda _: None,
+) -> dict[str, int]:
+    """Translate helmo records into ``out``, one record at a time (resumable, like
+    :func:`translate_file`). helmo has no multi-question cases, so each row is its own
+    unit; see :func:`pick_helmo_records` for ``limit`` and ``balanced``.
+    """
+    out = Path(out)
+    done = {r.source_id for r in read_jsonl(out)} if out.exists() else set()
+    stats = {"translated": 0, "skipped": 0, "with_findings": 0, "failed": 0}
+    records = pick_helmo_records(list(read_jsonl(source)), limit, balanced)
+    for record in records:
+        if record.source_id in done:
+            stats["skipped"] += 1
+            continue
+        try:
+            translated, findings = translate_helmo_record(record, translator)
+        except TranslationError as e:
+            stats["failed"] += 1
+            log = out.with_name(out.stem + ".failures.jsonl")
+            log.parent.mkdir(parents=True, exist_ok=True)
+            with log.open("a", encoding="utf-8", newline="\n") as f:
+                f.write(json.dumps({"source_id": record.source_id, "error": str(e)}) + "\n")
+            continue
+        append_jsonl(out, translated)
+        stats["translated"] += 1
+        stats["with_findings"] += bool(findings)
+        progress(record.source_id)
+    return stats
+
+
 def cases(records: Iterable[Record]) -> list[list[Record]]:
     """Records grouped by case, in file order (a case's questions are adjacent)."""
     grouped: dict[str, list[Record]] = {}

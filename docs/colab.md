@@ -55,6 +55,16 @@ The *Fetch typed-decisions* cells run `kodoom fetch typed-decisions`, which down
 
 The *Fetch helmo* cell (`kodoom fetch helmo`) does the same for `helmo/synthetic-typed-decisions`: 9,879 single-question records, converted to `data_dir/helmo/en`. If a dataset is not stored as parquet or JSON lines, `kodoom inspect` lists its files instead; use it for any new source.
 
+`kodoom translate helmo --translator NAME` translates its records the same way
+(`data_dir/helmo/fa/NAME/train.jsonl`, resumable, same exit-1-on-findings behaviour). helmo
+has no splits or workflows: `--split` does not apply, and `--balanced` with `--limit` takes
+records evenly from each question type (choice, score, noul) instead of from a workflow,
+since helmo has no workflow field. helmo's `state` is one free-text paragraph rather than a
+JSON tree, so the whole record (state, question, options) is translated in a single call and
+checked with the same text-level checks as a typed-decisions question or option.
+`kodoom translations helmo --translator NAME --show N` prints its counts and English next to
+Persian the same way `kodoom translations typed-decisions` does.
+
 ## When a session dies
 
 Nothing to rescue: logs and checkpoints are written to Drive while the run goes.

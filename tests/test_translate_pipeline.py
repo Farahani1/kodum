@@ -3,16 +3,21 @@ import re
 
 import pytest
 
+from kodoom.helmo import row_record
 from kodoom.schema import read_jsonl, write_jsonl
 from kodoom.translate.pipeline import (
     Item,
     StubTranslator,
     cases,
     pick_cases,
+    pick_helmo_records,
     translate_case,
     translate_file,
+    translate_helmo_file,
+    translate_helmo_record,
 )
 from kodoom.typed_decisions import case_records
+from tests.test_helmo import make_row as make_helmo_row
 from tests.test_typed_decisions import make_row
 
 STATE = json.dumps(
@@ -262,3 +267,105 @@ def test_balanced_selection_takes_cases_from_every_workflow():
     assert [c[0].source_id for c in mixed] == ["cu-0", "in-0", "cu-1", "in-1"]
     assert len(pick_cases(grouped, None, balanced=True)) == 10
     assert len(pick_cases(grouped, 99, balanced=True)) == 10
+
+
+def helmo_record(index=0, **over):
+    return row_record(make_helmo_row(**over), index)
+
+
+def test_a_translated_helmo_record_keeps_gold_and_options():
+    english = helmo_record(3)
+    persian, findings = translate_helmo_record(english, StubTranslator())
+    assert findings == []
+    assert persian.id == f"{english.id}:fa"
+    assert (persian.source_id, persian.source, persian.split, persian.gold) == (
+        english.source_id,
+        english.source,
+        english.split,
+        english.gold,
+    )
+    assert [o.id for o in persian.options] == [o.id for o in english.options]
+    assert (persian.origin, persian.state_lang, persian.question_lang) == (
+        "translated",
+        "fa",
+        "fa",
+    )
+    assert persian.checks_passed is True and persian.extra["translator"] == "stub"
+    assert "check_findings" not in persian.extra
+    assert persian.state != english.state  # actually translated, not kept
+
+
+def test_a_sloppy_helmo_translation_is_flagged_on_the_record():
+    english = helmo_record(0, state="Patient takes an SSRI, dose A-68034, for 3 weeks.")
+    persian, findings = translate_helmo_record(english, Sloppy())
+    assert {f.check for f in findings} == {"identifiers", "numbers"}
+    assert persian.checks_passed is False
+    assert {f["check"] for f in persian.extra["check_findings"]} == {"identifiers", "numbers"}
+
+
+def test_translate_helmo_file_resumes_and_honours_limit(tmp_path):
+    src, out = tmp_path / "en.jsonl", tmp_path / "fa" / "train.jsonl"
+    write_jsonl(src, [helmo_record(i) for i in range(3)])
+    stats = translate_helmo_file(src, out, StubTranslator(), limit=2)
+    assert stats == {"translated": 2, "skipped": 0, "with_findings": 0, "failed": 0}
+    assert len(list(read_jsonl(out))) == 2
+    stats = translate_helmo_file(src, out, StubTranslator())
+    assert stats == {"translated": 1, "skipped": 2, "with_findings": 0, "failed": 0}
+
+
+def test_translate_helmo_file_logs_and_skips_a_record_it_cannot_translate(tmp_path):
+    src, out = tmp_path / "en.jsonl", tmp_path / "fa.jsonl"
+    write_jsonl(src, [helmo_record(0)])
+    stats = translate_helmo_file(src, out, EmptyQuestions())
+    assert stats == {"translated": 0, "skipped": 0, "with_findings": 0, "failed": 1}
+    log = json.loads((tmp_path / "fa.failures.jsonl").read_text(encoding="utf-8"))
+    assert log["source_id"] == "helmo-00000"
+
+
+def test_translate_command_handles_helmo_end_to_end_on_a_dev_style_profile(tmp_path, capsys):
+    import kodoom.cli as cli
+
+    profile = write_profile(tmp_path)
+    write_jsonl(
+        tmp_path / "data" / "helmo" / "en" / "train.jsonl",
+        [helmo_record(i) for i in range(2)],
+    )
+    args = ["translate", "helmo", "--profile", str(profile), "--translator", "stub"]
+    assert cli.main(args) == 0
+    out = tmp_path / "data" / "helmo" / "fa" / "stub" / "train.jsonl"
+    assert len(list(read_jsonl(out))) == 2
+    assert cli.main(args) == 0  # a second run skips everything
+    assert "already done" in capsys.readouterr().out
+    assert cli.main([*args, "--split", "train"]) != 0  # helmo has no splits
+    assert "does not apply" in capsys.readouterr().err
+
+
+def test_pick_helmo_records_balances_by_question_type():
+    records = [helmo_record(i, qtype="noul") for i in range(5)] + [
+        helmo_record(i + 10, qtype="choice") for i in range(2)
+    ]
+    first = pick_helmo_records(records, 3, balanced=False)
+    assert {r.question_type for r in first} == {"noul"}
+    mixed = pick_helmo_records(records, 4, balanced=True)
+    assert [r.question_type for r in mixed] == ["noul", "choice", "noul", "choice"]
+    assert len(pick_helmo_records(records, None, balanced=True)) == 7
+    assert len(pick_helmo_records(records, 99, balanced=True)) == 7
+
+
+def test_translations_command_handles_helmo_counts_and_side_by_side(tmp_path, capsys):
+    import kodoom.cli as cli
+
+    profile = write_profile(tmp_path)
+    write_jsonl(
+        tmp_path / "data" / "helmo" / "en" / "train.jsonl",
+        [helmo_record(0), helmo_record(1)],
+    )
+    args = ["--profile", str(profile), "--translator", "stub"]
+    assert cli.main(["translate", "helmo", *args]) == 0
+    capsys.readouterr()
+    assert cli.main(["translations", "helmo", *args, "--show", "1"]) == 0
+    out = capsys.readouterr().out
+    assert "2 records" in out and "records with check findings: 0" in out
+    assert "== helmo-00000  (law, noul)" in out
+    assert "== helmo-00001" not in out  # --show 1
+    assert cli.main(["translations", "helmo", *args[:2], "--translator", "nope"]) != 0
