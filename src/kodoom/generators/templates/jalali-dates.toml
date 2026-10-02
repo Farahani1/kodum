@@ -12,8 +12,8 @@
 #   - each kind has both registers among train templates and among held-out ones;
 #   - held-out templates only ever produce split "test" items (plan 3.1).
 #
-# STATUS: drafted by the project's assistant, not yet reviewed by a native
-# speaker. Read every template aloud once before the suite is published; a
+# STATUS: reviewed on Oct 2, 2026 (data/review/templates-reviewed.csv, an
+# assistant review accepted by the owner); the "no" rows are applied here. A
 # template that sounds unnatural is a bug, not a style choice.
 
 # ---------------------------------------------------------------------------
@@ -55,8 +55,8 @@ id = "before-4"
 register = "colloquial"
 held_out = false
 relation = "after"
-state = "بلیطمون برای {a} هست و هتل رو از {b} رزرو کردم."
-question = "بلیط دیرتر از شروع رزرو هتل هست؟"
+state = "بلیطمون برای {a} هست و هتل رو از {b} گرفتیم."
+question = "تاریخ بلیطمون بعد از شروع اقامت تو هتله؟"
 
 [[template]]
 kind = "before"
@@ -170,7 +170,7 @@ id = "valid-5"
 register = "formal"
 held_out = true
 state = "تاریخ صدور گواهینامه {d} درج شده است."
-question = "آیا این تاریخ در تقویم شمسی درست است؟"
+question = "آیا چنین تاریخی در تقویم شمسی وجود دارد؟"
 
 [[template]]
 kind = "valid"

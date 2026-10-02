@@ -9,8 +9,8 @@
 # relation (kind "larger"): "more" asks whether amount a is more than amount b,
 # "less" whether it is less.
 #
-# STATUS: drafted by the project's assistant, not yet reviewed by a native
-# speaker. Read every template aloud once before the suite is published.
+# STATUS: reviewed on Oct 2, 2026 (data/review/templates-reviewed.csv, an
+# assistant review accepted by the owner); the "no" rows are applied here.
 
 # ---------------------------------------------------------------------------
 # equal: are the two amounts the same? (noul)
@@ -101,8 +101,8 @@ id = "larger-4"
 register = "colloquial"
 held_out = false
 relation = "less"
-state = "کرایه ماشین {a} تومان شد ولی کرایه تاکسی {b} تومان."
-question = "کرایه ماشین کمتر از تاکسی شد؟"
+state = "پیمانکار اول {a} تومان قیمت داد و پیمانکار دوم {b} تومان."
+question = "قیمت پیمانکار اول کمتر از دومیه؟"
 
 [[template]]
 kind = "larger"
@@ -119,8 +119,8 @@ id = "larger-6"
 register = "colloquial"
 held_out = true
 relation = "less"
-state = "بلیط اتوبوس {a} تومانه و بلیط قطار {b} تومان."
-question = "بلیط اتوبوس کمتر از بلیط قطاره؟"
+state = "پیش فاکتور اولی {a} تومانه و پیش فاکتور دومی {b} تومان."
+question = "پیش فاکتور اولی کمتر از دومیه؟"
 
 # ---------------------------------------------------------------------------
 # magnitude: which range does the amount fall in? (score, 5 ordered ranges)
@@ -139,8 +139,8 @@ kind = "magnitude"
 id = "magnitude-2"
 register = "colloquial"
 held_out = false
-state = "این گوشی {d} تومان شد."
-question = "قیمتش تقریبا تو کدوم محدوده هست؟"
+state = "مبلغ خریدم {d} تومان شد."
+question = "این مبلغ تو کدوم بازه هست؟"
 
 [[template]]
 kind = "magnitude"
@@ -148,14 +148,14 @@ id = "magnitude-3"
 register = "formal"
 held_out = false
 state = "هزینه تعمیرات {d} تومان برآورد شده است."
-question = "هزینه تعمیرات از نظر مقدار در کدام دسته قرار می گیرد؟"
+question = "هزینه تعمیرات در کدام بازه قرار می گیرد؟"
 
 [[template]]
 kind = "magnitude"
 id = "magnitude-4"
 register = "colloquial"
 held_out = false
-state = "کرایه تاکسی {d} تومان شد."
+state = "مبلغی که واریز کردم {d} تومان شد."
 question = "این مبلغ تو کدوم بازه هست؟"
 
 [[template]]
@@ -163,7 +163,7 @@ kind = "magnitude"
 id = "magnitude-5"
 register = "formal"
 held_out = true
-state = "حقوق پایه کارمند {d} تومان تعیین شده است."
+state = "مبلغ تراکنش {d} تومان ثبت شده است."
 question = "این مبلغ در کدام بازه قرار می گیرد؟"
 
 [[template]]

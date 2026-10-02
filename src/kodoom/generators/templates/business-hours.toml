@@ -7,8 +7,8 @@
 # "۱۵ مهر ۱۴۰۵ ساعت ۲۱:۳۰" (kind "date"). Time templates therefore put the word
 # "روز" before {v}, and date templates the words "در تاریخ".
 #
-# STATUS: drafted by the project's assistant, not yet reviewed by a native
-# speaker. Read every template aloud once before the suite is published.
+# STATUS: reviewed on Oct 2, 2026 (data/review/templates-reviewed.csv, an
+# assistant review accepted by the owner); the "no" rows are applied here.
 
 # ---------------------------------------------------------------------------
 # time: a weekday and a time (noul)
@@ -19,8 +19,8 @@ kind = "time"
 id = "time-1"
 register = "formal"
 held_out = false
-state = "ساعات کاری شعبه: {s}. مراجعه کننده روز {v} به شعبه مراجعه کرده است."
-question = "آیا شعبه در زمان مراجعه باز است؟"
+state = "ساعات کاری شعبه: {s}. مشتری روز {v} به شعبه مراجعه کرده است."
+question = "آیا شعبه در زمان مراجعه باز بود؟"
 
 [[template]]
 kind = "time"
@@ -71,8 +71,8 @@ kind = "date"
 id = "date-1"
 register = "formal"
 held_out = false
-state = "ساعات کاری شعبه: {s}. مراجعه کننده در تاریخ {v} به شعبه مراجعه کرده است."
-question = "آیا شعبه در زمان مراجعه باز است؟"
+state = "ساعات کاری شعبه: {s}. مشتری در تاریخ {v} به شعبه مراجعه کرده است."
+question = "آیا شعبه در زمان مراجعه باز بود؟"
 
 [[template]]
 kind = "date"

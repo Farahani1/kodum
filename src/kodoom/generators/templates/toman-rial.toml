@@ -8,8 +8,8 @@
 # relation (kind "compare"): "more" asks whether amount a is more than amount b,
 # "less" whether it is less. Amounts in different units are compared by value.
 #
-# STATUS: drafted by the project's assistant, not yet reviewed by a native
-# speaker. Read every template aloud once before the suite is published.
+# STATUS: reviewed on Oct 2, 2026 (data/review/templates-reviewed.csv, an
+# assistant review accepted by the owner); the "no" rows are applied here.
 
 # ---------------------------------------------------------------------------
 # compare: is amount a more / less than amount b? (noul)
@@ -48,8 +48,8 @@ id = "compare-4"
 register = "colloquial"
 held_out = false
 relation = "less"
-state = "کرایه ماشین {a} شد و کرایه تاکسی {b}."
-question = "کرایه ماشین کمتر از تاکسی شد؟"
+state = "خرید اولم {a} شد و خرید دومم {b}."
+question = "خرید اولم کمتر از دومی شد؟"
 
 [[template]]
 kind = "compare"
@@ -139,7 +139,7 @@ kind = "convert"
 id = "convert-2"
 register = "colloquial"
 held_out = false
-state = "قیمت این گوشی {d} شد."
+state = "مبلغ خریدم {d} شد."
 question = "این مبلغ به واحد دیگه (ریال یا تومان) چقدر می شه؟"
 
 [[template]]
@@ -171,5 +171,5 @@ kind = "convert"
 id = "convert-6"
 register = "colloquial"
 held_out = true
-state = "کرایه تاکسی {d} شد."
+state = "مبلغی که واریز کردم {d} شد."
 question = "این مبلغ تو واحد دیگه (ریال یا تومان) کدومه؟"

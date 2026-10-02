@@ -35,7 +35,7 @@ from kodoom.jalali import WEEKDAY_NAMES, JDate, add_days, month_length, to_grego
 from kodoom.schema import Option, Record
 
 NAME = "business-hours"
-VERSION = 1  # bump whenever templates or generation logic change
+VERSION = 2  # bump whenever templates or generation logic change
 SOURCE = "kodoom/code-labeled"
 TASK_FAMILY = "skill-hours"
 

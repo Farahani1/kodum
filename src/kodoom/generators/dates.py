@@ -47,7 +47,7 @@ from kodoom.jalali import (
 from kodoom.schema import Option, Record
 
 NAME = "jalali-dates"
-VERSION = 1  # bump whenever templates or generation logic change
+VERSION = 2  # bump whenever templates or generation logic change
 SOURCE = "kodoom/code-labeled"
 TASK_FAMILY = "skill-dates"
 

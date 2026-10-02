@@ -32,7 +32,7 @@ from kodoom.generators.common import (
 from kodoom.schema import Option, Record
 
 NAME = "iranian-formats"
-VERSION = 1  # bump whenever templates or generation logic change
+VERSION = 2  # bump whenever templates or generation logic change
 SOURCE = "kodoom/code-labeled"
 TASK_FAMILY = "skill-formats"
 

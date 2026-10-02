@@ -141,7 +141,7 @@ def test_fixed_generation_fingerprint():
         json.dumps(r.to_dict(), ensure_ascii=False, sort_keys=True) for r in dates.generate(SEED, 5)
     ]
     digest = hashlib.sha256("\n".join(lines).encode("utf-8")).hexdigest()
-    assert digest == "7592bf334a265904dfc3ce02689aa71b2e26bd3e07b68eb26bfd6c739372e3ad", digest
+    assert digest == "7566fb54564f2d30f446433160b561d5af4e6d411655f5af146b0c7bca067400", digest
 
 
 def test_counts_and_ids(records):

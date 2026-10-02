@@ -71,7 +71,7 @@ def parse_schedule(text: str) -> dict[int, tuple[tuple[int, int], ...]]:
 
 def test_the_rendered_schedule_reads_back_to_the_stored_schedule(records):
     for r in records:
-        text = re.search(r": (.+?)\. (?:مراجعه|من|درخواست|ما|بیمار)", r.state).group(1)
+        text = re.search(r": (.+?)\. (?:مراجعه|مشتری|من|درخواست|ما|بیمار)", r.state).group(1)
         assert parse_schedule(text) == schedule_of(r), (r.id, text)
 
 
@@ -200,4 +200,4 @@ def test_fixed_generation_fingerprint():
         json.dumps(r.to_dict(), ensure_ascii=False, sort_keys=True) for r in hours.generate(SEED, 5)
     ]
     digest = hashlib.sha256("\n".join(lines).encode("utf-8")).hexdigest()
-    assert digest == "a08fc7bb01eed8d81e8ba2939361e71feb24e8c54c5a0d69f1bdb862d32bcfdf", digest
+    assert digest == "3702bd15297e8165f68b8af021fe0b20e5ed474b2ef96c12a46d40373e79adc6", digest

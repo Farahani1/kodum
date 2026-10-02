@@ -5,8 +5,8 @@
 # them: national "0912 345 6789", international "+98 912 345 6789", codes as
 # "12345-67890", in Persian, Latin or Arabic-Indic digits.
 #
-# STATUS: drafted by the project's assistant, not yet reviewed by a native
-# speaker. Read every template aloud once before the suite is published.
+# STATUS: reviewed on Oct 2, 2026 (data/review/templates-reviewed.csv, an
+# assistant review accepted by the owner); the "no" rows are applied here.
 
 # ---------------------------------------------------------------------------
 # mobile: is this a valid Iranian mobile number? (noul)
@@ -18,7 +18,7 @@ id = "mobile-1"
 register = "formal"
 held_out = false
 state = "در فرم ثبت نام، شماره موبایل متقاضی {n} وارد شده است."
-question = "آیا این یک شماره موبایل معتبر ایرانی است؟"
+question = "آیا این شماره از نظر قالب، یک شماره موبایل ایرانی است؟"
 
 [[template]]
 kind = "mobile"
@@ -26,7 +26,7 @@ id = "mobile-2"
 register = "colloquial"
 held_out = false
 state = "دوستم شمارش رو داد: {n}."
-question = "این شماره موبایل ایرانی درسته؟"
+question = "این شماره از نظر قالب، شماره موبایل ایرانیه؟"
 
 [[template]]
 kind = "mobile"
@@ -49,8 +49,8 @@ kind = "mobile"
 id = "mobile-5"
 register = "formal"
 held_out = true
-state = "پیامک تایید به شماره {n} ارسال شده است."
-question = "آیا این شماره یک شماره موبایل معتبر ایران است؟"
+state = "شماره ای که کاربر برای دریافت پیامک تایید وارد کرده {n} است."
+question = "آیا این شماره با قالب شماره های موبایل ایران مطابقت دارد؟"
 
 [[template]]
 kind = "mobile"
@@ -58,7 +58,7 @@ id = "mobile-6"
 register = "colloquial"
 held_out = true
 state = "طرف گفت شمارم اینه: {n}."
-question = "این شماره موبایل معتبره؟"
+question = "این شماره قالب شماره موبایل ایرانی رو داره؟"
 
 # ---------------------------------------------------------------------------
 # postal: is this a valid 10-digit postal code? (noul)
@@ -70,7 +70,7 @@ id = "postal-1"
 register = "formal"
 held_out = false
 state = "در فرم ثبت آدرس، کد پستی {n} وارد شده است."
-question = "آیا این یک کد پستی ده رقمی معتبر است؟"
+question = "آیا کد پستی وارد شده دقیقا ده رقم دارد؟"
 
 [[template]]
 kind = "postal"
@@ -86,7 +86,7 @@ id = "postal-3"
 register = "formal"
 held_out = false
 state = "کد پستی گیرنده {n} درج شده است."
-question = "آیا کد پستی درج شده یک کد پستی ده رقمی معتبر است؟"
+question = "آیا کد پستی درج شده از ده رقم تشکیل شده است؟"
 
 [[template]]
 kind = "postal"
@@ -94,7 +94,7 @@ id = "postal-4"
 register = "colloquial"
 held_out = false
 state = "آدرسش رو دادن و کد پستیش {n} هست."
-question = "این کد پستی معتبره؟"
+question = "این کد پستی درست ده تا رقم داره؟"
 
 [[template]]
 kind = "postal"
@@ -110,4 +110,4 @@ id = "postal-6"
 register = "colloquial"
 held_out = true
 state = "پیک کد پستی رو خواست و من {n} رو گفتم."
-question = "این کد پستی درسته؟"
+question = "این کد پستی قالبش درسته، یعنی ده رقمیه؟"

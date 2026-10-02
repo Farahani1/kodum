@@ -33,7 +33,7 @@ from kodoom.generators.numbers import Style, draw_style, render
 from kodoom.schema import Option, Record
 
 NAME = "digit-forms"
-VERSION = 1  # bump whenever templates or generation logic change
+VERSION = 2  # bump whenever templates or generation logic change
 SOURCE = "kodoom/code-labeled"
 TASK_FAMILY = "skill-digits"
 
