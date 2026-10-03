@@ -7,12 +7,12 @@ from kodoom.cli import main
 
 def write(path, text="x"):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
+    path.write_text(text, encoding="utf-8", newline="\n")  # byte counts must not depend on the OS
 
 
 def touch_later(path, text):
     st = path.stat()
-    path.write_text(text, encoding="utf-8")
+    path.write_text(text, encoding="utf-8", newline="\n")
     os.utime(path, ns=(st.st_atime_ns, st.st_mtime_ns + 10**9))
 
 
