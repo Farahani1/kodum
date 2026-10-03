@@ -36,6 +36,9 @@ kodoom = ["profiles/*.toml", "generators/templates/*.toml", "translate/*.toml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Some test files import helpers from other test files (`from tests.x import ...`); this
+# makes that work for a plain `pytest` as CI runs it, not only for `python -m pytest`.
+pythonpath = ["."]
 
 [tool.ruff]
 line-length = 100
