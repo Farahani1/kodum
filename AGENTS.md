@@ -2,6 +2,11 @@
 
 These instructions are for any coding agent (Claude Code, Codex, Cursor, …) working in this repository.
 
+For notebook execution and GPU-provider handoffs, also read `agent.md`.
+`docs/workflow-change-plan.md` is the separate tooling migration plan (`WF-*`
+tasks); it does not replace or advance the research plan below. The two-notebook
+workflow and Kaggle support are targets until that migration passes validation.
+
 ## The project
 
 kodoom builds a Persian typed-decision data and evaluation layer (dataset, skills suite, harness) with small reference models on top. `docs/project-plan.md` is the big picture and the source of truth for scope, data rules, licenses and milestones. Read the parts relevant to your task before changing code, and do not work against it. If a change needs the plan to change, update the plan in the same piece of work, bump its version and add a row to its version history.
@@ -47,6 +52,8 @@ Before committing, run the fast checks (below) and commit only when they pass. I
 - `notebooks/colab.ipynb`: the only notebook; thin, tested by `tests/test_notebook.py`. `docs/colab.md` explains the Colab workflow.
 - `tests/`: one test file per module. New code comes with tests in the same commit.
 - `docs/project-plan.md`: the plan.
+- `agent.md`: notebook roles, active-stage handoffs and provider/storage policy.
+- `docs/workflow-change-plan.md`: the independent portable-workflow change plan.
 - Reuse these instead of re-implementing them: build records with `kodoom.schema.Record`, check them with `kodoom.sources.check_record`, normalize with `kodoom.normalize.normalize`, write with `write_jsonl` / `append_jsonl` (the latter for resumable steps). Every training or long-running step opens a `kodoom.runs.Run` and saves through `save_latest` / `save_best`, never by writing checkpoints to Drive directly, so resume and the storage budget hold.
 - Write invisible characters (ZWNJ, RLM, NBSP) as `\u` escapes in source; a test enforces it. Persian templates are written with plain spaces and cleaned on load.
 - A new skill generator: labels come from code, every item is one half of a minimal pair, digits stay raw, held-out templates give exactly the test split, and it registers in `generators/__init__.py`. Changing templates or logic means bumping the generator's `VERSION` and the fingerprint test.

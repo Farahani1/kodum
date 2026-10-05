@@ -3,6 +3,9 @@
 Persian Typed Decisions: an open bilingual dataset, a Persian skills suite and an evaluation harness for typed-decision models (choice, score and yes/no questions answered with calibrated probabilities), with CPU-friendly reference models.
 
 The big picture of the whole project is in [docs/project-plan.md](docs/project-plan.md).
+The separate [workflow change plan](docs/workflow-change-plan.md) covers the
+planned reference/execution notebook split and Colab/Kaggle portability.
+[agent.md](agent.md) defines that pipeline and how agents update each stage.
 Ideas beyond the current plan are collected in [docs/future-work.md](docs/future-work.md). How our data compares with earlier Persian decision models: [docs/data-comparison.md](docs/data-comparison.md).
 
 ## Setup (laptop)
@@ -36,7 +39,12 @@ kodoom runs --profile dev                 # runs on disk and what can be resumed
 
 ## Colab
 
-Open [`notebooks/colab.ipynb`](notebooks/colab.ipynb) in Colab and Run all. Updating, resuming after a dead session and what goes on Drive: [docs/colab.md](docs/colab.md).
+The existing [`notebooks/colab.ipynb`](notebooks/colab.ipynb) mixes historical trials
+with current work; run setup and only the cells for your active stage, not Run all.
+The documented next stage is the free-text gate (main plan 1.2 step 1).
+Updating, resuming and Drive storage: [docs/colab.md](docs/colab.md).
+The compact execution notebook and Kaggle support are pending the
+[workflow migration](docs/workflow-change-plan.md).
 
 ## Layout
 

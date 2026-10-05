@@ -2,6 +2,12 @@
 
 The laptop is where code is written and proven (`dev` profile). Colab only runs it. This page covers moving to Colab, updating the code there, and what happens when a session dies.
 
+The existing notebook contains historical trials and optional manual-input steps.
+Select setup and the active stage; do not Run all. The current documented next
+stage is the free-text gate (main plan 1.2 step 1), not the completed pilot.
+A separate [workflow change plan](workflow-change-plan.md) tracks the planned
+reference/execution notebooks and Kaggle support; they are not yet implemented.
+
 ## One-time setup
 
 1. **Open the notebook from GitHub.** In Colab: File → Open notebook → GitHub, then pick `notebooks/colab.ipynb` on your branch. Or open this link directly:
@@ -14,14 +20,22 @@ The laptop is where code is written and proven (`dev` profile). Colab only runs 
 
 1. Runtime → Change runtime type → **T4 GPU**.
 2. In the *Settings* cell, set `REF` (the branch, tag or commit) and `PROFILE` (`colab-preflight` before any long run, then `colab`).
-3. Runtime → **Run all**.
+3. Run Settings, Mount Google Drive, Get the code, install, Check the environment,
+   runs, Record the data, and Hugging Face access if needed. A failed check must
+   stop you here; the existing `!` commands do not enforce that for Run all.
+4. Run only the cells for your current stage. For the free-text gate, ensure the
+   English sources exist (fetch missing sources), then run its translation/report
+   cells. Do not rerun old translator trials, the pilot, cache deletion or optional
+   import cells. Finish with Files generated or updated, then optional Drive sync.
 
-The `kodoom check` cell stops the notebook if Drive is not mounted, no GPU is attached, or Drive is too full, and lists runs that can be resumed.
+`kodoom check` reports failure if Drive is not mounted, no GPU is attached, or
+Drive is too full, and lists runs that can be resumed. With the existing shell
+cell, stop manually on failure; automatic stopping is part of the migration.
 
 ## Updating the code
 
 1. Change the code on the laptop, run the fast checks and the `dev` smoke run, commit, push.
-2. On Colab, re-run the **Get the code** cell. It moves to the newest commit of `REF`. Nothing else is needed: the install is editable, and commands run as fresh `kodoom` processes.
+2. On Colab, re-run the **Get the code** cell. It moves to the newest commit of `REF`. The install is editable, and commands run as fresh `kodoom` processes. Then run setup checks and only the active stage.
 3. Re-run the install cell only if `pyproject.toml` dependencies changed.
 
 Edits made directly on Colab are discarded by the next update, on purpose: the code on Colab must always be a commit that already ran on the laptop. The commit is recorded in every run's `run.json` (with `-dirty` if it was not clean).
@@ -69,7 +83,8 @@ Persian the same way `kodoom translations typed-decisions` does.
 
 Nothing to rescue: logs and checkpoints are written to Drive while the run goes.
 
-1. Reconnect (or open a new session), T4 GPU, **Run all**.
+1. Reconnect (or open a new session), T4 GPU, then rerun setup and only the active
+   stage as described above. Reuse the same data paths and translation settings.
 2. `kodoom runs` shows each unfinished run and its latest checkpoint step.
 3. Start the same step again with the **same run id and the same settings**. It resumes from the latest checkpoint. With different settings it refuses and names what changed; use a new run id instead.
 

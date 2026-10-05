@@ -1,6 +1,6 @@
 # Persian Typed Decisions: Project Plan
 
-Version 15 · Oct 2, 2026 · @Shah
+Version 16 · Oct 5, 2026 · @Shah
 
 ## Overview
 
@@ -45,6 +45,14 @@ The test for every deliverable: could a developer drop this project's model enti
 Translated and native data meet only in the training mix, and only their train splits; every test set reaches Part 3 untouched.
 
 ## Environments: laptop development, Colab runs
+
+**Workflow migration:** the separate [workflow change plan](workflow-change-plan.md)
+defines a complete reference notebook and a compact current-stage execution
+notebook, with explicit Colab, Kaggle and generic Jupyter setup. Implementation
+progress uses `WF-*` IDs and does not change the research milestones or gates.
+The Colab/Drive assumptions below describe the existing supported workflow until
+that migration is validated; no data transfer or Kaggle run is implied. Agent
+handoff rules are in [agent.md](../agent.md).
 
 Development and Colab are separate. The code is written and proven error-free on the laptop, then run for real on Colab. There is one codebase and one pipeline; only a config profile decides which models, data sizes and paths are used.
 
@@ -532,6 +540,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
+| 16 | Oct 5, 2026 | Link the separate portable notebook workflow change plan and agent handoff policy. Reference/current-stage notebook separation and Kaggle support are planned; existing Colab/Drive implementation, research scope and gates remain the baseline until migration validation. |
 | 15 | Oct 2, 2026 | Gemma 3 12B dropped as a translator and as the free-text-gate fallback: too slow on a free Colab T4 for this project's session budget. Gemma 3 4B is the translator for the whole dataset, including helmo, decided outright rather than conditionally on the free-text gate. The gate (1.2 step 1) now sizes 4B's risk on free text instead of choosing between 4B and 12B; if it fails, the plan shrinks or drops helmo and leans on the automatic checks, meaning check and a wider human-review sample, instead of switching models. Failure-mode mitigation updated to match. |
 | 14 | Oct 2, 2026 | Gemma terms read (AI-assisted review, not legal advice): outputs are not Model Derivatives, so a Gemma-translated typed-decisions-fa appears publishable under Apache-2.0; but a model trained on Gemma synthetic data is a Model Derivative, so whether Gemma-made translations may enter the training mix is an open decision before M3 (Licenses, 1.2). |
 | 13 | Oct 2, 2026 | Gemma 3 4B (bf16) is the translator for the full run, for speed; 12B is the fallback. Because 4B was weaker on free text and the pilot covered only agent traces, a free-text gate before the full run: about 40 helmo records plus customer_service and security_incidents cases, with a pass bar fixed in advance and outcomes for passing and failing (1.2 step 1). Helmo: whole-record translation, a Latin-token check, an answer comparison in the meaning check, its own review sample of about 100 with a separate error rate, a 1.5–2k start, and a separate train-only config. A failure mode for 4B on helmo. |

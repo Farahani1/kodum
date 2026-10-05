@@ -1,0 +1,99 @@
+# Notebook and GPU execution workflow
+
+Read this together with `AGENTS.md`. This file defines the target execution
+workflow; `docs/workflow-change-plan.md` tracks its implementation. The notebook
+split and Kaggle support are planned, not implemented by this documentation
+change. Until the migration passes its checks, `notebooks/colab.ipynb` is the
+existing runner.
+
+## Three separate sources of truth
+
+- `docs/project-plan.md`: research scope, datasets, licenses, milestones and
+  scientific decision gates. These do not advance merely because a workflow
+  task is complete.
+- `docs/workflow-change-plan.md`: the environment and notebook migration, with
+  independent `WF-*` task IDs, dependencies and acceptance checks.
+- Proposed `workflows/current.toml`: the active execution request, updated with
+  each project stage. It records a main-plan reference, recipe IDs, parameters,
+  prerequisites and a review stop. It is configuration, not another research plan.
+
+Do not infer the active stage from the last notebook cell or from the existence
+of an output file. The current documented next step is the free-text translation
+gate in main-plan section 1.2 step 1; its result has not been recorded.
+
+## Two notebooks, one package
+
+`notebooks/reference.ipynb` will be the complete, ordered recipe reference for
+how artifacts are created. Include prerequisites, commands, inputs, output
+locations, provenance and links to the main plan. Retain historical trials as
+historical recipes, marking decisions that superseded them. Mark future steps
+as unavailable until their package commands exist. The reference is for reading
+and deliberately selecting recipes, not for running every experiment at once.
+
+`notebooks/execution.ipynb` will be the short operational notebook used on Colab,
+Kaggle and other explicitly configured Jupyter runtimes. Every stage update must
+replace its active request and summaries, so Run all performs only the approved
+current work. Completed pilots and optional experiments belong in the reference.
+The operational sequence is settings, bootstrap, restore, readiness check,
+current-stage execution, artifact report and persistence confirmation.
+
+Both notebooks call the same tested `kodoom` package. Dataset processing,
+translation, training, evaluation, recipe dispatch and artifact handling belong
+in modules and CLI commands, not notebook cells. A shared recipe catalog prevents
+the reference and execution notebooks from defining different commands.
+
+## Session contract
+
+1. Select the provider, explicit compute profile, exact code revision, active
+   stage, run ID and storage paths. Never choose a workload by guessing the host.
+2. Mount or attach storage and obtain credentials from provider secrets or
+   environment variables. Never write tokens into notebooks, URLs saved in git,
+   logs, artifact manifests or outputs.
+3. Check out the requested revision and record the resolved full commit SHA.
+   Stop on incompatible or dirty code instead of silently discarding edits.
+   Install validated dependencies; keep GPU-only dependencies out of `dev`.
+4. Restore explicitly selected input/checkpoint bundles into writable locations.
+   Validate their manifests, checksums and semantic run configuration.
+5. Validate prerequisites, writable paths, storage capacity, model access,
+   actual accelerator capabilities and the selected precision. A failed check
+   must stop Run all before any expensive stage starts.
+6. Execute only the active recipe group through the package. Preserve the
+   existing record, license, split and normalization rules.
+7. In a finalization path, report new/changed files, failures and review findings,
+   and update the existing data-directory README. Produce a run manifest with
+   code revision, input revisions, parameters, model/prompt versions, dependency
+   versions, output checksums and stage status. Do this on failure too.
+8. Save or export approved private artifacts and verify the durable copy. Mark a
+   stage complete only after execution and persistence succeed. A translation
+   gate ends at `awaiting-review`, never by starting the full run automatically.
+
+## Provider and storage boundaries
+
+Keep provider bootstrap separate from computation. Colab mounts the owner's
+Drive; Kaggle restores attached inputs into writable working space and uses an
+explicit private output-save/export process; generic platforms provide paths,
+secrets and a persistence method explicitly. Local caches and checkpoint staging
+are disposable, distinct from the artifacts selected for durable storage.
+
+Writing a checkpoint to a Kaggle session disk is not proof that it will survive
+session loss. Report the last verified durable checkpoint and the possible work
+lost since it. Test saving and restoring across new sessions before a full run.
+When moving between providers, preserve semantic configuration and input hashes;
+changes to model, precision or data require a new run unless compatibility is
+explicitly validated. Path changes alone should not invalidate a compatible run.
+
+Existing data remains on the owner's Drive until a transfer is explicitly
+authorized. Publishing this branch or a reference notebook does not authorize
+uploading datasets, checkpoints, credentials or private logs to Kaggle or any
+public service. Code and sanitized documentation go to git; generated artifacts
+stay outside git. No dataset/model publication runs in the operational notebook.
+
+## Agent handoff at every stage
+
+Update the active request, execution notebook, recipe reference and workflow
+documentation in the same logical change. State the main-plan step, required
+inputs, expected files, review criteria, stop condition and restart instructions.
+Keep prior versions reproducible through git and artifact manifests. Never claim
+a stage, provider preflight or scientific gate passed without recorded evidence.
+Follow `AGENTS.md` for tests and commits; use the separate `WF-*` task IDs when
+reporting workflow implementation progress.

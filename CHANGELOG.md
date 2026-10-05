@@ -1,7 +1,7 @@
 # Changelog and project status
 
 This file records what changed in kodoom and where the project stands against
-`docs/project-plan.md` (currently version 15, the source of truth). Format follows
+`docs/project-plan.md` (currently version 16, the source of truth). Format follows
 [Keep a Changelog](https://keepachangelog.com/): newest first, grouped by kind of
 change. The project has no releases yet; everything is under "Unreleased" until the
 first published dataset (typed-decisions-fa v0.1, plan 1.3).
@@ -73,6 +73,14 @@ Our checks and glossary are meant to catch this kind of inconsistency.
 ## Unreleased
 
 ### Added
+
+- Portable notebook workflow design in `agent.md` and the separate
+  `docs/workflow-change-plan.md` (WF-00 complete; WF-01 through WF-06 pending).
+  Defines reference and active execution notebooks, explicit Colab/Kaggle/generic
+  environments, artifact provenance and verified private persistence/restore.
+  Main plan v16 links the migration without advancing any research gate. Existing
+  notebook guidance now warns against Run all across historical experiments.
+  New notebooks, Kaggle support and data migration are not implemented yet.
 
 - `kodoom translate helmo` and `kodoom translations helmo` (`pipeline.py`, `report.py`): helmo
   has no workflows and its `state` is one free-text paragraph rather than a JSON tree, so each
