@@ -1,10 +1,9 @@
 # Notebook and GPU execution workflow
 
-Read this together with `AGENTS.md`. This file defines the target execution
-workflow; `docs/workflow-change-plan.md` tracks its implementation. The notebook
-split and Kaggle support are planned, not implemented by this documentation
-change. Until the migration passes its checks, `notebooks/colab.ipynb` is the
-existing runner.
+Read this together with `AGENTS.md`. This file defines the shared execution
+workflow; `docs/workflow-change-plan.md` tracks remaining migration work. The
+current Kaggle runner covers the free-text gate only; a live Kaggle run and
+fresh-session restore remain unverified.
 
 ## Three separate sources of truth
 
@@ -13,7 +12,7 @@ existing runner.
   task is complete.
 - `docs/workflow-change-plan.md`: the environment and notebook migration, with
   independent `WF-*` task IDs, dependencies and acceptance checks.
-- Proposed `workflows/current.toml`: the active execution request, updated with
+- `workflows/current.toml`: the active execution request, updated with
   each project stage. It records a main-plan reference, recipe IDs, parameters,
   prerequisites and a review stop. It is configuration, not another research plan.
 

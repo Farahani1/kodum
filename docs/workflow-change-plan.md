@@ -1,6 +1,6 @@
 # Portable notebook workflow: change plan
 
-Version 1 | Oct 5, 2026 | Status: design recorded; implementation pending
+Version 2 | Oct 5, 2026 | Kaggle free-text gate prepared; live provider validation pending
 
 Baseline inspected: commit `02a69bc` on `claude/sweet-franklin-pm0tdm` in
 `D:/Coding/kodum`. Design branch: `codex/portable-notebook-workflow`.
@@ -23,8 +23,9 @@ The target is one complete reference notebook plus one compact execution noteboo
 whose active stage is updated as the project advances. Both use the same package
 and recipes on Colab, Kaggle and explicitly configured Jupyter environments.
 Moving to Kaggle must not silently change datasets, model choices or research
-gates. This branch records the design; it does not yet create the new notebooks,
-add Kaggle profiles, move data or run a GPU job.
+gates. The current free-text gate now has a runtime, profiles, execution/reference
+notebooks and private bundles. Full training/evaluation and a live Kaggle GPU or
+fresh-session restore still need validation.
 
 ## Existing foundations and gaps
 
@@ -156,12 +157,12 @@ verified durable storage, not simply reaching the last notebook cell.
 | ID | Change | Depends on | Status |
 | --- | --- | --- | --- |
 | WF-00 | Record pipeline policy, migration plan and documentation links | None | Complete in this branch |
-| WF-01 | Inventory cells and specify artifact recipes/active request | WF-00 | Pending |
-| WF-02 | Build the validated recipe runner, dry-run and provenance | WF-01 | Pending |
-| WF-03 | Add explicit runtime adapters, Kaggle profiles and dependencies | WF-02 | Pending |
-| WF-04 | Implement private persistence/export/restore and resume checks | WF-03 | Pending; data transfer needs owner-selected private destination |
-| WF-05 | Create reference/execution notebooks and update operator docs | WF-02, WF-03, WF-04 | Pending |
-| WF-06 | Prove fresh-session operation and retire the legacy entry point | WF-05 | Pending |
+| WF-01 | Inventory cells and specify artifact recipes/active request | WF-00 | Complete for the free-text gate; future stages remain catalogued |
+| WF-02 | Build the validated recipe runner, dry-run and provenance | WF-01 | Gate implemented; future-stage dispatch pending |
+| WF-03 | Add explicit runtime adapters, Kaggle profiles and dependencies | WF-02 | Implemented; provider validation pending |
+| WF-04 | Implement private persistence/export/restore and resume checks | WF-03 | Checksummed bundles implemented; Kaggle fresh-session restore pending |
+| WF-05 | Create reference/execution notebooks and update operator docs | WF-02, WF-03, WF-04 | Complete for the active gate |
+| WF-06 | Prove fresh-session operation and retire the legacy entry point | WF-05 | Live GPU/restore pending; legacy Colab notebook retained |
 
 ### WF-01: Inventory and freeze the current request
 
@@ -270,4 +271,5 @@ retry Gemma 12B or repeat the completed pilot as part of Run all.
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2 | Oct 5, 2026 | Implement the Kaggle free-text gate, profiles, runtime, notebook pair, private bundles and review sheets; retain GPU/restore validation and future stages as pending. |
 | 1 | Oct 5, 2026 | Separate workflow migration, two notebook roles, explicit providers, provenance, durable artifact contract and WF-00 through WF-06 acceptance checks. |

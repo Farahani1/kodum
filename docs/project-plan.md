@@ -1,6 +1,6 @@
 # Persian Typed Decisions: Project Plan
 
-Version 16 · Oct 5, 2026 · @Shah
+Version 17 · Oct 5, 2026 · @Shah
 
 ## Overview
 
@@ -20,7 +20,7 @@ The test for every deliverable: could a developer drop this project's model enti
 
 **Constraints**
 
-- Training runs on the free Colab tier: a T4 GPU (16 GB), no bf16, no FlashAttention 2, sessions that drop.
+- The existing training plan targets the free Colab tier: a T4 GPU (16 GB), no bf16, no FlashAttention 2, sessions that drop. A private Kaggle runner now prepares the free-text gate; full model runs and Kaggle training are not yet validated.
 - Google Drive storage is the free 15 GB plan, shared with Gmail and Photos, so less than 15 GB is actually free. Drive is scratch space, not an archive (see Environments: Storage budget).
 - Data preparation, generation and small-model evaluation run on the laptop CPU.
 - The laptop is modest: Intel i3-1005G1 (2 cores, 4 threads), about 12 GB RAM, and an NVIDIA MX110 (2 GB) that is not used. It proves the code works; it does not train the real models (see Environments).
@@ -32,11 +32,11 @@ The test for every deliverable: could a developer drop this project's model enti
 - Build a decision model, not a classifier. Options arrive in the request, and whole tasks stay out of training to prove it.
 - Report native Persian results separately from translated data, always.
 - Publish early. Part 1's dataset is the first public output.
-- Develop on the laptop, run on Colab. Nothing reaches Colab until it has run end to end on the laptop.
+- Develop on the laptop, then use the selected provider's explicit preflight and stage profile. Nothing reaches a GPU provider until it has run end to end on the laptop where feasible.
 - The resource is the headline; the model is a reference implementation. The project is worthwhile even if the model turns out average.
 - Clean training data only. A source enters training only if its license allows a permissively licensed model; everything else is test-only or converter-only.
 - Licenses: the least restrictive. The code is 0BSD and the project's own data (the generated skills and their templates) is CC0-1.0. Data derived from other people's work keeps their license: typed-decisions-fa stays Apache-2.0 with attribution, and a source's license is enforced in code (`kodoom.sources`). The choice of license for the trained models is still open, and must respect the attribution terms of what they were trained on (MASSIVE is CC BY 4.0). Gemma's terms count a model trained on Gemma synthetic data as a Model Derivative, which carries Gemma's use restrictions. If typed-decisions-fa is translated with Gemma, putting its train split into the training mix may therefore bring the Gemma terms to the project's models. Decide before M3: keep Gemma-made translations out of training (benchmark use only), accept the Gemma terms for those models, or translate the training part another way. Have a lawyer confirm whether human-corrected translations change the answer.
-- Data stays on the owner's Drive. Generated, converted and translated datasets are written to the profile's `data_dir` (Drive on Colab), never into the repository checkout and never into git (a test fails if a data file is tracked). Nothing is published to Hugging Face or anywhere else until the owner decides to; the publication steps in Part 1 wait for that decision.
+- Data stays in owner-controlled private storage. Colab uses the owner's Drive; the bounded Kaggle free-text gate uses the owner's private Kaggle notebook output and attached inputs. Generated, converted and translated datasets are written to the profile's `data_dir`, never into the repository checkout or git. No dataset is publicly published or automatically transferred to Drive/Hugging Face; publication steps in Part 1 wait for an explicit owner decision.
 - `data_dir` describes itself. It carries a `README.md` written by kodoom: the file tree with sizes, record counts and what each folder holds, the files the last update made or changed, and the history of updates with their command lines. Every command that writes data refreshes it. The Colab notebook records the files when a run starts and ends by printing the tree with the files that run generated or updated marked. Data stays on Drive and out of git, so nothing else records which command or translator produced a file, or when; the README keeps the folder readable on its own, and the end-of-run tree shows whether a run wrote what it was meant to.
 - Benchmark data is stored as people write it. Normalization is part of a model's input pipeline, not of the published data, so the benchmark still tests how other models handle digit forms and spelling variants.
 
@@ -44,30 +44,28 @@ The test for every deliverable: could a developer drop this project's model enti
 
 Translated and native data meet only in the training mix, and only their train splits; every test set reaches Part 3 untouched.
 
-## Environments: laptop development, Colab runs
+## Environments: laptop development, Colab and Kaggle runs
 
-**Workflow migration:** the separate [workflow change plan](workflow-change-plan.md)
-defines a complete reference notebook and a compact current-stage execution
-notebook, with explicit Colab, Kaggle and generic Jupyter setup. Implementation
-progress uses `WF-*` IDs and does not change the research milestones or gates.
-The Colab/Drive assumptions below describe the existing supported workflow until
-that migration is validated; no data transfer or Kaggle run is implied. Agent
-handoff rules are in [agent.md](../agent.md).
+**Execution notebooks:** [execution.ipynb](../notebooks/execution.ipynb) prepares
+the free-text gate on Kaggle; [reference.ipynb](../notebooks/reference.ipynb)
+records the artifact recipes and historical Colab steps. See
+[execution-workflow.md](execution-workflow.md) for Kaggle setup and artifact
+handling. A live Kaggle GPU and fresh-session restore are not yet verified. Full
+training and evaluation on Kaggle are not validated. The Colab/Drive workflow
+remains supported. Tooling work has its own `WF-*` tasks and does not advance
+research gates. Agent rules: [agent.md](../agent.md).
 
 Development and Colab are separate. The code is written and proven error-free on the laptop, then run for real on Colab. There is one codebase and one pipeline; only a config profile decides which models, data sizes and paths are used.
 
-**Three profiles**, chosen explicitly (for example `--profile dev`); the code never guesses where it is running.
+**Five profiles**, chosen explicitly (for example `--profile dev`); the code never guesses where it is running.
 
-| Setting | `dev` (laptop CPU) | `colab-preflight` (T4) | `colab` (T4) |
-| --- | --- | --- | --- |
-| Purpose | Prove the whole pipeline runs, error-free | Catch T4-only failures before a long run | The real run |
-| Data | 20–50 cases per source, fixed seed | Small slice | Full sets |
-| Translator | Stub (echo or tagged text) or a tiny model | Real translator | TranslateGemma or an API |
-| Checker | Stub with fixed or random flags | Real checker | Qwen3-8B, 4-bit |
-| Encoder / decoder | Tiny random copies (below) | Real models | mmBERT-small / base; Qwen3.5-0.8B with LoRA |
-| Precision | fp32 | fp16 | fp16 |
-| Training length | 10–20 steps | About 20 steps | Full epochs |
-| Output paths | `./runs/` | Drive | Drive |
+| Setting | `dev` | `colab-preflight` | `colab` | `kaggle-preflight` | `kaggle` |
+| --- | --- | --- | --- | --- | --- |
+| Purpose | CPU development | Catch T4 failures | Full Colab run | Catch Kaggle/GPU/model failures | Active gate; limits come from request |
+| Data | 20-50 cases/source | Small slice | Full sets | Capped source fetch | Stage-limited gate |
+| Translator | Stub/tiny model | Real translator | Gemma 3 4B | Gemma 3 4B | Gemma 3 4B |
+| Device / dtype | CPU fp32 | T4 fp16 | T4 fp16 | One visible GPU; bf16 probe | One visible GPU; bf16 probe |
+| Output paths | `./runs/` | Drive | Drive | `/kaggle/working` | `/kaggle/working` |
 
 **Tiny random models.** For the laptop, build a copy of each real model from its own config, shrunk to about 2 layers and hidden size 64, with random weights and the real tokenizer. Only the config and tokenizer are downloaded, never the real weights. Most of the size is the vocabulary table (about 250k tokens × 64, roughly 60 MB), and a training step on a small batch should take well under a second on the laptop (an estimate, to confirm once the code exists). The copies use the same classes, input format, tokenizer and save/load code as the real models, so they catch shape, schema and pipeline bugs.
 
@@ -97,7 +95,7 @@ Development and Colab are separate. The code is written and proven error-free on
 
 **What the laptop cannot catch.** fp16 overflow (the Gemma 3 / TranslateGemma issue), Qwen3.5's Gated DeltaNet layers in fp16, GPU memory at the real batch size and length, and real run times. The `colab-preflight` profile (real models, about 20 steps, about 5 minutes) catches these before a full session is spent.
 
-**Workflow:** laptop `dev` smoke run → Colab `colab-preflight` → Colab full run.
+**Workflow:** laptop `dev` development -> selected-provider preflight -> the active stage. Kaggle currently runs the free-text gate only; full training support needs implementation and validation.
 
 ### Storage budget: Google Drive, free 15 GB plan
 
@@ -540,6 +538,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
+| 17 | Oct 5, 2026 | Add the reference/execution notebook workflow and prepare the private Kaggle free-text gate with pinned code, resumable bundles and review outputs. Kaggle GPU/persistence validation and full training remain pending; no research gate is advanced. |
 | 16 | Oct 5, 2026 | Link the separate portable notebook workflow change plan and agent handoff policy. Reference/current-stage notebook separation and Kaggle support are planned; existing Colab/Drive implementation, research scope and gates remain the baseline until migration validation. |
 | 15 | Oct 2, 2026 | Gemma 3 12B dropped as a translator and as the free-text-gate fallback: too slow on a free Colab T4 for this project's session budget. Gemma 3 4B is the translator for the whole dataset, including helmo, decided outright rather than conditionally on the free-text gate. The gate (1.2 step 1) now sizes 4B's risk on free text instead of choosing between 4B and 12B; if it fails, the plan shrinks or drops helmo and leans on the automatic checks, meaning check and a wider human-review sample, instead of switching models. Failure-mode mitigation updated to match. |
 | 14 | Oct 2, 2026 | Gemma terms read (AI-assisted review, not legal advice): outputs are not Model Derivatives, so a Gemma-translated typed-decisions-fa appears publishable under Apache-2.0; but a model trained on Gemma synthetic data is a Model Derivative, so whether Gemma-made translations may enter the training mix is an open decision before M3 (Licenses, 1.2). |

@@ -49,7 +49,7 @@ Before committing, run the fast checks (below) and commit only when they pass. I
 ## Where things are
 
 - `src/kodoom/`: the package. `config.py` + `profiles/` (run profiles), `schema.py` (the record and JSONL I/O), `sources.py` (source registry and license/split rules), `normalize.py` (the one Persian normalizer), `jalali.py` (the Jalali calendar), `generators/` (code-labeled skill generators: `common.py` pair-building loop, `numbers.py` written forms of numbers and dates, one module per generator, Persian templates in `templates/*.toml`; five so far: jalali-dates, digit-forms, toman-rial, business-hours, iranian-formats), `runs.py` (run directories: logs, checkpoints, resume), `metrics.py` (accuracy, ECE, KL, bootstrap, temperature scaling; pure Python), `predictions.py` + `calibration.py` (the prediction file and `calibration.json`), `evaluation.py` + `baselines.py` (the scoring harness), `typed_decisions.py` + `helmo.py` (the two English sources as records; `kodoom fetch`, `kodoom fields`), `translate/` (`rules.py`: translate/keep table per workflow; `checks.py`: automatic checks; `glossary.py` + `glossary.toml`: the term glossary and its check; `pipeline.py`: `Translator`, the stub, resumable `translate_file`; `hf.py`: TranslateGemma and chat-model translators (torch imported lazily); `report.py`: `kodoom translations`; `pilot.py`: blind A/B sheet and scoring; `exchange.py`: units files for a translator outside kodoom and `PrecomputedTranslator`; `kodoom translate`), `review.py` (`kodoom review-pack`: glossary and templates as HTML and CSV for a native reader), `datadir.py` (`<data_dir>/README.md`, refreshed after every data-writing command; `kodoom tree`), `inspect_hf.py` (`kodoom inspect`), `check.py` (`kodoom check`), `cli.py` (the `kodoom` command).
-- `notebooks/colab.ipynb`: the only notebook; thin, tested by `tests/test_notebook.py`. `docs/colab.md` explains the Colab workflow.
+- `notebooks/colab.ipynb`: legacy Colab record. `notebooks/execution.ipynb` runs only the current stage; `notebooks/reference.ipynb` retains the complete recipe/history. See `docs/execution-workflow.md`.
 - `tests/`: one test file per module. New code comes with tests in the same commit.
 - `docs/project-plan.md`: the plan.
 - `agent.md`: notebook roles, active-stage handoffs and provider/storage policy.
@@ -58,14 +58,15 @@ Before committing, run the fast checks (below) and commit only when they pass. I
 - Write invisible characters (ZWNJ, RLM, NBSP) as `\u` escapes in source; a test enforces it. Persian templates are written with plain spaces and cleaned on load.
 - A new skill generator: labels come from code, every item is one half of a minimal pair, digits stay raw, held-out templates give exactly the test split, and it registers in `generators/__init__.py`. Changing templates or logic means bumping the generator's `VERSION` and the fingerprint test.
 
-## Development and Colab are separate
+## Development and GPU execution are separate
 
 Read "Environments" in the plan. In short:
 
-- One codebase, one pipeline. Profiles (`dev`, `colab-preflight`, `colab`) decide models, data sizes, precision and paths. The code never detects where it is running; the profile is always explicit.
+- One codebase, one pipeline. Profiles (`dev`, `colab-preflight`, `colab`, `kaggle-preflight`, `kaggle`) decide models, data sizes, precision and paths. Choose provider and profile explicitly; never infer a workload from the host.
 - Everything must run end to end on the `dev` profile on a modest laptop (i3, 4 threads, about 12 GB RAM, CPU only) in under 5 minutes. Never make the `dev` path need a GPU, real model weights or CUDA-only packages.
-- No logic in notebooks. Colab notebooks only mount Drive, clone the repo, install, and call the same command.
-- CUDA-only dependencies (e.g. `bitsandbytes`) live in the `colab` extra and are imported lazily.
+- No computation logic in notebooks. Execution notebooks bootstrap the pinned repo, select/restore the active stage and call package commands.
+- CUDA-only dependencies (e.g. `bitsandbytes`) live in GPU extras and are imported lazily. Install against `constraints/gpu.txt`; preserve the provider's installed CUDA PyTorch.
+- Kaggle outputs are temporary until a private notebook output is saved and restored in a fresh session. Never commit bundles, datasets, credentials or model caches.
 - Code must run on Windows and Linux: use `pathlib`, write text files as UTF-8 explicitly, no shell-specific steps.
 
 ## Data rules that code must enforce

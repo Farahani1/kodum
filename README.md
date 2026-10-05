@@ -43,8 +43,11 @@ The existing [`notebooks/colab.ipynb`](notebooks/colab.ipynb) mixes historical t
 with current work; run setup and only the cells for your active stage, not Run all.
 The documented next stage is the free-text gate (main plan 1.2 step 1).
 Updating, resuming and Drive storage: [docs/colab.md](docs/colab.md).
-The compact execution notebook and Kaggle support are pending the
-[workflow migration](docs/workflow-change-plan.md).
+The current Kaggle gate runner is [`notebooks/execution.ipynb`](notebooks/execution.ipynb);
+the complete recipe record is [`notebooks/reference.ipynb`](notebooks/reference.ipynb).
+Kaggle setup, private output saving and review are in
+[docs/execution-workflow.md](docs/execution-workflow.md). Training stages and
+live Kaggle validation remain pending.
 
 ## Layout
 
@@ -62,6 +65,8 @@ The compact execution notebook and Kaggle support are pending the
 | `src/kodoom/check.py` | `kodoom check`: Drive mounted, free space, GPU, model cache |
 | `src/kodoom/cli.py` | The `kodoom` command |
 | `notebooks/colab.ipynb` | The thin Colab notebook ([docs/colab.md](docs/colab.md)) |
+| `notebooks/execution.ipynb`, `notebooks/reference.ipynb` | Active gate and complete recipe history ([docs/execution-workflow.md](docs/execution-workflow.md)) |
+| `src/kodoom/workflow.py`, `src/kodoom/artifacts.py`, `workflows/` | Gate orchestration, provenance and private output bundles |
 | `tests/` | Tests; `pytest` runs them all in about a second |
 
 Datasets, checkpoints and run outputs go in `data/`, `runs/` or Drive and are never committed.

@@ -1,7 +1,7 @@
 # Changelog and project status
 
 This file records what changed in kodoom and where the project stands against
-`docs/project-plan.md` (currently version 16, the source of truth). Format follows
+`docs/project-plan.md` (currently version 17, the source of truth). Format follows
 [Keep a Changelog](https://keepachangelog.com/): newest first, grouped by kind of
 change. The project has no releases yet; everything is under "Unreleased" until the
 first published dataset (typed-decisions-fa v0.1, plan 1.3).
@@ -11,13 +11,13 @@ table below or adds a user-visible command, module or decision.
 
 ## Status against the plan
 
-Last updated: Sep 30, 2026, at commit `3505090`. Checks: `ruff check`, `ruff format
---check` and `pytest` (567 tests) pass; CI runs Windows and Ubuntu on Python 3.11 to
-3.13.
+Last updated: Sep 30, 2026, at commit `3505090`. The historical checks below are
+from that commit; see the unreleased section for checks specific to newer changes.
+CI runs Windows and Ubuntu on Python 3.11 to 3.13.
 
 | Plan | Item | State |
 | --- | --- | --- |
-| Environments | `dev`, `colab-preflight`, `colab` profiles, storage keys, crash-safe run directories, `kodoom check`, thin notebook, Colab guide | Done. Preflight ran on a real T4 (Python 3.13): check, generate, fetch and fields all ran. |
+| Environments | `dev`, `colab-preflight`, `colab`, Kaggle gate profiles, run directories, notebook guides | Colab workflow established; Kaggle free-text gate prepared, but live GPU and restore need validation. Later Kaggle training is not implemented. |
 | 1.1 | Code-labeled skills: Jalali dates, digit forms, Toman/Rial, business hours, Iranian formats, with minimal pairs, held-out test templates, raw forms | Done: 4,200 items at the default 150 pairs per kind. Templates reviewed on Oct 2, 2026 (an assistant review accepted by the owner, `data/review/templates-reviewed.csv`): 21 of 84 reworded, all five generators now at version 2. Every label in the version-1 data was also re-checked against two independent Jalali libraries: no errors. |
 | 1.1 | typed-decisions loader, pinned revision `e135720c…`, field statistics | Done. Real data loads: 1,200 train cases (6,000 decisions) and 400 test cases (2,000), matching the dataset card. Preflight caps train at 200 cases per workflow. |
 | 1.1 | Translate/keep rules for each field | Done (`translate/rules.py`), decided from all 1,200 cases; a text field with no rule is an error. |
@@ -74,13 +74,17 @@ Our checks and glossary are meant to catch this kind of inconsistency.
 
 ### Added
 
-- Portable notebook workflow design in `agent.md` and the separate
-  `docs/workflow-change-plan.md` (WF-00 complete; WF-01 through WF-06 pending).
-  Defines reference and active execution notebooks, explicit Colab/Kaggle/generic
-  environments, artifact provenance and verified private persistence/restore.
-  Main plan v16 links the migration without advancing any research gate. Existing
-  notebook guidance now warns against Run all across historical experiments.
-  New notebooks, Kaggle support and data migration are not implemented yet.
+- Portable notebook workflow design and implementation status are tracked in
+  `agent.md` and the separate `docs/workflow-change-plan.md`. The reference and
+  active execution notebooks cover the current free-text gate; full training,
+  live Kaggle validation and durable restore validation remain outstanding.
+  Main plan v17 links the workflow without advancing any research gate.
+
+- Kaggle execution for the free-text gate: `notebooks/execution.ipynb`, full
+  recipe reference, explicit profiles, provider secrets, pinned Gemma revision,
+  input/output validation, review CSVs and checksummed private artifact bundles.
+  Restoring a completed sample reuses its outputs without loading Gemma again.
+  `ruff check` passed; `pytest` and live Kaggle GPU/persistence were not run.
 
 - `kodoom translate helmo` and `kodoom translations helmo` (`pipeline.py`, `report.py`): helmo
   has no workflows and its `state` is one free-text paragraph rather than a JSON tree, so each
