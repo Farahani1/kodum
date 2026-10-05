@@ -19,6 +19,7 @@ model card and have NOT been run yet; the first Colab trial shows whether they h
 
 from __future__ import annotations
 
+import os
 import re
 from collections.abc import Callable, Sequence
 from dataclasses import replace
@@ -170,6 +171,7 @@ def load_generator(
     dtype: str = "float16",
     batch_size: int = 8,
     max_new_tokens: int = 768,
+    revision: str | None = None,
 ) -> Generate:
     """Load a model and return a function that answers a batch of conversations.
 
@@ -187,7 +189,12 @@ def load_generator(
         raise RuntimeError(
             "torch and transformers are needed: pip install -e '.[colab]' on a Colab runtime"
         ) from e
-    tokenizer = AutoTokenizer.from_pretrained(model_id)
+    revision = revision or os.environ.get("KODOOM_MODEL_REVISION")
+    batch_size = int(os.environ.get("KODOOM_TRANSLATION_BATCH_SIZE", batch_size))
+    if batch_size < 1:
+        raise ValueError("translation batch size must be positive")
+    pinned = {"revision": revision} if revision else {}
+    tokenizer = AutoTokenizer.from_pretrained(model_id, **pinned)
     tokenizer.padding_side = "left"
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
@@ -199,7 +206,13 @@ def load_generator(
             bnb_4bit_compute_dtype=getattr(torch, dtype),
         )
     options["dtype"] = getattr(torch, dtype)
-    model = AutoModelForCausalLM.from_pretrained(model_id, **options)
+    model_class = AutoModelForCausalLM
+    if model_id in (GEMMA3_4B, GEMMA3_12B):
+        # These checkpoints use Gemma3Config (multimodal), not the 1B text-only config.
+        from transformers import Gemma3ForConditionalGeneration
+
+        model_class = Gemma3ForConditionalGeneration
+    model = model_class.from_pretrained(model_id, **options, **pinned)
     model.eval()
 
     def generate(conversations: Sequence[Messages]) -> list[str]:

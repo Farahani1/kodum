@@ -1,0 +1,71 @@
+schema_version = 1
+
+[[recipe]]
+id = "helmo-gate"
+status = "active"
+plan = "1.2 step 1"
+dataset = "helmo"
+args = ["translate", "helmo", "--balanced", "--limit", "{limit}", "--translator", "{translator}"]
+input = "helmo/en/train.jsonl"
+output = "helmo/fa/{translator}/train.jsonl"
+
+[[recipe]]
+id = "typed-gate"
+status = "active"
+plan = "1.2 step 1"
+dataset = "typed-decisions"
+args = ["translate", "typed-decisions", "--split", "train", "--balanced", "--limit", "{limit}", "--translator", "{translator}"]
+input = "typed-decisions/en/train.jsonl"
+output = "typed-decisions/fa/{translator}/train.jsonl"
+
+[[recipe]]
+id = "skills"
+status = "available"
+plan = "1.1"
+args = ["generate"]
+
+[[recipe]]
+id = "review-pack"
+status = "available"
+plan = "1.1, 1.2"
+args = ["review-pack"]
+
+[[recipe]]
+id = "translator-trials"
+status = "historical"
+plan = "1.2 step 1; docs/translation-eval-plan.md"
+note = "Original commands and decisions retained in the legacy notebook; not active."
+
+[[recipe]]
+id = "translation-pilot"
+status = "historical"
+plan = "1.2 step 1; docs/translation-eval-plan.md"
+note = "Completed; Gemma 12B decision superseded by main plan v15."
+
+[[recipe]]
+id = "full-translation"
+status = "blocked"
+plan = "1.2 step 2"
+note = "Requires the recorded free-text gate decision; never an active dependency."
+
+[[recipe]]
+id = "meaning-check"
+status = "unimplemented"
+plan = "1.2 step 4"
+
+[[recipe]]
+id = "human-review-publication"
+status = "blocked"
+plan = "1.2 step 5, 1.3"
+note = "Review and publication require separate recorded decisions."
+
+[[recipe]]
+id = "training"
+status = "unimplemented"
+plan = "2.1-2.4"
+
+[[recipe]]
+id = "evaluation-report"
+status = "partial"
+plan = "3.1-3.6"
+note = "Scoring/calibration exist; real model adapters and final reports remain pending."

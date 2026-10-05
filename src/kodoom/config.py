@@ -13,7 +13,7 @@ from importlib import resources
 from pathlib import Path
 from typing import Any
 
-BUILTIN_PROFILES = ("dev", "colab-preflight", "colab")
+BUILTIN_PROFILES = ("dev", "colab-preflight", "colab", "kaggle-preflight", "kaggle")
 DEVICES = ("cpu", "cuda")
 PRECISIONS = ("fp32", "fp16")
 

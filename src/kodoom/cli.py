@@ -55,6 +55,7 @@ from kodoom.translate.pipeline import (
     TRANSLATORS,
     cases,
     pick_cases,
+    pick_helmo_records,
     translate_file,
     translate_helmo_file,
     translator_factory,
@@ -494,10 +495,42 @@ def _fetch_helmo(args: argparse.Namespace) -> int:
 
 def _translate(args: argparse.Namespace) -> int:
     profile = _load(args)
-    translator = translator_factory(args.translator)()
     if args.dataset == "helmo":
-        return _translate_helmo(profile, translator, args)
+        if args.split:
+            raise InspectError("helmo has no splits; --split does not apply")
+        source = profile.data_dir / "helmo" / "en" / "train.jsonl"
+        if not source.exists():
+            raise InspectError(f"{source} does not exist; run `kodoom fetch helmo` first")
+        records = list(read_jsonl(source))
+        picked = pick_helmo_records(records, args.limit, args.balanced)
+        out = profile.data_dir / "helmo" / "fa" / args.translator / "train.jsonl"
+        done = {r.source_id: r for r in read_jsonl(out)} if out.exists() else {}
+        if all(r.source_id in done for r in picked):
+            findings = sum(done[r.source_id].checks_passed is False for r in picked)
+            print(f"{out}: 0 records translated, {len(picked)} already done")
+            return 1 if findings else 0
+        return _translate_helmo(profile, translator_factory(args.translator)(), args)
     base = profile.data_dir / "typed-decisions"
+    pending = False
+    chosen: dict[str, set[str]] = {}
+    for split in [args.split] if args.split else list(SPLITS):
+        source = base / "en" / f"{split}.jsonl"
+        if not source.exists():
+            raise InspectError(f"{source} does not exist; run `kodoom fetch typed-decisions` first")
+        grouped = pick_cases(cases(read_jsonl(source)), args.limit, args.balanced)
+        out = base / "fa" / args.translator / f"{split}.jsonl"
+        done = {r.source_id: r for r in read_jsonl(out)} if out.exists() else {}
+        chosen[split] = {group[0].source_id for group in grouped}
+        pending |= bool(chosen[split] - set(done))
+    if not pending:
+        findings = 0
+        for split, ids in chosen.items():
+            out = base / "fa" / args.translator / f"{split}.jsonl"
+            done = {r.source_id: r for r in read_jsonl(out)}
+            findings += sum(done[cid].checks_passed is False for cid in ids)
+            print(f"{out}: 0 cases translated, {len(ids)} already done")
+        return 1 if findings else 0
+    translator = translator_factory(args.translator)()
     failed = 0
     for split in [args.split] if args.split else list(SPLITS):
         source = base / "en" / f"{split}.jsonl"

@@ -48,6 +48,16 @@ def test_runs_dir_override():
     assert load_profile("dev", runs_dir="elsewhere").runs_dir == Path("elsewhere")
 
 
+@pytest.mark.parametrize("name", ["kaggle", "kaggle-preflight"])
+def test_kaggle_keeps_caches_out_of_saved_outputs(name):
+    profile = load_profile(name)
+    assert profile.device == "cuda"
+    assert profile.data_dir.as_posix().startswith("/kaggle/working/")
+    assert profile.runs_dir.as_posix().startswith("/kaggle/working/")
+    assert not profile.cache_dir.as_posix().startswith("/kaggle/working/")
+    assert not profile.scratch_dir.as_posix().startswith("/kaggle/working/")
+
+
 def test_profile_from_file(tmp_path):
     path = tmp_path / "mine.toml"
     path.write_text(

@@ -1,0 +1,12 @@
+# Gate limits come from the active request, not from the full-data profile.
+[run]
+seed = 1234
+runs_dir = "/kaggle/working/kodoom/runs"
+[compute]
+device = "cuda"
+precision = "fp16"
+[storage]
+scratch_dir = "/tmp/kodoom-scratch"
+cache_dir = "/tmp/kodoom-hf-cache"
+data_dir = "/kaggle/working/kodoom/data"
+reserve_gb = 1

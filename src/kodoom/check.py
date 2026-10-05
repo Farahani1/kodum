@@ -126,7 +126,8 @@ def _check_device(profile: Profile) -> Check:
         return Check(
             "device",
             FAIL,
-            "cuda wanted, but no GPU is visible. In Colab: Runtime > Change runtime type > T4 GPU",
+            "cuda wanted, but no GPU is visible. "
+            "Select a GPU accelerator in your provider settings",
         )
     name = torch.cuda.get_device_name(0)
     memory = torch.cuda.get_device_properties(0).total_memory / _GB

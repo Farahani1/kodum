@@ -1,0 +1,7 @@
+# Conservative compatibility bounds; the provider's CUDA torch is kept intact.
+# Exact installed versions are recorded in each execution manifest.
+transformers>=4.56,<5
+accelerate>=1.0,<2
+huggingface_hub>=0.34,<1
+pyarrow>=15,<26
+bitsandbytes>=0.43,<1
