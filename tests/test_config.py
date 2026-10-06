@@ -89,7 +89,7 @@ BASE = (
         (BASE.replace("seed = 1", "seed = true"), "wrong type"),
         (BASE.replace("seed = 1\n", ""), "missing"),
         (BASE.replace('"fp32"', '"fp16"'), "fp16 needs a GPU"),
-        (BASE.replace('"cpu"', '"tpu"'), "device must be"),
+        (BASE.replace('"cpu"', '"unknown"'), "device must be"),
         (BASE + "[data]\nmax_cases_per_source = 0\n", "at least 1"),
         ("[run\n", "invalid TOML"),
         (BASE.replace('cache_dir = "c"\n', ""), "missing \\[storage\\] cache_dir"),

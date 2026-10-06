@@ -84,9 +84,10 @@ on every chip, would exceed the per-chip budget. Load directly with sharding.
 
 ## Implementation tasks
 
-All implementation tasks are **pending**. Paths named as proposed below do not
-exist yet. Each task is a separate logical commit, with relevant tests and an
-updated status/evidence entry in this plan.
+TPU-01 is implemented with local tests for explicit profiles, backend validation,
+topology rejection and readiness dispatch. Other implementation tasks remain
+pending. Live TPU validation remains pending for every hardware-dependent task.
+Each task is a separate logical commit with its verification recorded.
 
 | ID | Deliverable | Dependencies | Acceptance |
 | --- | --- | --- | --- |

@@ -13,15 +13,23 @@ from importlib import resources
 from pathlib import Path
 from typing import Any
 
-BUILTIN_PROFILES = ("dev", "colab-preflight", "colab", "kaggle-preflight", "kaggle")
-DEVICES = ("cpu", "cuda")
-PRECISIONS = ("fp32", "fp16")
+BUILTIN_PROFILES = (
+    "dev",
+    "colab-preflight",
+    "colab",
+    "kaggle-preflight",
+    "kaggle",
+    "kaggle-tpu-preflight",
+    "kaggle-tpu",
+)
+DEVICES = ("cpu", "cuda", "tpu")
+PRECISIONS = ("fp32", "fp16", "bf16")
 
 # Every key a profile may contain, by section. Unknown keys are an error,
 # so a typo cannot silently fall back to a default.
 _SCHEMA: dict[str, dict[str, type | tuple[type, ...]]] = {
     "run": {"seed": int, "runs_dir": str},
-    "compute": {"device": str, "precision": str, "threads": int},
+    "compute": {"device": str, "precision": str, "threads": int, "backend": str},
     "data": {"max_cases_per_source": int},
     "storage": {
         "scratch_dir": str,
@@ -54,6 +62,7 @@ class Profile:
     data_dir: Path
     # Space to leave free on the runs_dir disk after any checkpoint write.
     reserve_gb: float
+    backend: str = "torch"
 
 
 def load_profile(name_or_path: str | Path, *, runs_dir: str | Path | None = None) -> Profile:
@@ -84,6 +93,7 @@ def load_profile(name_or_path: str | Path, *, runs_dir: str | Path | None = None
         cache_dir=Path(storage["cache_dir"]),
         data_dir=Path(storage["data_dir"]),
         reserve_gb=float(storage.get("reserve_gb", 1.0)),
+        backend=compute.get("backend", "torch"),
     )
     _check_values(profile)
     return profile
@@ -127,6 +137,12 @@ def _check_values(p: Profile) -> None:
         raise ProfileError(f"profile {p.name!r}: device must be one of {DEVICES}")
     if p.precision not in PRECISIONS:
         raise ProfileError(f"profile {p.name!r}: precision must be one of {PRECISIONS}")
+    if p.backend not in ("torch", "jax"):
+        raise ProfileError(f"profile {p.name!r}: backend must be torch or jax")
+    if (p.device == "tpu") != (p.backend == "jax"):
+        raise ProfileError(f"profile {p.name!r}: tpu requires the jax backend and vice versa")
+    if p.device == "tpu" and p.precision != "bf16":
+        raise ProfileError(f"profile {p.name!r}: TPU translation requires bf16")
     if p.device == "cpu" and p.precision == "fp16":
         raise ProfileError(f"profile {p.name!r}: fp16 needs a GPU; use fp32 on cpu")
     if p.threads is not None and p.threads < 1:

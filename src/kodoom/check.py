@@ -118,6 +118,14 @@ def _check_cache(profile: Profile) -> Check:
 def _check_device(profile: Profile) -> Check:
     if profile.device == "cpu":
         return Check("device", OK, "cpu (as the profile asks)")
+    if profile.device == "tpu":
+        from kodoom.tpu import probe_tpu
+
+        try:
+            info = probe_tpu()
+        except (RuntimeError, ImportError) as exc:
+            return Check("device", FAIL, str(exc))
+        return Check("device", OK, f"{info['device']}, {info['visible_devices']} chips, BF16")
     if importlib.util.find_spec("torch") is None:
         return Check("device", WARN, "cuda wanted, but torch is not installed yet")
     import torch

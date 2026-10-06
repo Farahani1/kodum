@@ -1,0 +1,14 @@
+[run]
+seed = 1234
+runs_dir = "/kaggle/working/kodoom/runs"
+[compute]
+device = "tpu"
+backend = "jax"
+precision = "bf16"
+[data]
+max_cases_per_source = 200
+[storage]
+scratch_dir = "/tmp/kodoom-scratch"
+cache_dir = "/tmp/kodoom-hf-cache"
+data_dir = "/kaggle/working/kodoom/data"
+reserve_gb = 1
