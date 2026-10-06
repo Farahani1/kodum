@@ -1,4 +1,4 @@
-# Notebook and GPU execution workflow
+# Notebook and accelerator execution workflow
 
 Read this together with `AGENTS.md`. This file defines the shared execution
 workflow; `docs/workflow-change-plan.md` tracks remaining migration work. The
@@ -18,7 +18,7 @@ fresh-session restore remain unverified.
 
 Do not infer the active stage from the last notebook cell or from the existence
 of an output file. The current documented next step is the free-text translation
-gate in main-plan section 1.2 step 1; its result has not been recorded.
+gate in main-plan section 1.2 step 1 (v18), now a bounded Gemma 3 27B BF16/JAX experiment on Kaggle TPU v5e-8. The 4B production decision remains the baseline; live TPU validation and human review are pending.
 
 ## Two notebooks, one package
 
@@ -96,3 +96,13 @@ Keep prior versions reproducible through git and artifact manifests. Never claim
 a stage, provider preflight or scientific gate passed without recorded evidence.
 Follow `AGENTS.md` for tests and commits; use the separate `WF-*` task IDs when
 reporting workflow implementation progress.
+
+## Kaggle TPU handoff
+
+Follow `docs/kaggle-tpu-change-plan.md` (TPU-* tasks). JAX imports and device
+probes must run in children so the notebook kernel does not retain TPU devices.
+Use the official versioned Flax asset and bundled tokenizer mounted under
+`/kaggle/input`; never copy 27B weights to saved output or Drive. Namespace 27B
+runs, enforce complete token budgets, and reject incompatible resume identities.
+Keep backend packages lazy and the CPU dev path independent. The operational
+notebook stops at human review and cannot approve the research gate or adopt 27B.

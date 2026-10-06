@@ -43,7 +43,7 @@ The existing [`notebooks/colab.ipynb`](notebooks/colab.ipynb) mixes historical t
 with current work; run setup and only the cells for your active stage, not Run all.
 The documented next stage is the free-text gate (main plan 1.2 step 1).
 Updating, resuming and Drive storage: [docs/colab.md](docs/colab.md).
-The current Kaggle gate runner is [`notebooks/execution.ipynb`](notebooks/execution.ipynb);
+The current Kaggle TPU v5e-8 / Gemma 3 27B experiment runner is [`notebooks/execution.ipynb`](notebooks/execution.ipynb);
 the complete recipe record is [`notebooks/reference.ipynb`](notebooks/reference.ipynb).
 Kaggle setup, private output saving and review are in
 [docs/execution-workflow.md](docs/execution-workflow.md). Training stages and

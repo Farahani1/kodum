@@ -1,0 +1,12 @@
+schema_version = 1
+stage = "free-text-gate"
+plan = "project-plan.md: 1.2 step 1 (v17)"
+stop = "awaiting-review"
+recipes = ["helmo-gate", "typed-gate"]
+translator = "gemma3-4b-bf16"
+model = "google/gemma-3-4b-it"
+model_revision = "main"
+batch_size = 1
+helmo_limit = 40
+typed_limit = 20
+review = "At most 1 meaning change in 40 helmo records; at most 10-15% needing edits. Human review required; do not start full translation."

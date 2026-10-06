@@ -1,6 +1,6 @@
 # Portable notebook workflow: change plan
 
-Version 3 | Oct 6, 2026 | TPU follow-up planned; existing execution unchanged
+Version 4 | Oct 6, 2026 | TPU experiment implemented locally; live validation pending
 
 Baseline inspected: commit `02a69bc` on `claude/sweet-franklin-pm0tdm` in
 `D:/Coding/kodum`. Design branch: `codex/portable-notebook-workflow`.
@@ -11,10 +11,11 @@ Tasks here use `WF-*` IDs, not M1/M2/M3 or research section numbers. Completing
 them does not complete a research milestone. `../agent.md` defines the workflow
 agents must maintain.
 
-The proposed Kaggle Gemma 3 27B TPU v5e-8 extension has its own
+The Kaggle Gemma 3 27B TPU v5e-8 extension has its own
 [change plan](kaggle-tpu-change-plan.md) and `TPU-*` task IDs on
-`codex/kaggle-tpu-v5e-8`. It does not activate a new request or mark TPU
-support validated.
+`codex/kaggle-tpu-v5e-8`. Project plan v18 and the active notebook now select its
+bounded experiment. Software checks pass locally; live TPU execution, saved
+output restore and human translator adoption remain pending.
 
 ## Problem and scope
 
@@ -262,6 +263,12 @@ Research gates and publication still need their own recorded decisions.
 
 ## First execution after migration
 
+The initial 4B request below is retained in `workflows/gpu-gate.toml`. The active
+request now selects the bounded 27B TPU experiment documented in the separate
+TPU plan and `execution-workflow.md`, with a fixed 10% edit threshold and
+separate option-description review. The historical 4B production decision is
+retained until an explicit adoption decision.
+
 Run only the free-text gate: `gemma3-4b-bf16` on about 40 helmo records balanced
 across question types and 20 typed-decisions training cases balanced across
 workflows, followed by the two translation reports. Keep this gate in its own
@@ -276,6 +283,7 @@ retry Gemma 12B or repeat the completed pilot as part of Run all.
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 4 | Oct 6, 2026 | Activate the locally implemented 27B TPU experiment and synchronized notebook handoff under project plan v18. Preserve the 4B request and pending live/provider/research acceptance. |
 | 3 | Oct 6, 2026 | Link the separate Kaggle TPU v5e-8 implementation plan; retain current GPU execution and pending provider validation. |
 | 2 | Oct 5, 2026 | Implement the Kaggle free-text gate, profiles, runtime, notebook pair, private bundles and review sheets; retain GPU/restore validation and future stages as pending. |
 | 1 | Oct 5, 2026 | Separate workflow migration, two notebook roles, explicit providers, provenance, durable artifact contract and WF-00 through WF-06 acceptance checks. |

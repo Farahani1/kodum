@@ -1,6 +1,6 @@
 # Persian Typed Decisions: Project Plan
 
-Version 17 · Oct 5, 2026 · @Shah
+Version 18 · Oct 6, 2026 · @Shah
 
 ## Overview
 
@@ -50,14 +50,14 @@ Translated and native data meet only in the training mix, and only their train s
 the free-text gate on Kaggle; [reference.ipynb](../notebooks/reference.ipynb)
 records the artifact recipes and historical Colab steps. See
 [execution-workflow.md](execution-workflow.md) for Kaggle setup and artifact
-handling. A live Kaggle GPU and fresh-session restore are not yet verified. Full
+handling. The active notebook prepares a Gemma 3 27B BF16 experiment on Kaggle TPU v5e-8. Live TPU fit and fresh-session restore are not yet verified. Full
 training and evaluation on Kaggle are not validated. The Colab/Drive workflow
 remains supported. Tooling work has its own `WF-*` tasks and does not advance
 research gates. Agent rules: [agent.md](../agent.md).
 
 Development and Colab are separate. The code is written and proven error-free on the laptop, then run for real on Colab. There is one codebase and one pipeline; only a config profile decides which models, data sizes and paths are used.
 
-**Five profiles**, chosen explicitly (for example `--profile dev`); the code never guesses where it is running.
+**CPU/CUDA profiles**, chosen explicitly (for example `--profile dev`); the code never guesses where it is running.
 
 | Setting | `dev` | `colab-preflight` | `colab` | `kaggle-preflight` | `kaggle` |
 | --- | --- | --- | --- | --- | --- |
@@ -66,6 +66,13 @@ Development and Colab are separate. The code is written and proven error-free on
 | Translator | Stub/tiny model | Real translator | Gemma 3 4B | Gemma 3 4B | Gemma 3 4B |
 | Device / dtype | CPU fp32 | T4 fp16 | T4 fp16 | One visible GPU; bf16 probe | One visible GPU; bf16 probe |
 | Output paths | `./runs/` | Drive | Drive | `/kaggle/working` | `/kaggle/working` |
+
+**TPU experiment profiles:** `kaggle-tpu-preflight` and `kaggle-tpu` explicitly
+select JAX, TPU v5e-8 and BF16. The active request caps both preflight and gate,
+loads the versioned Kaggle Flax model read-only under `/kaggle/input`, and saves
+small private artifacts under `/kaggle/working`. The CPU development path stays
+lightweight. GPU profiles and the 4B decision remain the historical baseline;
+27B adoption depends on paired human review and measured resource costs.
 
 **Tiny random models.** For the laptop, build a copy of each real model from its own config, shrunk to about 2 layers and hidden size 64, with random weights and the real tokenizer. Only the config and tokenizer are downloaded, never the real weights. Most of the size is the vocabulary table (about 250k tokens × 64, roughly 60 MB), and a training step on a small batch should take well under a second on the laptop (an estimate, to confirm once the code exists). The copies use the same classes, input format, tokenizer and save/load code as the real models, so they catch shape, schema and pipeline bugs.
 
@@ -91,7 +98,7 @@ Development and Colab are separate. The code is written and proven error-free on
 
 **Colab stays thin.** A notebook only mounts Drive, clones the repo at a fixed commit or tag, installs the pinned requirements, and calls the same command with `--profile colab-preflight` or `--profile colab`. No logic lives in notebooks, so nothing runs on Colab that the laptop has not already run.
 
-**Dependencies.** One pinned requirements set shared by both, plus a Colab-only extra for CUDA packages (such as `bitsandbytes` for 4-bit loading) that the laptop never installs.
+**Dependencies.** The GPU extra uses CUDA constraints; the separate TPU extra uses a Linux dependency lock for Python 3.11/3.12 and glibc 2.31+. Dev installs neither accelerator extra. Dependency resolution is checked locally; TPU imports and kernels require live preflight.
 
 **What the laptop cannot catch.** fp16 overflow (the Gemma 3 / TranslateGemma issue), Qwen3.5's Gated DeltaNet layers in fp16, GPU memory at the real batch size and length, and real run times. The `colab-preflight` profile (real models, about 20 steps, about 5 minutes) catches these before a full session is spent.
 
@@ -183,6 +190,21 @@ Preparation: write 5–10 Persian templates per generator, colloquial and formal
 | A frontier model through an API | Cloud | Best Persian quality. Takes a whole case as JSON with rules (keep keys, register). The dataset is small, so cost is low. | Payment and access. Record the exact model for the card. **Not available**: the owner has no budget for an API. |
 | Qwen3-8B (4-bit) | Colab T4 | The checker, in a separate pass: meaning comparison and consistency. Standard architecture, safe on a T4. | Weaker translator than the two above; use it to judge, not to translate. **Trial on the T4 (Sep 30):** it runs in 4-bit and follows the glossary, but its Persian changed meaning ("expired" became "valid", "irreversible" became "reversible", "benign" became nonsense) and it put Cyrillic letters inside a Persian word. Confirmed as a checker and glossary-following draft at most, not as the translator. |
 | NLLB-200 | — | Not recommended. | Non-commercial weights cloud the license of a dataset meant to be Apache-2.0. |
+
+**Active bounded experiment (Oct 6):** test Gemma 3 27B on Kaggle TPU v5e-8,
+using the same prompts, glossary, sources and deterministic decoding as the 4B
+baseline. The native JAX checkpoint/tokenizer identity differs from the HF
+artifact and is recorded separately. Translate 40 balanced helmo training
+records and 20 training cases balanced across all four typed workflows, after
+measured short/long preflight. For this experiment the edit threshold is fixed
+at **10%** of cases; retain at most **1 meaning change in 40 helmo records**.
+Review option descriptions separately for negation, severity, actor/action and
+conditions. Review recurring templates and label occurrences separately, and
+compare identical selected English inputs with the saved 4B gate where available.
+This balanced diagnostic set does not establish dataset-wide error prevalence
+or detector coverage. A fresh representative sample remains part of step 5.
+The Oct 2 4B production decision is retained pending an explicit adoption decision;
+no full translation, training or publication is dispatched by this experiment.
 
 1. **Pilot, 50 cases.** Translate with two candidates, review both blind, and keep the translator and prompt that win. **Done (Sep 30):** five candidates were rated blind on 50 test records from one workflow. Claude Cowork running Claude Opus 5.5 did the rating, as a single LLM rater; no human rated. Gemma 3 12B (4-bit) won narrowly; Gemma 3 4B was effectively tied. **Decided (Oct 2): Gemma 3 4B is the translator for the whole dataset, including helmo.** 12B is too slow on a free T4 for a solo project's session budget and is no longer used, as a fallback or otherwise.
    - **Free-text gate, before the full run.** The pilot covered only `agent_trace_observability`, whose text is short and templated. The other workflows and helmo have not been translated by any model. Helmo is the biggest risk: every state is a unique technical paragraph (about 650 characters, 130+ topics in a 200-record sample) and the gold answer depends on one fact in it, so a translation that changes that fact leaves a wrong label that nothing downstream detects.
@@ -538,6 +560,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
+| 18 | Oct 6, 2026 | Prepare a bounded Gemma 3 27B BF16/JAX experiment on Kaggle TPU v5e-8, with pinned Flax assets, sharded loading, local workflow tests, private restore contracts and label-focused paired review. Retain the 4B baseline; live TPU execution, persistence, Persian review and adoption remain pending. |
 | 17 | Oct 5, 2026 | Add the reference/execution notebook workflow and prepare the private Kaggle free-text gate with pinned code, resumable bundles and review outputs. Kaggle GPU/persistence validation and full training remain pending; no research gate is advanced. |
 | 16 | Oct 5, 2026 | Link the separate portable notebook workflow change plan and agent handoff policy. Reference/current-stage notebook separation and Kaggle support are planned; existing Colab/Drive implementation, research scope and gates remain the baseline until migration validation. |
 | 15 | Oct 2, 2026 | Gemma 3 12B dropped as a translator and as the free-text-gate fallback: too slow on a free Colab T4 for this project's session budget. Gemma 3 4B is the translator for the whole dataset, including helmo, decided outright rather than conditionally on the free-text gate. The gate (1.2 step 1) now sizes 4B's risk on free text instead of choosing between 4B and 12B; if it fails, the plan shrinks or drops helmo and leans on the automatic checks, meaning check and a wider human-review sample, instead of switching models. Failure-mode mitigation updated to match. |

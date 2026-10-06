@@ -1,6 +1,6 @@
 # Kaggle TPU v5e-8: change plan
 
-Version 1 | Oct 6, 2026 | Proposed implementation; TPU execution unverified
+Version 2 | Oct 6, 2026 | Local implementation; TPU execution unverified
 
 Branch: `codex/kaggle-tpu-v5e-8`. Baseline: `81f93a5` from
 `codex/portable-notebook-workflow`, whose tracked tree was clean and whose push
@@ -9,8 +9,9 @@ was confirmed up to date before this branch was created.
 This plan extends the [portable workflow plan](workflow-change-plan.md), using
 `TPU-*` task IDs. The [project plan](project-plan.md) remains the research source
 of truth, and [agent.md](../agent.md) defines execution and storage rules. This
-document adds proposed work only: it does not select a new production translator,
-change `workflows/current.toml`, implement TPU support, or pass a research gate.
+document tracks the implementation and operator handoff. The active request
+runs a bounded 27B experiment; it does not adopt a production translator
+or pass a research gate.
 
 ## Objective and evidence
 
@@ -40,7 +41,7 @@ suggests feasibility, but embeddings, caches, activations, collectives, loading
 buffers and compilation increase actual usage. Neither 128 GB nor a successful
 device enumeration guarantees that a particular sharding scheme fits.
 
-## Inspected gaps
+## Inspected gaps before implementation
 
 | Component | Current behavior | Required change |
 | --- | --- | --- |
@@ -84,39 +85,23 @@ on every chip, would exceed the per-chip budget. Load directly with sharding.
 
 ## Implementation tasks
 
-TPU-01 and TPU-02 are implemented with local tests for explicit profiles, backend
-validation, topology rejection, readiness dispatch and dependency selection.
-Gemma 3.3.0 and Kauldron 1.4.2 wheel APIs were inspected; JAX 0.7.2's metadata
-pins libtpu 0.0.23. This is a candidate pinned set, not a live-validated Kaggle
-environment. TPU-03 now has the lazy generator and translator registration,
-The complete 190-package Linux dependency set resolves for Python 3.11 and
-3.12 with glibc 2.31+, and is pinned in `constraints/tpu-linux-py311.txt`.
-Bootstrap rejects older glibc and unsupported Python versions. Resolution
-verifies package metadata, not real imports or TPU kernels.
-with prompt, termination, sharding and stateless generation covered by fixtures.
-It uses the official versioned Kaggle Flax asset and its bundled tokenizer,
-not the authenticated Google Cloud bucket. Compiler monitoring records XLA
-compile durations separately from call wall times and marks warm calls.
-TPU-04 has backend-aware execution, model-specific artifact roots, checked
-restore identities, checkpoint/prompt/version provenance, complete input-token
-measurement before loading and an explicit two-hour stage budget. TPU gate
-execution requires a matching successful preflight. CPU fixtures also cover
-TPU orchestration, failed probes and completed-record resume. The new request
-is staged in `workflows/tpu-gate.toml`; activation is part of TPU-05.
-All hardware-dependent validation remains pending.
-TPU-06's local validation hooks now measure every selected gate prompt before
-loading, warm the shortest and longest prompts twice in preflight, record
-compilation versus warm timings, and print completed case IDs after persistence.
-Fixtures restore a checksummed TPU bundle into a fresh directory without
-duplicating completed IDs. This does not establish provider durability or real
-memory fit; the operator must validate those on Kaggle.
-TPU-07's review tooling is also implemented: per-option CSVs retain English and
-Persian context, recurring-template counts show repetitions, and an optional
-paired comparison verifies identical selected English records before joining
-4B/27B outputs. Human annotations survive compatible reruns. Descriptive review
-counts do not estimate whole-dataset error rates or detector coverage. Actual
-Persian review and the adoption decision remain pending after the Kaggle run.
-Each task is a separate logical commit with its verification recorded.
+Software deliverables for TPU-01 through TPU-07 are implemented and locally
+checked: explicit profiles, a separate resolved Linux dependency lock, lazy
+sharded inference, backend-aware execution, pinned notebook handoff, measured
+preflight/restore hooks and label-focused paired review resources.
+
+**Pending after the handoff:** real Kaggle imports and eight-device kernels,
+27B memory fit and throughput, interruption and saved-output restore across
+provider sessions, Persian human review and the translator adoption decision.
+Local fixtures and package resolution do not satisfy those acceptance checks.
+Each logical change has a separate commit and verification record.
+
+Local handoff verification (Oct 6): `ruff check .` and `ruff format --check .`
+pass, and the full suite passes 668 tests. Notebook cells compile with empty
+outputs; defaults and summaries match the active request. Linux dependency
+metadata resolves for Python 3.11 and 3.12 with glibc 2.31+. The Kaggle TPU
+dry-run selects only the approved preflight/gate recipes and 27B artifact roots.
+No weights or datasets were committed, and no live provider result is claimed.
 
 | ID | Deliverable | Dependencies | Acceptance |
 | --- | --- | --- | --- |
@@ -177,8 +162,8 @@ after the basic subprocess contract is validated.
 When activating the TPU experiment, update `workflows/current.toml`, both notebook
 summaries, `docs/execution-workflow.md`, `agent.md`, and the research plan's model
 and environment assumptions in the same logical change. Bump the research plan
-version then; retain the 4B decision and historical pilot as history. This planning
-commit leaves the executable 4B request and notebook summaries unchanged.
+version then; retain the 4B decision and historical pilot as history. The active request and both notebook summaries now select the bounded 27B
+experiment. `workflows/gpu-gate.toml` retains the historical 4B request.
 
 Local checks use fixtures/fakes to cover explicit profile selection, missing TPU
 dependencies/devices, wrong device count, prompt conversion, reply count/order,
@@ -237,4 +222,5 @@ another model. Any alternative becomes an explicit new experiment.
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2 | Oct 6, 2026 | Implement the software path and Kaggle handoff, including a 190-package Linux lock, sharded native generation, model-specific resume identities, short/long measured preflight and paired option review. Live TPU validation and human adoption remain pending. |
 | 1 | Oct 6, 2026 | Plan Gemma 3 27B JAX inference on Kaggle v5e-8, with explicit sharding, dependencies, provenance, restore validation and label-focused evaluation. |
