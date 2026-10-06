@@ -89,6 +89,10 @@ validation, topology rejection, readiness dispatch and dependency selection.
 Gemma 3.3.0 and Kauldron 1.4.2 wheel APIs were inspected; JAX 0.7.2's metadata
 pins libtpu 0.0.23. This is a candidate pinned set, not a live-validated Kaggle
 environment. TPU-03 now has the lazy generator and translator registration,
+The complete 190-package Linux dependency set resolves for Python 3.11 and
+3.12 with glibc 2.31+, and is pinned in `constraints/tpu-linux-py311.txt`.
+Bootstrap rejects older glibc and unsupported Python versions. Resolution
+verifies package metadata, not real imports or TPU kernels.
 with prompt, termination, sharding and stateless generation covered by fixtures.
 It uses the official versioned Kaggle Flax asset and its bundled tokenizer,
 not the authenticated Google Cloud bucket. Compiler monitoring records XLA

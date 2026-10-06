@@ -4,12 +4,21 @@ from __future__ import annotations
 
 import base64
 import os
+import platform
 import subprocess
 import sys
 from pathlib import Path
 
 PROVIDERS = ("kaggle", "colab", "generic")
 REPOSITORY = "https://github.com/Farahani1/kodum.git"
+
+
+def validate_tpu_runtime() -> None:
+    if sys.platform != "linux" or not (3, 11) <= sys.version_info[:2] <= (3, 12):
+        raise RuntimeError("Kaggle TPU bootstrap supports Linux with Python 3.11 or 3.12")
+    libc, version = platform.libc_ver()
+    if libc != "glibc" or tuple(int(x) for x in version.split(".")[:2]) < (2, 31):
+        raise RuntimeError("The pinned libtpu wheel requires glibc 2.31 or newer")
 
 
 def secret(provider: str, name: str) -> str | None:
@@ -35,13 +44,13 @@ def secret(provider: str, name: str) -> str | None:
 def bootstrap(
     provider: str, revision: str, directory: str | Path, *, backend: str = "torch"
 ) -> Path:
-    """Fetch clean code, install the GPU extra, and leave caches outside saved outputs."""
+    """Fetch clean code and install the explicitly selected accelerator dependencies."""
     if provider not in PROVIDERS or not revision or revision.startswith("-"):
         raise ValueError("select a valid provider and code revision")
     if backend not in ("torch", "jax"):
         raise ValueError("select backend='torch' or backend='jax' explicitly")
-    if backend == "jax" and (sys.platform != "linux" or sys.version_info < (3, 11)):
-        raise RuntimeError("Kaggle TPU bootstrap requires Linux and Python 3.11 or newer")
+    if backend == "jax":
+        validate_tpu_runtime()
     if provider == "colab":
         from google.colab import drive
 
