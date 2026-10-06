@@ -596,6 +596,9 @@ def run_current(
                 raise ValueError("translation command failed without a complete reviewable output")
             state.setdefault("outputs", {})[recipe["dataset"]] = result
             review_sheet(root, recipe, picked, translator)
+            from kodoom.translate.gate_review import label_sheet
+
+            label_sheet(root, recipe, picked, translator)
             args = [
                 "translations",
                 recipe["dataset"],

@@ -100,6 +100,12 @@ execution requires a matching successful preflight. CPU fixtures also cover
 TPU orchestration, failed probes and completed-record resume. The new request
 is staged in `workflows/tpu-gate.toml`; activation is part of TPU-05.
 All hardware-dependent validation remains pending.
+TPU-07's review tooling is also implemented: per-option CSVs retain English and
+Persian context, recurring-template counts show repetitions, and an optional
+paired comparison verifies identical selected English records before joining
+4B/27B outputs. Human annotations survive compatible reruns. Descriptive review
+counts do not estimate whole-dataset error rates or detector coverage. Actual
+Persian review and the adoption decision remain pending after the Kaggle run.
 Each task is a separate logical commit with its verification recorded.
 
 | ID | Deliverable | Dependencies | Acceptance |
