@@ -13,7 +13,7 @@ agents must maintain.
 
 The Kaggle Gemma 3 27B TPU v5e-8 extension has its own
 [change plan](kaggle-tpu-change-plan.md) and `TPU-*` task IDs on
-`codex/kaggle-tpu-v5e-8`. Project plan v18 and the active notebook now select its
+`codex/kaggle-tpu-v5e-8`. Project plan v19 and the active notebook now select its
 bounded experiment. Software checks pass locally; live TPU execution, saved
 output restore and human translator adoption remain pending.
 

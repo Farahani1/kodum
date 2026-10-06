@@ -18,7 +18,7 @@ fresh-session restore remain unverified.
 
 Do not infer the active stage from the last notebook cell or from the existence
 of an output file. The current documented next step is the free-text translation
-gate in main-plan section 1.2 step 1 (v18), now a bounded Gemma 3 27B BF16/JAX experiment on Kaggle TPU v5e-8. The 4B production decision remains the baseline; live TPU validation and human review are pending.
+gate in main-plan section 1.2 step 1 (v19), now a bounded Gemma 3 27B BF16/JAX experiment on Kaggle TPU v5e-8. The 4B production decision remains the baseline; live TPU validation and human review are pending.
 
 ## Two notebooks, one package
 

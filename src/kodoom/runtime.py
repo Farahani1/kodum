@@ -14,8 +14,8 @@ REPOSITORY = "https://github.com/Farahani1/kodum.git"
 
 
 def validate_tpu_runtime() -> None:
-    if sys.platform != "linux" or not (3, 11) <= sys.version_info[:2] <= (3, 12):
-        raise RuntimeError("Kaggle TPU bootstrap supports Linux with Python 3.11 or 3.12")
+    if sys.platform != "linux" or not (3, 11) <= sys.version_info[:2] <= (3, 13):
+        raise RuntimeError("Kaggle TPU bootstrap supports Linux with Python 3.11 through 3.13")
     libc, version = platform.libc_ver()
     if libc != "glibc" or tuple(int(x) for x in version.split(".")[:2]) < (2, 31):
         raise RuntimeError("The pinned libtpu wheel requires glibc 2.31 or newer")
@@ -98,6 +98,9 @@ def bootstrap(
     sha = git("-C", str(checkout), "rev-parse", "HEAD")
     if provider != "generic":
         extra = "tpu" if backend == "jax" else "gpu"
+        # TensorFlow 2.19 has no Python 3.13 wheel. Keep older kernels on their
+        # existing lock and select the separately resolved 2.20 set for 3.13.
+        constraints = "tpu-py313" if backend == "jax" and sys.version_info[:2] == (3, 13) else extra
         subprocess.run(
             [
                 sys.executable,
@@ -107,7 +110,7 @@ def bootstrap(
                 "-e",
                 f"{checkout}[{extra}]",
                 "-c",
-                str(checkout / "constraints" / f"{extra}.txt"),
+                str(checkout / "constraints" / f"{constraints}.txt"),
             ],
             check=True,
         )

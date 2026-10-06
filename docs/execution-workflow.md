@@ -1,6 +1,6 @@
 # Run the Gemma 3 27B experiment on Kaggle TPU
 
-The active request implements project-plan v18, section 1.2 step 1. It compares
+The active request implements project-plan v19, section 1.2 step 1. It compares
 Gemma 3 27B with the saved 4B baseline before any translator adoption. Local
 checks and Linux dependency resolution pass. **Real Kaggle TPU execution,
 resource fit, fresh-session persistence and Persian human review are pending.**
@@ -11,7 +11,11 @@ resource fit, fresh-session persistence and Persian human review are pending.**
    a new **private** Kaggle notebook. The notebook pins the implementation SHA;
    keep `CODE_REVISION` unchanged for compatible resume.
 2. Enable **Internet** and select **TPU v5e-8**. Start with a fresh kernel.
-   The pinned runtime supports Linux x86_64, Python 3.11/3.12 and glibc 2.31+.
+   The pinned runtime supports Linux x86_64, Python 3.11 through 3.13 and glibc 2.31+.
+   Python 3.13 automatically selects `constraints/tpu-py313.txt` with
+   TensorFlow/TensorBoard 2.20; older kernels retain their original lock.
+   After updating an older notebook, restart the session and rerun bootstrap.
+   Do not bypass the version guard or install Python over the running kernel.
 3. Accept Gemma's model terms on Kaggle and add the official
    [Gemma 3 27B Flax version 1](https://www.kaggle.com/models/google/gemma-3/flax/gemma3-27b-it/1)
    under **Inputs / Models**. Its `gemma3-27b-it` directory and `tokenizer.model`
@@ -27,7 +31,8 @@ resource fit, fresh-session persistence and Persian human review are pending.**
 ## What Run all does
 
 The thin notebook fetches pinned clean code, installs only the TPU extra using
-`constraints/tpu.txt` and the 190-package Linux lock, then probes eight v5e chips
+the Python-specific TPU constraints (190 packages for 3.11/3.12;
+189 for 3.13), then probes eight v5e chips
 and real BF16 arithmetic in a child process. JAX inference and probes stay out
 of the notebook kernel so that it does not retain TPU device ownership.
 
@@ -131,7 +136,7 @@ random sample and the wider human-review plan remain necessary before release.
 
 ## References and handoff
 
-Research: `docs/project-plan.md` v18. Active configuration:
+Research: `docs/project-plan.md` v19. Active configuration:
 `workflows/current.toml`; shared recipes: `workflows/recipes.toml`.
 Implementation and pending live checks: `docs/kaggle-tpu-change-plan.md`.
 Historical recipes: `notebooks/reference.ipynb`. Agent rules: `AGENTS.md` and

@@ -1,6 +1,6 @@
 # Persian Typed Decisions: Project Plan
 
-Version 18 · Oct 6, 2026 · @Shah
+Version 19 · Oct 7, 2026 · @Shah
 
 ## Overview
 
@@ -98,7 +98,7 @@ lightweight. GPU profiles and the 4B decision remain the historical baseline;
 
 **Colab stays thin.** A notebook only mounts Drive, clones the repo at a fixed commit or tag, installs the pinned requirements, and calls the same command with `--profile colab-preflight` or `--profile colab`. No logic lives in notebooks, so nothing runs on Colab that the laptop has not already run.
 
-**Dependencies.** The GPU extra uses CUDA constraints; the separate TPU extra uses a Linux dependency lock for Python 3.11/3.12 and glibc 2.31+. Dev installs neither accelerator extra. Dependency resolution is checked locally; TPU imports and kernels require live preflight.
+**Dependencies.** The GPU extra uses CUDA constraints; the separate TPU extra uses version-specific Linux dependency locks for Python 3.11 through 3.13 and glibc 2.31+ (TensorFlow 2.20 for the observed Kaggle Python 3.13 kernel). Dev installs neither accelerator extra. Dependency resolution is checked locally; TPU imports and kernels require live preflight.
 
 **What the laptop cannot catch.** fp16 overflow (the Gemma 3 / TranslateGemma issue), Qwen3.5's Gated DeltaNet layers in fp16, GPU memory at the real batch size and length, and real run times. The `colab-preflight` profile (real models, about 20 steps, about 5 minutes) catches these before a full session is spent.
 
@@ -560,6 +560,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
+| 19 | Oct 7, 2026 | Fix the observed Kaggle Python 3.13 bootstrap failure with a separately resolved TensorFlow 2.20 dependency lock and interpreter-specific selection. Preserve older kernel pins and model versions; live TPU imports, inference and review remain pending. |
 | 18 | Oct 6, 2026 | Prepare a bounded Gemma 3 27B BF16/JAX experiment on Kaggle TPU v5e-8, with pinned Flax assets, sharded loading, local workflow tests, private restore contracts and label-focused paired review. Retain the 4B baseline; live TPU execution, persistence, Persian review and adoption remain pending. |
 | 17 | Oct 5, 2026 | Add the reference/execution notebook workflow and prepare the private Kaggle free-text gate with pinned code, resumable bundles and review outputs. Kaggle GPU/persistence validation and full training remain pending; no research gate is advanced. |
 | 16 | Oct 5, 2026 | Link the separate portable notebook workflow change plan and agent handoff policy. Reference/current-stage notebook separation and Kaggle support are planned; existing Colab/Drive implementation, research scope and gates remain the baseline until migration validation. |

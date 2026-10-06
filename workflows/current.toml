@@ -1,6 +1,6 @@
 schema_version = 2
 stage = "free-text-gate"
-plan = "project-plan.md: 1.2 step 1 (v18); kaggle-tpu-change-plan TPU-06/07"
+plan = "project-plan.md: 1.2 step 1 (v19); kaggle-tpu-change-plan TPU-06/07"
 stop = "awaiting-review"
 recipes = ["helmo-gate", "typed-gate"]
 translator = "gemma3-27b-tpu-bf16"

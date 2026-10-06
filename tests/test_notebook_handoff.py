@@ -35,9 +35,9 @@ def test_operational_notebook_settings_and_summaries_match_the_active_request():
             compile(code, "execution.ipynb", "exec")
     text = "".join("".join(cell["source"]) for cell in notebook["cells"])
     assert request["translator"] in text and request["stop"] in text
-    assert "v18" in text and "backend=BACKEND" in text
+    assert "v19" in text and "backend=BACKEND" in text
     reference = (ROOT / "notebooks/reference.ipynb").read_text("utf-8")
-    assert "Gemma 3 27B" in reference and "v18" in reference
+    assert "Gemma 3 27B" in reference and "v19" in reference
     assert tomllib.loads((ROOT / "workflows/tpu-gate.toml").read_text("utf-8")) == request
 
 

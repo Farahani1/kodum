@@ -60,9 +60,15 @@ def test_bootstrap_refuses_dirty_checkouts(tmp_path, monkeypatch):
         runtime.bootstrap("generic", "revision", tmp_path)
 
 
-def test_tpu_bootstrap_selects_dependencies_before_imports(tmp_path, monkeypatch):
+@pytest.mark.parametrize(
+    "python,constraints", [((3, 11), "tpu.txt"), ((3, 12), "tpu.txt"), ((3, 13), "tpu-py313.txt")]
+)
+def test_tpu_bootstrap_selects_dependencies_before_imports(
+    tmp_path, monkeypatch, python, constraints
+):
     calls = []
     monkeypatch.setattr(runtime.sys, "platform", "linux")
+    monkeypatch.setattr(runtime.sys, "version_info", python)
     monkeypatch.setattr(runtime.platform, "libc_ver", lambda: ("glibc", "2.35"))
     monkeypatch.setattr(runtime, "secret", lambda *args: None)
     monkeypatch.setattr(runtime.os, "chdir", lambda _: None)
@@ -78,7 +84,7 @@ def test_tpu_bootstrap_selects_dependencies_before_imports(tmp_path, monkeypatch
     runtime.bootstrap("kaggle", "fixed", tmp_path / "code", backend="jax")
     install = next(words for words in calls if "pip" in words)
     assert any(word.endswith("[tpu]") for word in install)
-    assert install[-1].endswith("tpu.txt")
+    assert install[-1].endswith(constraints)
     assert "CUDA_VISIBLE_DEVICES" not in runtime.os.environ
     assert runtime.os.environ["JAX_PLATFORMS"] == "tpu"
     assert any("probe_tpu" in " ".join(words) for words in calls)
@@ -90,7 +96,7 @@ def test_invalid_backend_stops_without_checkout(tmp_path):
     assert not (tmp_path / "code").exists()
 
 
-@pytest.mark.parametrize("python,libc", [((3, 10), "2.35"), ((3, 13), "2.35"), ((3, 11), "2.28")])
+@pytest.mark.parametrize("python,libc", [((3, 10), "2.35"), ((3, 14), "2.35"), ((3, 11), "2.28")])
 def test_tpu_runtime_rejects_incompatible_python_or_wheel_platform(monkeypatch, python, libc):
     monkeypatch.setattr(runtime.sys, "platform", "linux")
     monkeypatch.setattr(runtime.sys, "version_info", python)
