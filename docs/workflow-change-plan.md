@@ -1,6 +1,6 @@
 # Portable notebook workflow: change plan
 
-Version 2 | Oct 5, 2026 | Kaggle free-text gate prepared; live provider validation pending
+Version 3 | Oct 6, 2026 | TPU follow-up planned; existing execution unchanged
 
 Baseline inspected: commit `02a69bc` on `claude/sweet-franklin-pm0tdm` in
 `D:/Coding/kodum`. Design branch: `codex/portable-notebook-workflow`.
@@ -10,6 +10,11 @@ milestones and data rules) and `translation-eval-plan.md` (the historical pilot)
 Tasks here use `WF-*` IDs, not M1/M2/M3 or research section numbers. Completing
 them does not complete a research milestone. `../agent.md` defines the workflow
 agents must maintain.
+
+The proposed Kaggle Gemma 3 27B TPU v5e-8 extension has its own
+[change plan](kaggle-tpu-change-plan.md) and `TPU-*` task IDs on
+`codex/kaggle-tpu-v5e-8`. It does not activate a new request or mark TPU
+support validated.
 
 ## Problem and scope
 
@@ -271,5 +276,6 @@ retry Gemma 12B or repeat the completed pilot as part of Run all.
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 3 | Oct 6, 2026 | Link the separate Kaggle TPU v5e-8 implementation plan; retain current GPU execution and pending provider validation. |
 | 2 | Oct 5, 2026 | Implement the Kaggle free-text gate, profiles, runtime, notebook pair, private bundles and review sheets; retain GPU/restore validation and future stages as pending. |
 | 1 | Oct 5, 2026 | Separate workflow migration, two notebook roles, explicit providers, provenance, durable artifact contract and WF-00 through WF-06 acceptance checks. |
