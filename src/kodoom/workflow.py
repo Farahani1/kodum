@@ -529,6 +529,7 @@ def run_current(
         env.update(
             KODOOM_MODEL_REVISION=state["model_revision"],
             KODOOM_TRANSLATION_BATCH_SIZE=str(request["batch_size"]),
+            KODOOM_REPORT_PROGRESS="1",
         )
         if backend == "jax" and not smoke:
             env.update(
@@ -537,6 +538,7 @@ def run_current(
                 KODOOM_OUTPUT_TOKENS=str(request["output_tokens"]),
                 KODOOM_CACHE_TOKENS=str(request["cache_tokens"]),
                 KODOOM_DEADLINE=str(time.monotonic() + request["max_seconds"]),
+                KODOOM_TPU_WARMUP="1" if mode == "preflight" else "0",
             )
         translator = "stub" if smoke else request["translator"]
         datadir.save_start(root)
@@ -580,7 +582,18 @@ def run_current(
             args = [arg.format(limit=limit, translator=translator) for arg in recipe["args"]]
             if backend == "jax" and not smoke:
                 prompts = root / f"prompts-{recipe['dataset']}.json"
-                prompt_manifest(recipe, picked, prompts)
+                measured = (
+                    selected_records(
+                        recipe,
+                        root,
+                        request["helmo_limit"]
+                        if recipe["dataset"] == "helmo"
+                        else request["typed_limit"],
+                    )
+                    if mode == "preflight"
+                    else picked
+                )
+                prompt_manifest(recipe, measured, prompts)
                 env["KODOOM_PROMPTS"] = str(prompts)
             code = invoke(args)
             if backend == "jax" and not smoke:

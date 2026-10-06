@@ -104,6 +104,12 @@ execution requires a matching successful preflight. CPU fixtures also cover
 TPU orchestration, failed probes and completed-record resume. The new request
 is staged in `workflows/tpu-gate.toml`; activation is part of TPU-05.
 All hardware-dependent validation remains pending.
+TPU-06's local validation hooks now measure every selected gate prompt before
+loading, warm the shortest and longest prompts twice in preflight, record
+compilation versus warm timings, and print completed case IDs after persistence.
+Fixtures restore a checksummed TPU bundle into a fresh directory without
+duplicating completed IDs. This does not establish provider durability or real
+memory fit; the operator must validate those on Kaggle.
 TPU-07's review tooling is also implemented: per-option CSVs retain English and
 Persian context, recurring-template counts show repetitions, and an optional
 paired comparison verifies identical selected English records before joining

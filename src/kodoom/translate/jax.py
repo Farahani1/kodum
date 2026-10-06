@@ -105,14 +105,17 @@ def load_generator():
     jax.monitoring.register_event_duration_secs_listener(compiled)
     tokenizer = gm.text.Gemma3Tokenizer(path=directory / "tokenizer.model")
     prompt_lengths = []
+    measured_conversations = []
     if path := os.environ.get("KODOOM_PROMPTS"):
-        conversations = json.loads(Path(path).read_text("utf-8"))
+        measured_conversations = json.loads(Path(path).read_text("utf-8"))
         prompt_lengths = [
-            len(tokenizer.encode(format_prompt(msg), add_bos=True)) for msg in conversations
+            len(tokenizer.encode(format_prompt(msg), add_bos=True))
+            for msg in measured_conversations
         ]
         for length in prompt_lengths:
             validate_limits(length, input_limit, output_limit, cache_length)
     started = time.perf_counter()
+    print("Loading Gemma 3 27B directly with eight-device FSDP sharding...", flush=True)
     model = gm.nn.Gemma3_27B(dtype=jnp.bfloat16)
     params = gm.ckpts.load_params(
         directory / "gemma3-27b-it", text_only=True, sharding=kd.sharding.FSDPSharding()
@@ -150,6 +153,11 @@ def load_generator():
             target.write_text(json.dumps(info, indent=2, default=str) + "\n", encoding="utf-8")
 
     save_info()
+    print(
+        f"Sharded weights ready in {info['load_seconds']:.1f}s; dtypes: {info['parameter_dtypes']}",
+        flush=True,
+    )
+    phase = "translation"
 
     def generate(conversations):
         prompts = [format_prompt(messages) for messages in conversations]
@@ -178,6 +186,7 @@ def load_generator():
                 info["failure"] = {
                     "type": type(exc).__name__,
                     "input_tokens": length,
+                    "phase": phase,
                     "seconds": time.perf_counter() - started,
                     "devices": memory_snapshot(jax.devices()),
                 }
@@ -194,6 +203,7 @@ def load_generator():
                 {
                     "input_tokens": length,
                     "seconds": elapsed,
+                    "phase": phase,
                     "compilation_seconds": compilation,
                     "warm": compile_seconds == 0,
                     "output_tokens": next(
@@ -213,6 +223,19 @@ def load_generator():
             del result
         return replies
 
+    if os.environ.get("KODOOM_TPU_WARMUP") == "1" and prompt_lengths:
+        phase = "preflight-warmup"
+        indexes = sorted(
+            {
+                min(range(len(prompt_lengths)), key=prompt_lengths.__getitem__),
+                max(range(len(prompt_lengths)), key=prompt_lengths.__getitem__),
+            }
+        )
+        warmup = [measured_conversations[i] for i in indexes]
+        print("Measuring short/long prompts twice for compilation and warm timing...", flush=True)
+        generate(warmup)
+        generate(warmup)
+        phase = "translation"
     return generate
 
 

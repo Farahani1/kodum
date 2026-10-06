@@ -82,6 +82,14 @@ def test_tpu_gate_fixture_preserves_ids_and_resumes_without_reloading(tmp_path, 
     assert preflight_root.parent.name == "gemma3-27b-tpu-bf16"
     assert state["semantic"]["checkpoint"] == "pinned"
     assert load_profile(gate_root / "profile.toml").backend == "jax"
+    restored_base = replace(base, data_dir=tmp_path / "restored-data")
+    monkeypatch.setattr(workflow, "load_profile", lambda _: restored_base)
+    preflight_bundle = next(p for p in (tmp_path / "bundles").glob("preflight-*.zip"))
+    restored = workflow.run_current(
+        provider="kaggle", profile="test", request_path=REQUEST, restore=str(preflight_bundle)
+    )
+    assert restored["status"] == "preflight-passed"
+    assert len(loaded) == 4
 
 
 def test_tpu_gate_requires_matching_preflight(tmp_path, monkeypatch):

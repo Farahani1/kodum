@@ -1,3 +1,4 @@
+import json
 from types import SimpleNamespace
 
 import pytest
@@ -121,10 +122,27 @@ def test_generator_loads_sharded_once_and_never_forwards_history(tmp_path, monke
     assert generate([messages, messages]) == ["41", "42"]
     assert generate([messages]) == ["43"]
     assert len(load_calls) == 1
+    monkeypatch.setenv("KODOOM_CHECKPOINT_FINGERPRINT", "abc")
+    long = [{**m, "content": m["content"] * 10} for m in messages]
+    manifest = tmp_path / "prompts.json"
+    manifest.write_text(json.dumps([messages, long]), encoding="utf-8")
+    monkeypatch.setenv("KODOOM_PROMPTS", str(manifest))
+    monkeypatch.setenv("KODOOM_TPU_WARMUP", "1")
+    warmed = native.load_generator()
+    data = json.loads(metrics.read_text("utf-8"))
+    assert data["input_lengths"]["items"] == 2
+    assert len(data["calls"]) == 4
+    assert all(call["phase"] == "preflight-warmup" for call in data["calls"])
+    warmed([messages])
+    assert json.loads(metrics.read_text("utf-8"))["calls"][-1]["phase"] == "translation"
+    monkeypatch.setenv("KODOOM_INPUT_TOKENS", "10")
+    with pytest.raises(ValueError, match="not truncated"):
+        native.load_generator()
+    assert len(load_calls) == 2  # All selected lengths are checked before weights load.
     assert load_calls[0][1] == {"text_only": True, "sharding": "fsdp"}
     assert all("last_state" not in kw and kw["sharding"] == "rep" for _, kw in calls)
     assert metrics.exists()
     monkeypatch.setenv("KODOOM_CHECKPOINT_FINGERPRINT", "different")
     with pytest.raises(RuntimeError, match="identity changed"):
         native.load_generator()
-    assert len(load_calls) == 1
+    assert len(load_calls) == 2

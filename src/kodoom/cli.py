@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sys
 from collections import Counter
 from pathlib import Path
@@ -537,7 +538,14 @@ def _translate(args: argparse.Namespace) -> int:
         if not source.exists():
             raise InspectError(f"{source} does not exist; run `kodoom fetch typed-decisions` first")
         out = base / "fa" / translator.name / f"{split}.jsonl"
-        stats = translate_file(source, out, translator, limit=args.limit, balanced=args.balanced)
+        stats = translate_file(
+            source,
+            out,
+            translator,
+            limit=args.limit,
+            balanced=args.balanced,
+            progress=_translation_progress,
+        )
         print(f"{out}: {stats['translated']} cases translated, {stats['skipped']} already done")
         failed += stats["with_findings"] + stats["failed"]
         if stats["with_findings"]:
@@ -548,6 +556,11 @@ def _translate(args: argparse.Namespace) -> int:
     return 0 if not failed else 1
 
 
+def _translation_progress(source_id: str) -> None:
+    if os.environ.get("KODOOM_REPORT_PROGRESS") == "1":
+        print(f"Completed and saved: {source_id}", flush=True)
+
+
 def _translate_helmo(profile: Profile, translator, args: argparse.Namespace) -> int:
     if args.split:
         raise InspectError("helmo has no splits; --split does not apply")
@@ -556,7 +569,14 @@ def _translate_helmo(profile: Profile, translator, args: argparse.Namespace) -> 
     if not source.exists():
         raise InspectError(f"{source} does not exist; run `kodoom fetch helmo` first")
     out = base / "fa" / translator.name / "train.jsonl"
-    stats = translate_helmo_file(source, out, translator, limit=args.limit, balanced=args.balanced)
+    stats = translate_helmo_file(
+        source,
+        out,
+        translator,
+        limit=args.limit,
+        balanced=args.balanced,
+        progress=_translation_progress,
+    )
     print(f"{out}: {stats['translated']} records translated, {stats['skipped']} already done")
     if stats["with_findings"]:
         print(f"  {stats['with_findings']} records have check findings (checks_passed=false)")
