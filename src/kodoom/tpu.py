@@ -3,6 +3,50 @@
 from __future__ import annotations
 
 import importlib
+import json
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+
+def host_resources() -> dict:
+    available = None
+    meminfo = Path("/proc/meminfo")
+    if meminfo.exists():
+        for line in meminfo.read_text("utf-8").splitlines():
+            if line.startswith("MemAvailable:"):
+                available = int(line.split()[1]) * 1024
+    free = shutil.disk_usage(os.environ.get("TMPDIR", "/tmp")).free
+    if available is not None and available < 8 * 1024**3:
+        raise RuntimeError("Less than 8 GiB host memory available for checkpoint loading")
+    if free < 4 * 1024**3:
+        raise RuntimeError("Less than 4 GiB temporary space available for TPU compilation")
+    return {"host_available_bytes": available, "temporary_free_bytes": free}
+
+
+def probe_in_child() -> dict:
+    """The notebook process must leave TPU ownership to inference children."""
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import json; from kodoom.tpu import probe_tpu; "
+            "print('KODOOM_PROBE=' + json.dumps(probe_tpu()))",
+        ],
+        env=dict(os.environ, JAX_PLATFORMS="tpu"),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=180,
+    )
+    if result.returncode:
+        raise RuntimeError("TPU child probe failed; select v5e-8 and run the TPU bootstrap")
+    for line in result.stdout.splitlines():
+        if line.startswith("KODOOM_PROBE="):
+            return json.loads(line.removeprefix("KODOOM_PROBE="))
+    raise RuntimeError("TPU probe returned no structured result")
 
 
 def validate_devices(devices: list, process_count: int) -> None:

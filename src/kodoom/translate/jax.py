@@ -7,7 +7,7 @@ import os
 import time
 from pathlib import Path
 
-from kodoom.tpu import memory_snapshot, probe_tpu
+from kodoom.tpu import host_resources, memory_snapshot, probe_tpu
 from kodoom.translate.checkpoint import KAGGLE_MODEL, prepare_checkpoint
 from kodoom.translate.hf import ChatTranslator, Messages
 
@@ -89,6 +89,7 @@ def load_generator():
     output_limit = int(os.environ.get("KODOOM_OUTPUT_TOKENS", "768"))
     cache_length = int(os.environ.get("KODOOM_CACHE_TOKENS", "4096"))
     validate_limits(0, input_limit, output_limit, cache_length)
+    host = host_resources()
     probe_tpu()
     directory, checkpoint = prepare_checkpoint()
     expected = os.environ.get("KODOOM_CHECKPOINT_FINGERPRINT")
@@ -102,6 +103,15 @@ def load_generator():
             compile_times[event] = compile_times.get(event, 0.0) + duration
 
     jax.monitoring.register_event_duration_secs_listener(compiled)
+    tokenizer = gm.text.Gemma3Tokenizer(path=directory / "tokenizer.model")
+    prompt_lengths = []
+    if path := os.environ.get("KODOOM_PROMPTS"):
+        conversations = json.loads(Path(path).read_text("utf-8"))
+        prompt_lengths = [
+            len(tokenizer.encode(format_prompt(msg), add_bos=True)) for msg in conversations
+        ]
+        for length in prompt_lengths:
+            validate_limits(length, input_limit, output_limit, cache_length)
     started = time.perf_counter()
     model = gm.nn.Gemma3_27B(dtype=jnp.bfloat16)
     params = gm.ckpts.load_params(
@@ -110,14 +120,19 @@ def load_generator():
     jax.block_until_ready(params)
     info = {
         "checkpoint": checkpoint,
+        "host_before_load": host,
         "model": KAGGLE_MODEL,
         "load_seconds": time.perf_counter() - started,
         **parameter_summary(jax.tree.leaves(params)),
         "devices_after_load": memory_snapshot(jax.devices()),
         "calls": [],
         "compilation_seconds": compile_times,
+        "input_lengths": {
+            "items": len(prompt_lengths),
+            "max": max(prompt_lengths, default=0),
+            "min": min(prompt_lengths, default=0),
+        },
     }
-    tokenizer = gm.text.Gemma3Tokenizer(path=directory / "tokenizer.model")
     sampler = gm.text.Sampler(
         model=model,
         params=params,
@@ -144,16 +159,30 @@ def load_generator():
             validate_limits(length, input_limit, output_limit, cache_length)
         replies = []
         for prompt, length in zip(prompts, lengths, strict=True):
+            if time.monotonic() >= float(os.environ.get("KODOOM_DEADLINE", "inf")):
+                raise RuntimeError(
+                    "TPU stage time budget exhausted; save and resume the partial bundle"
+                )
             before_compile = dict(compile_times)
             started = time.perf_counter()
-            result = sampler.sample(
-                prompt,
-                max_new_tokens=output_limit,
-                return_state=True,
-                sharding=kd.sharding.REPLICATED,
-                rng=0,
-            )
-            jax.block_until_ready(result.state)
+            try:
+                result = sampler.sample(
+                    prompt,
+                    max_new_tokens=output_limit,
+                    return_state=True,
+                    sharding=kd.sharding.REPLICATED,
+                    rng=0,
+                )
+                jax.block_until_ready(result.state)
+            except BaseException as exc:
+                info["failure"] = {
+                    "type": type(exc).__name__,
+                    "input_tokens": length,
+                    "seconds": time.perf_counter() - started,
+                    "devices": memory_snapshot(jax.devices()),
+                }
+                save_info()
+                raise
             tokens = jax.device_get(result.tokens).tolist()
             elapsed = time.perf_counter() - started
             cache_leaves = jax.tree.leaves(result.state.cache)

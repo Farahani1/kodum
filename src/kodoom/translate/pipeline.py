@@ -113,6 +113,28 @@ class StubTranslator:
         return pattern.sub(piece, item.text)
 
 
+def case_items(records: Sequence[Record]) -> list[Item]:
+    first = records[0]
+    workflow = first.extra["workflow"]
+    items = [
+        Item(s.text, s.rule.register, STATE, workflow)
+        for s in segments(workflow, first.state)
+        if s.rule.action == "translate"
+    ]
+    for record in records:
+        items.append(Item(record.question_text, FORMAL, QUESTION, workflow))
+        items += [Item(option.text, FORMAL, OPTION, workflow) for option in record.options]
+    return items
+
+
+def helmo_items(record: Record) -> list[Item]:
+    return [
+        Item(record.state, FORMAL, STATE),
+        Item(record.question_text, FORMAL, QUESTION),
+        *[Item(option.text, FORMAL, OPTION) for option in record.options],
+    ]
+
+
 def translate_case(
     records: Sequence[Record], translator: Translator, glossary: Glossary | None = None
 ) -> tuple[list[Record], list[Finding]]:
@@ -128,10 +150,7 @@ def translate_case(
     glossary = glossary if glossary is not None else load_glossary()
 
     todo = [s for s in segments(workflow, first.state) if s.rule.action == "translate"]
-    items = [Item(s.text, s.rule.register, STATE, workflow) for s in todo]
-    for r in records:
-        items.append(Item(r.question_text, FORMAL, QUESTION, workflow))
-        items += [Item(o.text, FORMAL, OPTION, workflow) for o in r.options]
+    items = case_items(records)
     out = [clean_orthography(t) for t in translator.translate(items)]
     if len(out) != len(items):
         raise ValueError(f"translator returned {len(out)} texts for {len(items)} items")
@@ -192,9 +211,7 @@ def translate_helmo_record(record: Record, translator: Translator) -> tuple[Reco
     and in the options that refer to it, and checked with the same text-level checks
     used for a typed-decisions question or option.
     """
-    items = [Item(record.state, FORMAL, STATE)]
-    items.append(Item(record.question_text, FORMAL, QUESTION))
-    items += [Item(o.text, FORMAL, OPTION) for o in record.options]
+    items = helmo_items(record)
     out = [clean_orthography(t) for t in translator.translate(items)]
     if len(out) != len(items):
         raise ValueError(f"translator returned {len(out)} texts for {len(items)} items")

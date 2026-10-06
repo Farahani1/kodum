@@ -93,7 +93,13 @@ with prompt, termination, sharding and stateless generation covered by fixtures.
 It uses the official versioned Kaggle Flax asset and its bundled tokenizer,
 not the authenticated Google Cloud bucket. Compiler monitoring records XLA
 compile durations separately from call wall times and marks warm calls.
-Other tasks and all hardware-dependent validation remain pending.
+TPU-04 has backend-aware execution, model-specific artifact roots, checked
+restore identities, checkpoint/prompt/version provenance, complete input-token
+measurement before loading and an explicit two-hour stage budget. TPU gate
+execution requires a matching successful preflight. CPU fixtures also cover
+TPU orchestration, failed probes and completed-record resume. The new request
+is staged in `workflows/tpu-gate.toml`; activation is part of TPU-05.
+All hardware-dependent validation remains pending.
 Each task is a separate logical commit with its verification recorded.
 
 | ID | Deliverable | Dependencies | Acceptance |

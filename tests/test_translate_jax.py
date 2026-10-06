@@ -111,6 +111,7 @@ def test_generator_loads_sharded_once_and_never_forwards_history(tmp_path, monke
         native, "_libraries", lambda: (fake_jax, SimpleNamespace(bfloat16="bf16"), gm, kd)
     )
     monkeypatch.setattr(native, "probe_tpu", lambda: {})
+    monkeypatch.setattr(native, "host_resources", lambda: {})
     monkeypatch.setattr(native, "prepare_checkpoint", lambda: (tmp_path, {"fingerprint": "abc"}))
     monkeypatch.setenv("KODOOM_CHECKPOINT_FINGERPRINT", "abc")
     metrics = tmp_path / "metrics.json"

@@ -45,7 +45,7 @@ def apply_environment(profile: Profile) -> None:
         os.environ.setdefault("OMP_NUM_THREADS", str(profile.threads))
 
 
-def run_checks(profile: Profile) -> list[Check]:
+def run_checks(profile: Profile, *, probe_devices: bool = True) -> list[Check]:
     checks = [
         Check("kodoom", OK, f"{__version__}, commit {git_commit() or 'unknown'}"),
         Check("python", OK, f"{platform.python_version()} on {platform.system()}"),
@@ -54,7 +54,8 @@ def run_checks(profile: Profile) -> list[Check]:
     checks.append(_check_writable("scratch_dir", profile.scratch_dir))
     checks.append(_check_writable("data_dir", profile.data_dir))
     checks.append(_check_cache(profile))
-    checks.append(_check_device(profile))
+    if probe_devices:
+        checks.append(_check_device(profile))
     return checks
 
 
