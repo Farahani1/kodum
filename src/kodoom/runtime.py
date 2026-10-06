@@ -32,10 +32,16 @@ def secret(provider: str, name: str) -> str | None:
     return None
 
 
-def bootstrap(provider: str, revision: str, directory: str | Path) -> Path:
+def bootstrap(
+    provider: str, revision: str, directory: str | Path, *, backend: str = "torch"
+) -> Path:
     """Fetch clean code, install the GPU extra, and leave caches outside saved outputs."""
     if provider not in PROVIDERS or not revision or revision.startswith("-"):
         raise ValueError("select a valid provider and code revision")
+    if backend not in ("torch", "jax"):
+        raise ValueError("select backend='torch' or backend='jax' explicitly")
+    if backend == "jax" and (sys.platform != "linux" or sys.version_info < (3, 11)):
+        raise RuntimeError("Kaggle TPU bootstrap requires Linux and Python 3.11 or newer")
     if provider == "colab":
         from google.colab import drive
 
@@ -44,7 +50,11 @@ def bootstrap(provider: str, revision: str, directory: str | Path) -> Path:
     hf_token = secret(provider, "HF_TOKEN")
     if hf_token:
         os.environ["HF_TOKEN"] = hf_token
-    os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
+    if backend == "torch":
+        os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
+    else:
+        os.environ["JAX_PLATFORMS"] = "tpu"
+        os.environ.setdefault("XLA_PYTHON_CLIENT_MEM_FRACTION", "0.85")
     checkout = Path(directory).resolve()
     env = dict(os.environ, GIT_TERMINAL_PROMPT="0")
     if token:
@@ -78,6 +88,7 @@ def bootstrap(provider: str, revision: str, directory: str | Path) -> Path:
     git("-C", str(checkout), "checkout", "--detach", "FETCH_HEAD")
     sha = git("-C", str(checkout), "rev-parse", "HEAD")
     if provider != "generic":
+        extra = "tpu" if backend == "jax" else "gpu"
         subprocess.run(
             [
                 sys.executable,
@@ -85,12 +96,20 @@ def bootstrap(provider: str, revision: str, directory: str | Path) -> Path:
                 "pip",
                 "install",
                 "-e",
-                f"{checkout}[gpu]",
+                f"{checkout}[{extra}]",
                 "-c",
-                str(checkout / "constraints" / "gpu.txt"),
+                str(checkout / "constraints" / f"{extra}.txt"),
             ],
             check=True,
         )
+        if backend == "jax":
+            # Probe in a child: the notebook kernel must not own TPU devices also
+            # needed by the translation process. A failed install/probe stops Run all.
+            subprocess.run(
+                [sys.executable, "-c", "from kodoom.tpu import probe_tpu; print(probe_tpu())"],
+                env=dict(os.environ, PYTHONPATH=str(checkout / "src")),
+                check=True,
+            )
     os.chdir(checkout)
     sys.path.insert(0, str(checkout / "src"))
     print(f"Code revision: {sha}")

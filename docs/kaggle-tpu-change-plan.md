@@ -84,9 +84,11 @@ on every chip, would exceed the per-chip budget. Load directly with sharding.
 
 ## Implementation tasks
 
-TPU-01 is implemented with local tests for explicit profiles, backend validation,
-topology rejection and readiness dispatch. Other implementation tasks remain
-pending. Live TPU validation remains pending for every hardware-dependent task.
+TPU-01 and TPU-02 are implemented with local tests for explicit profiles, backend
+validation, topology rejection, readiness dispatch and dependency selection.
+Gemma 3.3.0 and Kauldron 1.4.2 wheel APIs were inspected; JAX 0.7.2's metadata
+pins libtpu 0.0.23. This is a candidate pinned set, not a live-validated Kaggle
+environment. Other tasks and all hardware-dependent validation remain pending.
 Each task is a separate logical commit with its verification recorded.
 
 | ID | Deliverable | Dependencies | Acceptance |

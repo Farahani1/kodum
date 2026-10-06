@@ -58,3 +58,32 @@ def test_bootstrap_refuses_dirty_checkouts(tmp_path, monkeypatch):
     )
     with pytest.raises(RuntimeError, match="local edits"):
         runtime.bootstrap("generic", "revision", tmp_path)
+
+
+def test_tpu_bootstrap_selects_dependencies_before_imports(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(runtime.sys, "platform", "linux")
+    monkeypatch.setattr(runtime, "secret", lambda *args: None)
+    monkeypatch.setattr(runtime.os, "chdir", lambda _: None)
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    monkeypatch.delenv("CUDA_VISIBLE_DEVICES", raising=False)
+    monkeypatch.setenv("JAX_PLATFORMS", "cpu")
+
+    def run(words, **kwargs):
+        calls.append(words)
+        return types.SimpleNamespace(returncode=0, stdout="a" * 40 if "rev-parse" in words else "")
+
+    monkeypatch.setattr(runtime.subprocess, "run", run)
+    runtime.bootstrap("kaggle", "fixed", tmp_path / "code", backend="jax")
+    install = next(words for words in calls if "pip" in words)
+    assert any(word.endswith("[tpu]") for word in install)
+    assert install[-1].endswith("tpu.txt")
+    assert "CUDA_VISIBLE_DEVICES" not in runtime.os.environ
+    assert runtime.os.environ["JAX_PLATFORMS"] == "tpu"
+    assert any("probe_tpu" in " ".join(words) for words in calls)
+
+
+def test_invalid_backend_stops_without_checkout(tmp_path):
+    with pytest.raises(ValueError, match="backend"):
+        runtime.bootstrap("generic", "fixed", tmp_path / "code", backend="unknown")
+    assert not (tmp_path / "code").exists()
