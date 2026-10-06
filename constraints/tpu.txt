@@ -1,6 +1,7 @@
 # API-inspected Python 3.11/3.12 set. Live Kaggle kernel validation is pending.
 # Separate from CUDA constraints: bootstrap never installs bitsandbytes here.
 gemma==3.3.0
+kagglehub==0.3.13
 kauldron==1.4.2
 jax==0.7.2
 jaxlib==0.7.2

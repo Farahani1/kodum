@@ -375,11 +375,16 @@ MODEL_TRANSLATORS = (
     "translategemma-12b-4bit",
     "gemma3-4b-bf16",
     "gemma3-12b-4bit",
+    "gemma3-27b-tpu-bf16",
     "qwen3-8b-4bit",
 )
 
 
 def translator_factory(name: str) -> Callable[[], Translator]:
+    if name == "gemma3-27b-tpu-bf16":
+        from kodoom.translate.jax import gemma3_27b_tpu_bf16
+
+        return gemma3_27b_tpu_bf16
     if name in TRANSLATORS:
         return TRANSLATORS[name]
     if name in MODEL_TRANSLATORS:

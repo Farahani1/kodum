@@ -88,7 +88,12 @@ TPU-01 and TPU-02 are implemented with local tests for explicit profiles, backen
 validation, topology rejection, readiness dispatch and dependency selection.
 Gemma 3.3.0 and Kauldron 1.4.2 wheel APIs were inspected; JAX 0.7.2's metadata
 pins libtpu 0.0.23. This is a candidate pinned set, not a live-validated Kaggle
-environment. Other tasks and all hardware-dependent validation remain pending.
+environment. TPU-03 now has the lazy generator and translator registration,
+with prompt, termination, sharding and stateless generation covered by fixtures.
+It uses the official versioned Kaggle Flax asset and its bundled tokenizer,
+not the authenticated Google Cloud bucket. Compiler monitoring records XLA
+compile durations separately from call wall times and marks warm calls.
+Other tasks and all hardware-dependent validation remain pending.
 Each task is a separate logical commit with its verification recorded.
 
 | ID | Deliverable | Dependencies | Acceptance |
