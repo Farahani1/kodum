@@ -2,6 +2,12 @@
 
 Sep 30, 2026 · compares the data used by earlier Persian-capable decision models with the data this project plans to use ([project plan](project-plan.md), v7).
 
+**Historical comparison.** Its "ours only" claims describe that Sep 30 source
+list, not the current community. The [Oct 8 review](precompute-project-review.md)
+adds Decima's Persian resources, updates the contribution claim and separates
+source licenses from translator-derived training eligibility. Use project-plan
+v22 for present decisions.
+
 **Where the facts come from.** Each earlier work is described only from its own published card or README:
 
 - **DibaOne X1:** its model card, pasted by the project owner.

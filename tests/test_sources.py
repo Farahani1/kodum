@@ -5,6 +5,7 @@ from kodoom.sources import (
     EXCLUDED,
     SOURCES,
     TEST_ONLY,
+    TRAIN_ONLY,
     SourceError,
     check_record,
     get_source,
@@ -32,6 +33,9 @@ def record(source, split="train", license=None):
 
 
 def test_plan_roles():
+    assert {n for n, s in SOURCES.items() if s.role == TRAIN_ONLY} == {
+        "helmo/synthetic-typed-decisions"
+    }
     assert {n for n, s in SOURCES.items() if s.role == TEST_ONLY} == {
         "persiannlp/parsinlu",
         "sajjjadayobi/PersianQA",
@@ -69,6 +73,13 @@ def test_unknown_source():
         get_source("someone/else")
 
 
+@pytest.mark.parametrize("split", ["train", "validation", "calibration"])
+def test_helmo_allows_training_development_but_never_benchmark_use(split):
+    check_record(record("helmo/synthetic-typed-decisions", split))
+    with pytest.raises(SourceError, match="training-only"):
+        check_record(record("helmo/synthetic-typed-decisions", "test"))
+
+
 def test_gpl_and_nc_data_is_not_published():
     assert not SOURCES["sajjjadayobi/PersianQA"].publish_derived_data
     assert not SOURCES["persiannlp/parsinlu"].publish_derived_data
@@ -76,7 +87,7 @@ def test_gpl_and_nc_data_is_not_published():
 
 def test_every_training_source_has_a_permissive_license():
     permissive = {"Apache-2.0", "MIT", "CC-BY-4.0", "CC0-1.0"}
-    trainable = [s for s in SOURCES.values() if s.role == "train_and_test"]
+    trainable = [s for s in SOURCES.values() if s.role in {"train_and_test", TRAIN_ONLY}]
     assert {s.license for s in trainable} <= permissive
 
 

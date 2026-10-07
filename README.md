@@ -3,6 +3,11 @@
 Persian Typed Decisions: an open bilingual dataset, a Persian skills suite and an evaluation harness for typed-decision models (choice, score and yes/no questions answered with calibrated probabilities), with CPU-friendly reference models.
 
 The big picture of the whole project is in [docs/project-plan.md](docs/project-plan.md).
+The [Oct 8 precompute review](docs/precompute-project-review.md) evaluates the
+dataset choices, newer Persian alternatives, community value and the separate
+draft-generation, release and training gates. Gemma 3 drafts remain outside the
+planned permissive reference-model training mix until a compatible license route
+is recorded. Helmo is optional augmentation and is never a benchmark source.
 The separate [workflow change plan](docs/workflow-change-plan.md) covers the
 planned reference/execution notebook split and Colab/Kaggle portability.
 [agent.md](agent.md) defines that pipeline and how agents update each stage.

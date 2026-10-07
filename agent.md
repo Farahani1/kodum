@@ -5,6 +5,14 @@ workflow; `docs/workflow-change-plan.md` tracks remaining migration work. The
 current Kaggle runner covers the bulk draft campaign; a live Kaggle run and
 fresh-session restore remain unverified.
 
+Research acceptance follows project-plan v22 and
+[the precompute audit](docs/precompute-project-review.md). The active request
+and notebook pin retain the frozen v21 production recipe. Do not silently change
+a campaign identity to follow document revisions. Helmo is training-only and
+optional; Gemma 3 translations remain ineligible for the planned permissive
+training mix until a compatible licensing route is recorded. The source registry
+alone does not enforce translator-derived model licensing.
+
 The owner-selected active direction is the implemented
 [bulk translation plan](docs/tpu-bulk-translation-plan.md), project-plan v21.
 Generate unreviewed drafts to reduce queue waits, with BF16 batching and verified

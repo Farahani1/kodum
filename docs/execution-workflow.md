@@ -6,6 +6,20 @@ The execution notebook implements project-plan **v21**, section 1.2, and the
 **2,000-record helmo selection**. Local checks pass. Real TPU fit, throughput,
 private HF access and a second live session still need runtime evidence.
 
+Before running, read the [project review](precompute-project-review.md) and
+project-plan v22. The v21 request and code pin are intentionally preserved as
+the frozen production recipe. The scientific interpretation is narrower:
+typed-decisions measures teacher agreement, helmo is optional training
+augmentation, and Gemma 3 drafts are held out of permissive-model training until
+a compatible licensing route is recorded. A private completed draft campaign
+does not establish release approval, source correctness or training readiness.
+
+Record the actual input/output-limit failures, completed cases per hour,
+automatic findings and last durable save in the first allocation. Validate
+storage and batching before continuing; review the diagnostic outputs locally
+as they arrive. The 40/20 diagnostic set is screening, not a random estimate of
+the corpus error rate. All 400 test cases still need human review.
+
 ## Set up the notebook
 
 1. Import [execution.ipynb](../notebooks/execution.ipynb) from

@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from kodoom.schema import Record
 
 TRAIN_AND_TEST = "train_and_test"
+TRAIN_ONLY = "train_only"
 TEST_ONLY = "test_only"
 EXCLUDED = "excluded"
 
@@ -45,7 +46,7 @@ SOURCES: dict[str, Source] = {
             "helmo/synthetic-typed-decisions",
             "https://huggingface.co/datasets/helmo/synthetic-typed-decisions",
             "MIT",
-            TRAIN_AND_TEST,
+            TRAIN_ONLY,
         ),
         Source(
             "kodoom/code-labeled",
@@ -114,6 +115,10 @@ def check_record(record: Record) -> None:
         raise SourceError(
             f"record {record.id!r}: {source.name} is test-only but the record is in "
             f"split {record.split!r}"
+        )
+    if source.role == TRAIN_ONLY and record.split == "test":
+        raise SourceError(
+            f"record {record.id!r}: {source.name} is training-only and cannot be a test set"
         )
     if record.license != source.license:
         raise SourceError(

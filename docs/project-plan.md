@@ -1,12 +1,12 @@
 # Persian Typed Decisions: Project Plan
 
-Version 21 · Oct 8, 2026 · @Shah
+Version 22 · Oct 8, 2026 · @Shah
 
 ## Overview
 
 **Persian Typed Decisions: an open bilingual dataset, a Persian skills suite and an evaluation harness, with CPU-friendly reference models.**
 
-Typed decisions are choice, score and yes/no (noul) questions answered with calibrated probabilities, the interface Jev popularized. Open decision models already exist, including multilingual and Persian-first ones, so another Persian model alone is not a distinctive contribution. What is missing is an independent, reproducible Persian data and evaluation layer that any decision model can be trained or measured on. This project builds that layer, and trains small reference models on top of it.
+Typed decisions are choice, score and yes/no (noul) questions answered with calibrated probabilities, the interface Jev popularized. Open decision models and Persian evaluation resources already exist. This project contributes an independently auditable bilingual workflow corpus, reproducible Persian-specific skills and comparable model measurements, with small reference models where they add value. It does not claim to be the first Persian decision dataset or benchmark. The [precompute review](precompute-project-review.md) records the Oct 8 source audit, newer alternatives and the evidence still needed.
 
 The test for every deliverable: could a developer drop this project's model entirely and still benefit? For the first three, the answer is yes.
 
@@ -35,7 +35,7 @@ The test for every deliverable: could a developer drop this project's model enti
 - Develop on the laptop, then use the selected provider's explicit preflight and stage profile. Nothing reaches a GPU provider until it has run end to end on the laptop where feasible.
 - The resource is the headline; the model is a reference implementation. The project is worthwhile even if the model turns out average.
 - Clean training data only. A source enters training only if its license allows a permissively licensed model; everything else is test-only or converter-only.
-- Licenses: the least restrictive. The code is 0BSD and the project's own data (the generated skills and their templates) is CC0-1.0. Data derived from other people's work keeps their license: typed-decisions-fa stays Apache-2.0 with attribution, and a source's license is enforced in code (`kodoom.sources`). The choice of license for the trained models is still open, and must respect the attribution terms of what they were trained on (MASSIVE is CC BY 4.0). Gemma's terms count a model trained on Gemma synthetic data as a Model Derivative, which carries Gemma's use restrictions. If typed-decisions-fa is translated with Gemma, putting its train split into the training mix may therefore bring the Gemma terms to the project's models. Decide before M3: keep Gemma-made translations out of training (benchmark use only), accept the Gemma terms for those models, or translate the training part another way. Have a lawyer confirm whether human-corrected translations change the answer.
+- Licenses: the least restrictive compatible terms. Code is 0BSD; own generated skills and templates are CC0-1.0; derived data retains source terms and attribution. Dataset licensing and downstream model eligibility are separate decisions. The [Gemma 3 terms](https://ai.google.dev/gemma/terms) exclude outputs themselves from Model Derivatives, while including some models created through transfer of outputs. Whether training on these translations qualifies requires a documented interpretation; human correction is not an assumed exemption. **Default: hold Gemma 3 translations out of the permissive reference-model training mix until a compatible route is recorded before M3.** Options are a separately evaluated translator with compatible terms, benchmark-only use, or a model release under applicable Gemma terms. [Gemma 4 uses Apache 2.0](https://ai.google.dev/gemma/apache_2), but it is not validated in this runner. Source teachers, source licenses and attribution still require review. The current registry enforces source/split rules, not a complete translator-provenance training gate; implement that gate before training.
 - Data stays in owner-controlled private storage. Colab uses the owner's Drive; the Kaggle bulk draft campaign uses a configured owner-controlled private HF dataset repository for verified periodic checkpoints, plus private Kaggle output. Generated, converted and translated datasets are written to the profile's `data_dir`, never into the repository checkout or git. No dataset is publicly published or transferred to another destination beyond the explicitly configured private campaign checkpoints; publication steps in Part 1 wait for an explicit owner decision.
 - `data_dir` describes itself. It carries a `README.md` written by kodoom: the file tree with sizes, record counts and what each folder holds, the files the last update made or changed, and the history of updates with their command lines. Every command that writes data refreshes it. The Colab notebook records the files when a run starts and ends by printing the tree with the files that run generated or updated marked. Data stays on Drive and out of git, so nothing else records which command or translator produced a file, or when; the README keeps the folder readable on its own, and the end-of-run tree shows whether a run wrote what it was meant to.
 - Benchmark data is stored as people write it. Normalization is part of a model's input pipeline, not of the published data, so the benchmark still tests how other models handle digit forms and spelling variants.
@@ -111,7 +111,7 @@ The current notebook runs the bulk package: a live private save/restore probe an
 
 **What the laptop cannot catch.** fp16 overflow (the Gemma 3 / TranslateGemma issue), Qwen3.5's Gated DeltaNet layers in fp16, GPU memory at the real batch size and length, and real run times. The `colab-preflight` profile (real models, about 20 steps, about 5 minutes) catches these before a full session is spent.
 
-**Workflow:** laptop `dev` development -> selected-provider preflight -> the active stage. Kaggle currently runs the free-text gate only; full training support needs implementation and validation.
+**Workflow:** laptop `dev` development -> selected-provider preflight -> the active stage. Kaggle's active stage is the private bulk draft campaign; full training support needs implementation and validation. The frozen request/notebook retain the v21 production recipe while this v22 research audit governs acceptance and downstream use.
 
 ### Storage budget: Google Drive, free 15 GB plan
 
@@ -144,6 +144,36 @@ Measure the space actually free on Drive before M3; if it is under about 8 GB, c
 ## Part 1 — Data augmentation
 
 Part 1 turns English typed-decision data and code-generated examples into Persian data, and publishes typed-decisions-fa as the project's first public output.
+
+### 1.0 Source strategy and limits of the claims
+
+Keep typed-decisions as the paired workflow anchor. Its synthetic teacher targets
+support an agreement measurement, not a claim of independently verified decision
+correctness. Review translation fidelity separately from source-label validity.
+Preserve upstream targets in the canonical config; report questionable cases
+and a versioned exclusion manifest. Any adjudicated targets need a separate
+config, rationale and provenance. Report full-set and clean-subset results.
+
+Helmo is optional augmentation, never a benchmark or a blocker for M1. Audit
+at least 100 selected English records for source-label errors and unsupported
+questions before adopting the Persian sample. Its score converter preserves
+the mean using adjacent levels, not the source variance; disclose this and
+choice-target renormalization. Keep its augmentation ablation separate.
+
+Prioritize existing MASSIVE-fa, FarsTail and code-labeled skills for native
+transfer evidence. MASSIVE is human-localized parallel data, distinct from
+originally authored Persian. Audit the Persian subset of
+[Decima System One Tasks](https://huggingface.co/datasets/amyrmahdy/decima-system-one-tasks)
+as a possible future alternative to helmo. Audit
+[jabr-v2-persian](https://huggingface.co/datasets/amyrmahdy/jabr-v2-persian/commit/ebd9d7aab6d0cd7be834258903343e8ccf37f901)
+as evaluation-only complementary work. These sources are not registered or
+added to the active campaign. Full comparisons, CLINC150/BANKING77 candidates
+and research gates are in [the review](precompute-project-review.md).
+
+The first useful release is the reviewed bilingual workflow corpus and the
+reproducible skills suite, with cards and scoring examples. A small independently
+authored Persian decision set is an optional post-M1 extension; do not replace
+the current scope or enlarge helmo merely to increase the row count.
 
 ### 1.1 Data preparation
 
@@ -239,16 +269,18 @@ Its software is implemented and locally tested. The active notebook performs a p
 3. **Automatic checks on every case:**
    - Keep-fields are byte-identical to the source.
    - Every number, ID and amount survives (convert Persian digits to Latin, then compare).
-   - Every Latin-script token of the source (acronyms, units, symbols such as SERT, 5-HT1A, LTV:CAC) appears unchanged in the Persian. In helmo these usually carry the fact the answer depends on.
+   - Protected Latin acronyms, identifiers, units and technical terms (such as SERT, 5-HT1A, LTV:CAC) survive unchanged. Ordinary English words are translated. Numerical checks do not establish that a value retains its actor, unit, sign, comparison or condition; semantic review covers those relationships.
    - Output is Persian, not empty, not looping, with no extreme length ratio. For helmo's long states the length bounds come from the gate sample, because a dropped clause shows up as a short translation.
    - Glossary terms match between a state and its options.
 4. **Meaning check.** The checker compares English and Persian for each case. It flags any change in meaning, urgency, negation, or who did what.
    - For helmo, also an answer comparison: the checker answers the question once from the English record and once from the Persian one, and a large difference between the two answers flags the record. This targets exactly the error that makes a label wrong.
+   - This is an acceptance step still to implement/validate against human findings; the bulk runner's structural checks are not a meaning checker. Measure missed errors and false flags. Agreement in both languages cannot validate the source answer.
 5. **Human review.**
-   - **Test split: all 400 cases**, English and Persian side by side, for meaning, negation, urgency and who did what. The dataset card can then say every benchmark case was reviewed, and reports how many needed a fix. At 2–4 minutes a case this is roughly 15–25 hours, the largest single cost of M1.
+   - **Test split: all 400 cases**, English and Persian side by side, including every decision and option description. At 2–4 minutes a case this is roughly 13–27 hours before corrections and bookkeeping. Time ten real cases to budget the work. Seek a second native reader for at least 40 cases and disputed cases; record adjudication, or disclose single-reviewer limitations.
    - **Train split:** every flagged case plus 100–150 random unflagged ones. The error rate in the random sample goes into the dataset card.
    - **Helmo:** about 100 random unflagged records of its own, spread across topics, on top of the typed-decisions sample, because no fixed template covers its text. Its error rate is reported on its own line in the dataset card, never blended with typed-decisions.
-   - Fix or drop cases; never change the gold.
+   - Keep source-label issues separate from translation errors. Retain drafts, correction diffs, reviewer/date and inclusion/exclusion decisions. Preserve canonical upstream gold; exclude unresolved cases through a manifest rather than silently deleting them. Human-reviewed status requires a human.
+   - Diagnostics are purposive screening samples, not prevalence estimates. Random unflagged audits retain their frame/seed and report separate pre-edit rates with intervals by source. Topic balancing needs weighting to estimate the population rate. The 40-record pilot cannot certify dataset-wide quality.
 6. **Orthographic cleanup only.** Fix translator noise: Persian ی/ک instead of Arabic ي/ك, the zero-width non-joiner (نیم‌فاصله) where it belongs, invisible marks and stray spaces. Digits stay as in the source. The full normalizer, including one digit policy, is part of the reference model's input pipeline at training and inference; it is not applied to the published data.
 
 Output: typed-decisions-fa (train and test, original gold unchanged) and a Persian sample of synthetic-typed-decisions as a separate, train-only config.
@@ -298,7 +330,7 @@ Licenses checked against each repository's LICENSE or NOTICE file (September 202
 
 **Training sources**, all compatible with a permissively licensed model: MASSIVE (CC BY 4.0, attribution in the model card), FarsTail (Apache-2.0), and Part 1's data (Apache-2.0 and MIT sources, and the project's own CC0-1.0 skills data). Everything else is test-only or excluded.
 
-**From Part 1:** typed-decisions-fa train split (soft labels), the Persian synthetic-typed-decisions sample, and the code-labeled Persian data (training templates only).
+**From Part 1:** the code-labeled Persian data (training templates only), plus reviewed typed-decisions-fa and optionally the Persian synthetic-typed-decisions sample **only after the source/teacher/translator license gate is satisfied**. Gemma 3 drafts are held out by default. Training eligibility is not implied by a dataset's source-license field or a successful translation run.
 
 **English slice:** the original English typed-decisions train split, plus some records with an English question over a Persian state. This keeps the model usable the way a foreign client would use it.
 
@@ -340,6 +372,7 @@ Not chosen: ParsBERT and XLM-R (superseded by mmBERT), and anything 2B or larger
 - Untrained mmBERT-base with a fresh head (expected near chance).
 - [Laya](https://github.com/NandhaKishorM/laya)-multilingual (`convaiinnovations/laya-multilingual`, Apache-2.0), zero-shot: the open multilingual reference, and the **primary controlled comparison**, because it starts from the same mmBERT-base as the main model (see below). What its card says matters here: it ships uncalibrated (temperature 1.0; refitting moved its mean ECE from 0.314 to 0.106), it is near chance on typed-decisions zero-shot (0.342, against 0.318 random and 0.461 majority), it wants choice questions under about 20 options (256 tokens for a question and its options), it rarely picks the first level of a score question, and noul can under-report "true".
 - [laya-typed-decisions](https://huggingface.co/convaiinnovations/laya-typed-decisions) (ModernBERT-large, English), optional: an English specialist fitted on the typed-decisions workflows. On the Persian test it shows what an English-only specialist loses in Persian.
+- [Decima-base](https://huggingface.co/amyrmahdy/decima-base), a newer mmBERT decision baseline candidate: audit its exact checkpoint, context budget and training exposure before reporting held-out results. Its published results are author reports until independently reproduced here.
 - [DibaOne X1](https://huggingface.co/Dibachain/DibaOne-X1) (Apache-2.0), zero-shot: the Persian-first open reference. A 278M XLM-R-family cross-encoder behind a 118M retriever; **choice questions only** (no noul or score). Trained on its own synthetic data (CC0) and Wikipedia, so no overlap with this project's test sets is expected. Slow on CPU (0.7–1.8 s per decision at 2 threads in `best` mode), so it is evaluated on a T4.
 - [DibaOne M3](https://huggingface.co/Dibachain/DibaOne-M3) (CC BY-NC-SA 4.0), evaluation only: a Persian-first bi-encoder answering all three question types. **It was trained on ParsiNLU and PersianQA**, so its scores on those sets are in-domain and excluded from every held-out comparison; its full source list (`NOTICE`) is checked against the other test sets before its scores are reported.
 - Every baseline is reported **raw and recalibrated**: a temperature per question type is fitted on this project's calibration split for every model alike, so calibration differences are not just "one model shipped a temperature and another did not".
@@ -362,7 +395,7 @@ Not chosen: ParsBERT and XLM-R (superseded by mmBERT), and anything 2B or larger
 
 Which runs actually happen depends on the decision gate (2.4).
 
-**Controlled and uncontrolled comparisons.** Laya-multilingual and the main model share the mmBERT-base backbone, so comparing them (and runs 6 and 7) isolates decision training and Persian data. DibaOne (XLM-R family), Qwen and the others differ in backbone, data, objective, option handling and calibration at once. Their comparisons are empirical ("model A scored X, model B scored Y on this benchmark") and are never read as evidence that one backbone suits Persian better.
+**Controlled and uncontrolled comparisons.** A shared backbone controls architecture only: comparing the main model with Laya does not isolate training data, objective or recipe. Runs 6 and 7 isolate the Persian-data intervention only when starting checkpoint, update budget, seeds and calibration policy match. Other model comparisons are empirical scores, not causal claims about backbone suitability. Add a separate with/without-helmo comparison if helmo is eligible; do not blend its effect with typed-decisions-fa. One seed is exploratory; repeat promising matched comparisons with at least three seeds when affordable.
 
 **Settings on the Colab T4**
 
@@ -401,7 +434,7 @@ After the M2 baselines and before M3's training runs, one planned decision: does
 
 Calibration in Persian and the STT transcripts are measured and reported too, but they do not decide the outcome.
 
-**Thresholds, written down before any baseline runs.** Once the numbers are visible it is easy to argue for the outcome already wanted. Unlike the success criteria in 3.5, which are set after the baselines, these decide how time is spent, so they are fixed first. The values below are placeholders to replace with the project owner's own before M2 starts.
+**Thresholds, written down before any baseline runs.** Freeze primary endpoints, weights across suites and the owner's thresholds before M2 starts. The values below are placeholders until recorded in that decision. Baseline results can set practical M3 targets, but must not select a favorable primary metric after seeing the scores.
 
 | Signal | Large gap (counts toward A) | Small gap (counts toward C) |
 | --- | --- | --- |
@@ -457,12 +490,14 @@ The model is judged on Persian it never trained on, on how honest its confidence
 ### 3.3 Comparisons
 
 - Every fine-tuned run against every baseline from 2.2, on the same items.
-- **The primary controlled comparison:** the main model (run 2) against Laya-multilingual, same backbone; and run 6 against run 7, same start with and without Persian data.
+- **Matched intervention comparison:** run 6 against run 7, same start with and without eligible Persian data and matched training budget. Run 2 against Laya-multilingual is an architecture-matched external baseline, not an isolated data intervention.
 - **Mode is stated with every typed-decisions result**, as the leaderboard asks: *specialist* (trained on typed-decisions `train`, as this project's models are) or *general* (zero-shot, as Laya, DibaOne and prompted Qwen are). The gap between the modes is the price of generality, not a quality ranking; held-out tasks measure generality.
 - **Request shape is recorded:** whole case in one request (the leaderboard's shape) or one question per request. It changes results (Jev's yes/no accuracy was 0.843 per question and 0.788 alongside the others), so compared rows use the same shape.
 - Run 2 vs run 3 (with vs without translated data) and run 2 vs run 4 (encoder vs decoder).
 - Before vs after temperature scaling.
 - 95% confidence intervals by bootstrap, with paired comparisons on the same items. A difference inside the interval is reported as a tie.
+- Resample whole source cases (all five questions together) or minimal pairs; language/model comparisons retain paired IDs. Report missing/failed coverage and common-item comparisons. Log loss and Brier complement teacher agreement; ECE alone is insufficient. Known, suspected and unknown baseline exposure are separate statuses.
+- Report originally authored Persian, human-localized parallel data, machine translations and procedural skills separately. Audit tokenizer/context limits for every adapter; unsupported inputs remain visible rather than silently truncated or dropped. Option subsampling and full-option evaluation are distinct protocols, and removal of an option requires explicit remapping of soft target mass.
 
 ### 3.4 Robustness checks
 
@@ -506,7 +541,7 @@ The model is judged on Persian it never trained on, on how honest its confidence
 
 ## Failure modes
 
-The likeliest failure is a classifier in disguise; the costliest are silent label errors from translation and leakage between splits. Checks already in Parts 1–3 catch all three early.
+The likeliest failure is a classifier in disguise; the costliest are silent label errors from translation and leakage between splits. Parts 1–3 specify checks for them; implementation and measured detector coverage remain acceptance requirements. The [precompute review](precompute-project-review.md) distinguishes implemented safeguards from pending research evidence.
 
 | Failure mode | Likelihood | Impact | Early signal | Mitigation |
 | --- | --- | --- | --- | --- |
@@ -546,6 +581,8 @@ Changes since the milestone diagram was drawn (the diagram itself still needs up
 - **Gate 2** now also applies the decision gate (2.4): its thresholds are written down before the baselines run, and its outcome (A, B or C) is recorded.
 - **M3's scope depends on the gate outcome**: the full run plan, a reduced one, or a light fine-tune of Laya-multilingual.
 - **M1 now includes the full review of the 400-case test split** (1.2 step 5), and the skills suite with minimal pairs.
+- **M1 may ship without helmo or a new model.** Its gate requires translation/source-label review status, correction/exclusion manifests, honest provenance, attribution and runnable scoring examples. Private draft completion is not M1 completion.
+- **Before M3:** record the translation-training license route and enforce it in the mix builder; freeze leakage/context audits, calibration split, M2 thresholds/outcome and matched ablations. The bulk campaign establishes none of these automatically.
 
 ## References
 
@@ -573,7 +610,8 @@ Licenses marked \* are from memory; confirm them on the page before use.
 | [Dohnuts-0.1.0-0.8B](https://huggingface.co/PsiACE/Dohnuts-0.1.0-0.8B) | Decision model on Qwen3.5-0.8B, evidence | see card | 2.2 |
 | [Tiny-Jev](https://huggingface.co/lostargon/Tiny-Jev) | Decision model on Qwen3-0.6B, evidence | see card | 2.2 |
 | [TranslateGemma](https://arxiv.org/pdf/2601.09012) ([vLLM guide](https://docs.vllm.ai/projects/recipes/en/latest/Google/TranslateGemma.html)) | Translation model | Gemma terms | 1.2 |
-| [Gemma 3](https://huggingface.co/google/gemma-3-12b-it) | Prompted translator (4B for the full run, 12B as fallback) | Gemma terms | 1.2 |
+| [Gemma 3](https://huggingface.co/google/gemma-3-12b-it) | 4B historical adoption baseline, 27B TPU draft candidate; 12B retired | Gemma terms | 1.2 |
+| [Decima System One Tasks](https://huggingface.co/datasets/amyrmahdy/decima-system-one-tasks), [jabr-v2-persian](https://huggingface.co/datasets/amyrmahdy/jabr-v2-persian/commit/ebd9d7aab6d0cd7be834258903343e8ccf37f901) | New Persian augmentation / evaluation audit candidates, not adopted | CC BY 4.0 / CC0 per cards | 1.0 |
 | [TypeSafe Jev models page](https://docs.typesafe.ai/models) | Jev customization and language support | — | Overview |
 | [typed-decision-bench](https://github.com/kyr0/typed-decision-bench) | Community benchmark and format | see repo | 3.6 |
 | [open-system-one](https://github.com/zhlei07/open-system-one) | Community benchmark vs Jev | see repo | 3.6 |
@@ -582,6 +620,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
+| 22 | Oct 8, 2026 | Audit community value and newer Persian alternatives before computation. Separate teacher agreement, source-label validity and translation fidelity; make helmo optional and enforce training-only use. Hold Gemma 3 drafts out of permissive-model training pending a license route; clarify review sampling, controlled ablations, context limits and acceptance gates. Preserve the frozen v21 production request and notebook pin. |
 | 21 | Oct 8, 2026 | Implement the bulk draft campaign: frozen complete scope, structured helmo text, native BF16 batches, one managed worker, atomic cases, verified private HF snapshot saves, deadlines, review downloads/pause and portable operator resume. Switch the notebook/active request; local checks pass, while live TPU/HF evidence and human adoption/release decisions remain pending. |
 | 20 | Oct 7, 2026 | Plan a resumable 27B bulk draft campaign to reduce repeated TPU queue waits: all typed cases plus 2,000 helmo records, BF16 batching before quantization, verified private remote checkpoints and portable session/collaborator handoffs. Permit draft generation before human gate acceptance while retaining review/adoption requirements; implementation remains pending. |
 | 19 | Oct 7, 2026 | Fix the observed Kaggle Python 3.13 bootstrap failure with a separately resolved TensorFlow 2.20 dependency lock and interpreter-specific selection. Preserve older kernel pins and model versions; live TPU imports, inference and review remain pending. |

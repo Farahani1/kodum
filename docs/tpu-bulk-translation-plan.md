@@ -1,6 +1,6 @@
 # Resumable bulk translation on Kaggle TPU
 
-Version 2 | Oct 8, 2026 | Software implemented; live TPU/HF and physical restart validation pending
+Version 3 | Oct 8, 2026 | Research audit added; live TPU/HF and physical restart validation pending
 
 Branch: `codex/tpu-bulk-resume-batching`.
 Baseline: `bc0c679` on `codex/kaggle-tpu-v5e-8`, including the correction for
@@ -9,6 +9,17 @@ Kaggle's observed Python 3.13 kernel.
 This extends [project-plan.md](project-plan.md), section 1.2 (v21), and the
 [TPU implementation plan](kaggle-tpu-change-plan.md). Tasks use `BULK-*` IDs.
 The execution notebook now runs the implemented bulk package. Local software checks pass; live hardware/storage results and research acceptance remain pending.
+
+Project-plan v22 and the [precompute review](precompute-project-review.md) now
+govern research acceptance. The v21 request, notebook pin and existing campaign
+identity remain unchanged. This audit does not add a source or swap a model.
+Helmo is optional augmentation, not a benchmark; Gemma 3 drafts are held out of
+the permissive reference-model training mix until a compatible license route is
+recorded. Source-label validity is reviewed separately from translation fidelity.
+Measure completed cases/decisions and failure rates alongside generated token
+throughput; report IDs exceeding token limits rather than losing them silently.
+Draft generation can proceed before research acceptance under the owner's
+existing queue-saving decision.
 
 ## Why the execution approach changes
 
@@ -251,5 +262,6 @@ until the live evidence above exists.
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 3 | Oct 8, 2026 | Add the precompute source/value audit and v22 research gates. Preserve the frozen v21 production identity; distinguish optional helmo augmentation, teacher agreement, source-label validity and downstream translation-training eligibility. |
 | 2 | Oct 8, 2026 | Implement BULK-01 through BULK-09, verify local interruption/failure behavior, activate the pinned notebook, and transport complete-case shards in verified snapshot archives. Run storage/batch readiness inside the allocated session; physical new-session and real TPU evidence remain pending. |
 | 1 | Oct 7, 2026 | Plan bulk draft generation to reduce repeated TPU queue waits, with BF16 batching before quantization, atomic cases, verified remote saves and portable collaborator/session resume. |
