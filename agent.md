@@ -2,15 +2,15 @@
 
 Read this together with `AGENTS.md`. This file defines the shared execution
 workflow; `docs/workflow-change-plan.md` tracks remaining migration work. The
-current Kaggle runner covers the free-text gate only; a live Kaggle run and
+current Kaggle runner covers the bulk draft campaign; a live Kaggle run and
 fresh-session restore remain unverified.
 
-The owner-selected next development direction is the proposed
-[bulk translation plan](docs/tpu-bulk-translation-plan.md), linked from project
-plan v20. It permits generating unreviewed drafts before human gate acceptance
-to reduce repeated queue waits, with BF16 batching and durable session resume.
-Its `BULK-*` tasks are pending; this planning change does not switch the active
-request or make the existing gate notebook execute the bulk scope.
+The owner-selected active direction is the implemented
+[bulk translation plan](docs/tpu-bulk-translation-plan.md), project-plan v21.
+Generate unreviewed drafts to reduce queue waits, with BF16 batching and verified
+private HF snapshots. BULK-01 through BULK-09 are implemented; live TPU, private
+storage and a physical new-session handoff remain unverified. Human adoption,
+release and training decisions have not advanced.
 
 ## Three separate sources of truth
 
@@ -24,8 +24,7 @@ request or make the existing gate notebook execute the bulk scope.
   prerequisites and a review stop. It is configuration, not another research plan.
 
 Do not infer the active stage from the last notebook cell or from the existence
-of an output file. The current documented next step is the free-text translation
-gate in main-plan section 1.2 step 1 (v19), now a bounded Gemma 3 27B BF16/JAX experiment on Kaggle TPU v5e-8. The 4B production decision remains the baseline; live TPU validation and human review are pending.
+of an output file. The active step is bulk draft generation in main-plan section 1.2 (v21), using Gemma 3 27B BF16/JAX on Kaggle TPU v5e-8. Historical gate requests remain explicit recipes. The 4B adoption baseline and human review requirements remain in force.
 
 ## Two notebooks, one package
 
@@ -76,8 +75,7 @@ the reference and execution notebooks from defining different commands.
 ## Provider and storage boundaries
 
 Keep provider bootstrap separate from computation. Colab mounts the owner's
-Drive; Kaggle restores attached inputs into writable working space and uses an
-explicit private output-save/export process; generic platforms provide paths,
+Drive; Kaggle restores verified campaign snapshots into writable working space and saves periodically to its explicitly configured private HF dataset repo; private notebook output is an additional copy; generic platforms provide paths,
 secrets and a persistence method explicitly. Local caches and checkpoint staging
 are disposable, distinct from the artifacts selected for durable storage.
 

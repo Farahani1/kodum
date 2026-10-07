@@ -41,13 +41,13 @@ kodoom runs --profile dev                 # runs on disk and what can be resumed
 
 The existing [`notebooks/colab.ipynb`](notebooks/colab.ipynb) mixes historical trials
 with current work; run setup and only the cells for your active stage, not Run all.
-The documented next stage is the free-text gate (main plan 1.2 step 1).
+The Colab free-text gate remains a historical recipe; the active draft campaign uses Kaggle TPU.
 Updating, resuming and Drive storage: [docs/colab.md](docs/colab.md).
-The current Kaggle TPU v5e-8 / Gemma 3 27B experiment runner is [`notebooks/execution.ipynb`](notebooks/execution.ipynb);
+The current resumable Kaggle TPU v5e-8 / Gemma 3 27B bulk draft runner is [`notebooks/execution.ipynb`](notebooks/execution.ipynb);
 the complete recipe record is [`notebooks/reference.ipynb`](notebooks/reference.ipynb).
-Kaggle setup, private output saving and review are in
+Kaggle setup, verified private HF checkpoints, collaborator resume and review are in
 [docs/execution-workflow.md](docs/execution-workflow.md). Training stages and
-live Kaggle validation remain pending.
+live Kaggle validation remain pending. The active notebook generates only unreviewed drafts of the approved English scope.
 
 ## Layout
 

@@ -1,143 +1,216 @@
-# Run the Gemma 3 27B experiment on Kaggle TPU
+# Run the resumable Gemma 3 27B campaign on Kaggle TPU
 
-The active request implements project-plan v19, section 1.2 step 1. It compares
-Gemma 3 27B with the saved 4B baseline before any translator adoption. Local
-checks and Linux dependency resolution pass. **Real Kaggle TPU execution,
-resource fit, fresh-session persistence and Persian human review are pending.**
+The execution notebook implements project-plan **v21**, section 1.2, and the
+[bulk plan](tpu-bulk-translation-plan.md). It generates unreviewed drafts of all
+**1,600 typed cases (1,200 train / 400 test, 8,000 decisions)** and a deterministic
+**2,000-record helmo selection**. Local checks pass. Real TPU fit, throughput,
+private HF access and a second live session still need runtime evidence.
 
-## Kaggle setup
+## Set up the notebook
 
-1. Import `notebooks/execution.ipynb` from branch `codex/kaggle-tpu-v5e-8` into
-   a new **private** Kaggle notebook. The notebook pins the implementation SHA;
-   keep `CODE_REVISION` unchanged for compatible resume.
-2. Enable **Internet** and select **TPU v5e-8**. Start with a fresh kernel.
-   The pinned runtime supports Linux x86_64, Python 3.11 through 3.13 and glibc 2.31+.
-   Python 3.13 automatically selects `constraints/tpu-py313.txt` with
-   TensorFlow/TensorBoard 2.20; older kernels retain their original lock.
-   After updating an older notebook, restart the session and rerun bootstrap.
-   Do not bypass the version guard or install Python over the running kernel.
-3. Accept Gemma's model terms on Kaggle and add the official
+1. Import [execution.ipynb](../notebooks/execution.ipynb) from
+   `codex/tpu-bulk-resume-batching` into a **private** Kaggle notebook. Keep its
+   `CODE_REVISION` unchanged: it pins the implemented runtime and its frozen
+   `workflows/tpu-bulk.toml` request. `workflows/current.toml` records the same
+   active request in the handoff branch.
+2. Enable **Internet**, select **TPU v5e-8**, and use a fresh kernel. The pinned
+   runtime supports Linux x86_64, Python 3.11–3.13 and glibc 2.31+. Python 3.13
+   selects `constraints/tpu-py313.txt`; older kernels use `constraints/tpu.txt`.
+3. Accept Gemma's Kaggle terms and add the official
    [Gemma 3 27B Flax version 1](https://www.kaggle.com/models/google/gemma-3/flax/gemma3-27b-it/1)
-   under **Inputs / Models**. Its `gemma3-27b-it` directory and `tokenizer.model`
-   are mounted read-only under `/kaggle/input`. KaggleHub uses the notebook's
-   model access. An HF token does not authenticate this Flax asset.
-4. If the GitHub repository is private, enable a read-only `GITHUB_TOKEN`
-   secret for this notebook. A public repository needs no secret. Never paste
-   tokens into notebook cells.
-5. Keep the defaults `PROVIDER="kaggle"`, `PROFILE="kaggle-tpu"`, `BACKEND="jax"`.
-   Leave restore and baseline paths blank for the first run. Use `RUN_GATE=False`
-   if you want to inspect and save the measured preflight before running the gate.
+   under **Inputs / Models**. Weights and the bundled tokenizer remain read-only
+   under `/kaggle/input`. They are never included in checkpoints or saved output.
+4. Create an existing **private Hugging Face dataset repository**. For another
+   authorized operator to save progress, use an owner-administered organization
+   repository and grant that person write access. Set `HF_DATASET_REPO` to
+   `organization/dataset-name`. The code checks privacy and write access before
+   loading weights; it does not create a repository or publish data.
+5. Enable the **HF_TOKEN** Kaggle secret with write access to that dataset repo.
+   Every operator uses their own token. A private GitHub checkout also needs a
+   read-only **GITHUB_TOKEN** secret. Never put tokens in cells or share logins.
+   An HF token does not authenticate the Kaggle Flax model; each operator needs
+   their own Kaggle model access.
+6. Choose a stable `CAMPAIGN_ID`, such as `gemma27b-bulk-v1`, and a short
+   non-secret `OPERATOR` name. Keep `TAKEOVER=False` for ordinary starts/resumes.
+   Keep `PROVIDER="kaggle"`, `PROFILE="kaggle-tpu"`, `BACKEND="jax"`.
+7. Use **Save Version → Save & Run All** for a server-side run. Bootstrap,
+   secret lookup and restore all run in that new session. The laptop can sleep
+   after submission; this does not extend Kaggle's limits. Inspect execution
+   logs and the latest verified HF checkpoint while it runs.
+
+The deadline is eight hours from the bootstrap cell, including setup, loading,
+compilation and inference, with a 30-minute finalization reserve. Weekly quota
+is separate from a session limit; use the limits shown for the actual account.
+No automatic account rotation or quota workaround is implemented.
 
 ## What Run all does
 
-The thin notebook fetches pinned clean code, installs only the TPU extra using
-the Python-specific TPU constraints (190 packages for 3.11/3.12;
-189 for 3.13), then probes eight v5e chips
-and real BF16 arithmetic in a child process. JAX inference and probes stay out
-of the notebook kernel so that it does not retain TPU device ownership.
+The thin notebook installs the pinned TPU extra and probes eight v5e devices
+and BF16 arithmetic in a child. The notebook kernel never imports JAX. The
+managed inference child has a hard deadline enforced by its parent launcher.
 
-The runner checks writable storage, a minimum 8 GiB available host memory and
-4 GiB temporary disk space, plus model access. It measures the token length of
-every item selected for the gate before loading weights. No input is truncated.
-Weights load directly with eight-device FSDP sharding. Large weights must be
-BF16 and non-replicated. The single-item cache is deliberately replicated;
-actual cache dtypes, sizes and per-device memory are recorded.
+The worker acquires one campaign writer lease, restores a verified snapshot,
+and prints completed/pending/failed counts before model work. A new campaign
+fetches the complete pinned English sources, checks all typed split/workflow
+counts, removes exact helmo duplicates and exact held-out-state matches, then
+selects 2,000 records across question types/topics with seed 1234. Semantic
+overlap still needs the research leakage review before training.
 
-Preflight generates the shortest and longest selected prompts twice to measure
-compilation and warm timing, then completes 3 balanced helmo records and 4 typed
-cases. A successful matching preflight permits the gate: **40 helmo training
-records and 20 typed training cases**, balanced across four workflows. The
-request uses greedy decoding, batch 1, 3072 input tokens, 768 output tokens,
-a 4096-token cache and a **7200-second budget per stage**. Time checks happen
-between items; an in-flight load or generation may exceed the budget before
-returning. No precision reduction, source shortening or model substitution occurs.
+English IDs, revisions, splits, licenses, gold distributions and selection
+hashes are frozen. Resume checks code, prompt/glossary/rules hashes, request,
+checkpoint/tokenizer fingerprint, interpreter and accelerator library versions.
+Changing paths or an authorized operator alone is compatible. Changing data,
+model, precision, prompts, code or production batch requires a new campaign.
 
-The model loads once per recipe process. Repeated completed cases skip loading.
-Generation uses independent conversations, the existing instructions/glossary,
-and the checkpoint's bundled tokenizer. Replies must terminate explicitly;
-an output-limit failure does not save a partial case. Each complete case is
-appended before its progress line prints. An unfinished case may need rework.
+Before weights load, a tiny private commit is read back and restored into a
+fresh directory, then its campaign and complete-case references are checked.
+Every pending prompt is measured with the model tokenizer before weights load.
+The request uses **3,072 input / 1,536 output / 6,144 cache tokens**. Inputs are
+never truncated; outputs need an explicit end token.
 
-The gate ends at `awaiting-review`; full translation, training and publication
-are outside the notebook. Source IDs, option IDs, gold, licenses, keep-fields and
-train splits are preserved. This trial does not replace the 4B production decision.
+One worker loads BF16 weights with eight-device FSDP sharding once. A first
+session benchmarks **1, 2, 4, 8** on representative inputs, including the longest
+prompt repeated at the candidate batch size. It records load/compilation time,
+warm requests and tokens per second, per-device memory and a **512 MiB reserve**.
+It freezes the fastest passing batch and comparison replies. A resume reuses
+that selection; OOM never silently changes the batch or precision. If nothing
+passes, fix the configuration in a new campaign after inspecting evidence.
 
-## Files and private saving
+Requests are bucketed by input length and mapped back to their work units.
+Helmo state, question and descriptions go together as strict JSON; only text
+values are accepted. Typed cases share one translated state and retain workflow
+context. IDs, gold and metadata come from English inputs. Each complete typed
+case needs all five decisions. Unfinished or malformed cases remain pending;
+valid neighbors can be saved. Automatic check findings remain review flags,
+and all translations remain `unreviewed-draft` with `human_reviewed=False`.
 
-Artifacts live under:
+The first 40 helmo records and 20 typed training cases form the diagnostic
+review set. Generation continues through the approved draft scope without
+waiting for human review. Completed-unit rates appear in events. Quantization
+is deferred. A restored campaign with no pending work skips loading entirely.
 
+## Files and durable checkpoints
+
+Local artifacts:
+
+```text
+/kaggle/working/kodoom/data/bulk/<campaign-id>/
+  campaign.json       frozen request, source/input identity and code hashes
+  inputs.json         complete frozen English work units
+  production.json     selected batch, backend identity and benchmark evidence
+  shards/<key>.jsonl  one atomic unit with English and Persian decision arrays
+  progress.json       complete references/checksums, failed work, stop status
+  events.jsonl        UTC attempts, completions, failures, saves and rates
+  tpu-metrics.json    current attempt's load/compile/cache/memory measurements
+  review/cases-*.csv  one row per decision with whole-case context
+  review/labels-*.csv one row per option description with context
+  result.json         final status, counts and last verified remote revision
 ```
-/kaggle/working/kodoom/data/workflows/free-text-gate/gemma3-27b-tpu-bf16/{preflight,gate}/
+
+These case shards are checkpoint envelopes, not the final released dataset
+format. Research curation/release steps remain separate. The parent data
+directory gets the standard generated README; per-attempt Run logs/checkpoints
+are under `/kaggle/working/kodoom/runs`.
+
+The private HF repository contains `campaigns/<campaign-id>/writer.json`,
+`checkpoint.json`, optional `control.json`, and immutable `snapshots/<sha>.zip`.
+A snapshot compresses all complete shards, English inputs, configuration,
+events, metrics and review CSVs. One atomic commit updates its manifest with the
+archive. Every artifact hash and the committed archive are verified on readback.
+This avoids downloading thousands of tiny files on restart. Snapshots contain
+no model weights, caches, credentials, checkout or unrelated Drive data.
+Earlier snapshots remain available; storage grows with checkpoint history.
+
+A background thread snapshots under a lock approximately **every ten minutes**
+while inference runs. Cases are sealed locally immediately. Transient saves
+retry with bounded backoff. After **30 minutes of unsaved completed work**,
+the worker stops new inference and attempts final persistence. Normal stop and
+failure also attempt a verified final save. The status report shows whether
+that succeeded. An abrupt platform kill can lose work since the last verified
+remote snapshot; local disk alone is not durable. Save private Kaggle output
+as an additional copy. Live persistence is first checked inside the allocated
+session; verify a separate real session restore at the next allocation.
+
+## Resume in a fresh session
+
+Import the same pinned notebook, attach the same model, enable your own secrets,
+and select the same repo/campaign. Set the operator name for the person running
+it. The package restores inputs and verified complete cases and computes only
+pending work. It does not trust a completion log as proof of a translated case.
+
+A normal stop releases its writer lease. An abruptly killed session leaves an
+active lease: **confirm that worker ended**, then explicitly set `TAKEOVER=True`
+for the next attempt. Set it back to False afterwards. Revision checks fence a
+stale writer from replacing a newer checkpoint. Do not run simultaneous workers
+for one campaign. Kaggle collaboration uses each person's own account and model
+access; borrowing credentials is not a restart mechanism.
+
+Corruption, missing shards, changed configuration or conflicting local/remote
+content stops restore. Keep evidence and resolve the cause instead of deleting
+or overwriting the contract. Failed cases are retried on the next compatible
+attempt and never count as completed.
+
+## Review during generation and pause
+
+On a CPU machine, install the package and `huggingface_hub>=0.34,<1`, configure
+`HF_TOKEN` securely in the environment, then use a **fresh directory**:
+
+```python
+from kodoom.bulk.launch import download
+
+snapshot = download(
+    campaign_id="gemma27b-bulk-v1",
+    repo="organization/private-dataset",
+    directory="data/bulk-review/snapshot-001",
+)
+print(snapshot)
 ```
 
-The stage contains English inputs, translated JSONL, `execution.json`, attempt
-logs, reports, case-review CSVs, label-review CSVs and label-template counts.
-`tpu-*-<attempt>.json` records checkpoint/tokenizer identity, input lengths,
-actual dtypes, memory, load time, XLA compilation durations and generation call
-times. Calls with no backend compilation are marked warm. Do not add trace,
-MLIR and backend-compile durations together: compiler phases can overlap.
+This downloads/validates durable artifacts without acquiring the inference
+lease. Copy the review CSVs elsewhere before editing; later downloads should
+use another fresh directory. Corrections remain separate from original drafts.
+The running worker does not import or approve human annotations automatically.
 
-The printed ZIP path under `/kaggle/working/kodoom/bundles` contains only this
-stage's private artifacts, with a checksummed manifest. It excludes weights,
-compilation caches, checkout and credentials. A finally path exports diagnostics
-on execution failures too. A ZIP ready on session disk is not proof of durability.
+Read state/question context when judging labels: negation, severity ordering,
+actors/actions, conditions and technical terms. Fill `meaning_changed` and
+`needs_edit` with yes/no, plus category, suggested wording, notes and reviewer.
+Count distinct typed source IDs for case-level rates; each case has five rows.
+All 400 test cases require human review, alongside the train/helmo samples in
+the main plan. The balanced diagnostic set cannot estimate dataset-wide noisy
+label coverage. Whole-record prompts require fresh quality review; they are
+not directly equivalent to the historical fieldwise gate prompt.
 
-Save a private notebook version **with outputs**. For interactive results use
-Quick Save with output saving enabled; **Save & Run All** executes in a new
-session. Check the current [Kaggle notebook documentation](https://www.kaggle.com/docs/notebooks)
-for saving controls and output limits. Confirm the ZIP appears in the saved
-output, then attach that notebook output to a fresh session.
+To pause a live campaign explicitly (observed at the next periodic save):
 
-## Restart and verify persistence
+```python
+from kodoom.bulk.launch import control
 
-Set `RESTORE_PREFLIGHT` and/or `RESTORE_GATE` to the attached **27B** ZIP paths.
-Use a fresh working directory. Restore verifies checksums and model/stage/mode
-identity before extraction and refuses existing destinations. The runner also
-checks code, library versions, prompt/glossary, checkpoint fingerprint, allocator,
-input selection and generation settings before resuming.
+control(campaign_id="gemma27b-bulk-v1", repo="organization/private-dataset", pause=True)
+```
 
-Keep `CODE_REVISION` and the request unchanged. Completed IDs skip translation;
-an interrupted case is regenerated. Save the resumed output and verify its
-completed IDs, counts and checksums. A failed hardware probe that saved no
-translations can retry after correcting the accelerator setup. A corrupted or
-incompatible run needs a separate artifact root, not overwritten identities.
-Session failure can lose all progress since the last saved output version.
+Use `pause=False` before resuming. The worker finalizes verified progress when
+it observes a pause. Neither completion nor an automatic check adopts 27B,
+approves releases, changes gold, starts training or publishes data.
 
-Do not put a 4B bundle into a 27B restore setting. Attach it only as
-`BASELINE_GATE_BUNDLE` for comparison. Old CUDA code remains reproducible through
-git; `workflows/gpu-gate.toml` preserves its request. The CUDA CLI can select that
-request explicitly with `--request workflows/gpu-gate.toml --profile kaggle`.
+## Local validation and historical recipes
 
-## Review and the adoption decision
+The CPU fixture run needs no GPU, model download or cloud access:
 
-- `review-helmo.csv` and `review-typed-decisions.csv`: complete case meaning and edits.
-- `review-labels-*.csv`: every option description with English/Persian state and
-  question context. Check negation, severity ordering, actor/action, conditions,
-  technical terms and distinctions between options. Fill `meaning_changed` and
-  `needs_edit` with `yes`/`no`, plus error category, suggested wording and reviewer.
-- `label-templates-*.csv`: recurring variants and occurrence counts. Repeated
-  labels are not independent evidence; review them in their case context.
+```text
+python -m kodoom.bulk --dev --provider generic --profile dev --campaign smoke-campaign --root data/bulk-smoke/first --local-remote data/bulk-smoke/remote --max-units 2
+python -m kodoom.bulk --dev --provider generic --profile dev --campaign smoke-campaign --root data/bulk-smoke/next --local-remote data/bulk-smoke/remote --operator collaborator
+```
 
-An optional real 4B gate ZIP produces `paired-decisions.csv`, `paired-labels.csv`
-and `paired-provenance.json` only after identical selected English records are
-verified. The 4B checkpoint/code identities are retained separately. Fill paired
-assessments as fixed, regressed, unchanged or uncertain after reading both outputs;
-automatic text changes are not quality judgments. Comparison creates a new
-private ZIP. Compatible reruns preserve human annotations.
+This local directory adapter exercises the artifact contract, not cloud
+durability or model quality. The automated suite also injects upload outages,
+corruption, writer conflicts, pause requests and unfinished replies.
 
-For this experiment the bar is fixed before review: at most **1 meaning change
-in 40 helmo records**, at most **10% of helmo records needing edits**, and at most
-**10% of typed cases needing edits**. Consider label fidelity separately and
-record the owner's adoption/rejection decision with measured resource costs.
-Empty review cells remain unreviewed. `review_summary` reports descriptive
-counts and never approves a gate. The balanced diagnostic sample cannot estimate
-whole-dataset error rates or noisy-label detector coverage. A representative
-random sample and the wider human-review plan remain necessary before release.
+`workflows/tpu-gate.toml` retains the bounded 27B experiment and
+`workflows/gpu-gate.toml` the 4B CUDA gate. Select either explicitly with
+`kodoom-workflow --request PATH` and its matching profile. The full recipe
+history is in [reference.ipynb](../notebooks/reference.ipynb).
 
-## References and handoff
-
-Research: `docs/project-plan.md` v19. Active configuration:
-`workflows/current.toml`; shared recipes: `workflows/recipes.toml`.
-Implementation and pending live checks: `docs/kaggle-tpu-change-plan.md`.
-Historical recipes: `notebooks/reference.ipynb`. Agent rules: `AGENTS.md` and
-`agent.md`. No provider run or research gate is complete without recorded evidence.
+Live batch fit, timing, representative Persian output inspection and a physical
+fresh-session handoff remain unverified until recorded. They do not block
+importing the prepared notebook; runtime readiness checks block generation on
+failure. Record those results in the bulk plan before claiming hardware success.

@@ -105,7 +105,7 @@ def review_summary(root: str | Path) -> dict:
 
 def compare_gate(gate: dict, baseline_bundle: str | Path) -> dict:
     """Write paired case/label CSVs only after verifying identical selected English inputs."""
-    from kodoom.workflow import load_request, selected_records, validate_output
+    from kodoom.workflow import ROOT, load_request, selected_records, validate_output
 
     root = Path(gate["artifact_root"])
     if gate["status"] != "awaiting-review" or gate["semantic"]["smoke"]:
@@ -123,7 +123,8 @@ def compare_gate(gate: dict, baseline_bundle: str | Path) -> dict:
                 "paired review already exists for different inputs; preserve annotations"
             )
         return gate
-    _, recipes = load_request()
+    # Historical paired review must not follow a newer active stage.
+    _, recipes = load_request(ROOT / "workflows/tpu-gate.toml")
     request = gate["request"]
     if request["translator"] != "gemma3-27b-tpu-bf16":
         raise ValueError("candidate must be the Gemma 27B TPU experiment")

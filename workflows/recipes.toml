@@ -1,8 +1,18 @@
 schema_version = 1
 
 [[recipe]]
-id = "helmo-gate"
+id = "bulk-translation"
 status = "active"
+plan = "1.2(v21); BULK-01 through BULK-10"
+entrypoint = "kodoom-bulk"
+args = ["--campaign", "{campaign}", "--repo", "{private_repo}", "--root", "{artifact_root}", "--provider", "kaggle", "--profile", "kaggle-tpu"]
+input = "Frozen full typed train/test plus 2000 stratified helmo records"
+output = "Complete-case shards, review CSVs and verified private HF snapshots"
+stop = "drafts-complete-awaiting-review"
+
+[[recipe]]
+id = "helmo-gate"
+status = "historical"
 plan = "1.2 step 1"
 dataset = "helmo"
 args = ["translate", "helmo", "--balanced", "--limit", "{limit}", "--translator", "{translator}"]
@@ -11,7 +21,7 @@ output = "helmo/fa/{translator}/train.jsonl"
 
 [[recipe]]
 id = "typed-gate"
-status = "active"
+status = "historical"
 plan = "1.2 step 1"
 dataset = "typed-decisions"
 args = ["translate", "typed-decisions", "--split", "train", "--balanced", "--limit", "{limit}", "--translator", "{translator}"]

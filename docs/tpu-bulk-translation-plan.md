@@ -1,15 +1,14 @@
 # Resumable bulk translation on Kaggle TPU
 
-Version 1 | Oct 7, 2026 | Proposed; implementation and live validation pending
+Version 2 | Oct 8, 2026 | Software implemented; live TPU/HF and physical restart validation pending
 
 Branch: `codex/tpu-bulk-resume-batching`.
 Baseline: `bc0c679` on `codex/kaggle-tpu-v5e-8`, including the correction for
 Kaggle's observed Python 3.13 kernel.
 
-This extends [project-plan.md](project-plan.md), section 1.2 (v20), and the
+This extends [project-plan.md](project-plan.md), section 1.2 (v21), and the
 [TPU implementation plan](kaggle-tpu-change-plan.md). Tasks use `BULK-*` IDs.
-This document records a development direction, not a completed implementation.
-The existing execution notebook still runs the bounded 27B experiment.
+The execution notebook now runs the implemented bulk package. Local software checks pass; live hardware/storage results and research acceptance remain pending.
 
 ## Why the execution approach changes
 
@@ -117,9 +116,9 @@ machine-readable manifest determine whether work is complete.
 
 | Artifact | Contents and purpose |
 | --- | --- |
-| `campaign.json` | Immutable campaign ID, schema version, exact code/model/tokenizer/input revisions, selection, prompt/glossary/rules hashes, decoding settings and frozen production batch. |
+| `campaign.json` | Immutable campaign ID, schema version, exact code and input revisions, selection, request and prompt/glossary/rules hashes. `production.json` separately freezes checkpoint/tokenizer/library identity, greedy decoding and the selected batch/benchmark replies. |
 | `shards/` | Immutable JSONL batches of completed cases/records, retaining English-to-Persian correspondence, checksums and review status. |
-| `progress.json` | Versioned checkpoint: referenced shards and hashes, complete/pending/failed counts by dataset and split, last verified remote revision and next work. |
+| `progress.json` | Versioned checkpoint: referenced shards and hashes, complete references and failed IDs plus stop status. Counts/pending work derive from frozen inputs; the report and remote checkpoint revision identify the last verified durable save. |
 | `events.jsonl` | UTC attempt events with stable work IDs, completion/failure reasons, upload results, timing and stop reasons. Never credentials. |
 | `review/` | Case and option review exports, findings and separate human decisions; append corrections without replacing original drafts. |
 
@@ -131,7 +130,7 @@ machine-readable manifest determine whether work is complete.
 2. Save each completed case/record locally immediately. Seal and upload pending
    shards approximately every 10 minutes, and at normal stop/failure. Snapshot
    only complete units; concurrent upload must not read a changing output file.
-3. Upload immutable shards and their checkpoint in a consistent remote revision.
+3. Pack immutable case shards and review/configuration files into a checksummed compressed snapshot, then commit that archive and its checkpoint manifest in one remote revision. This full text snapshot avoids thousands of tiny downloads on restore; history increases storage usage.
    Verify the committed contents/hashes before reporting durable completion.
    Retry transient upload failures with bounded backoff. Expose upload failures,
    the last successful save time and the count of locally completed but unsaved
@@ -149,7 +148,7 @@ machine-readable manifest determine whether work is complete.
    Concurrent collaborative workers and automatic account switching are outside
    scope; their conflict/shard assignment protocol is not implemented here.
 
-Default proposed destination: an **owner-controlled private Hugging Face dataset
+Implemented destination: an **owner-controlled private Hugging Face dataset
 repository**, supporting incremental file commits and restoration independently
 of the Kaggle notebook owner. For collaborator uploads, use an owner-administered
 HF organization repository with appropriate write access and each collaborator's
@@ -160,8 +159,7 @@ alone does not establish persistence. Never upload weights, checkout caches,
 credentials or unrelated data.
 
 The owner must select the destination repository and authorized collaborators
-before enabling uploads. This planning change creates no external repository,
-transfers no existing Drive data and grants no publication authorization.
+before enabling uploads. The notebook requires an existing configured private repository and its operator's own write token; it creates no external repository, transfers no existing Drive data and grants no publication authorization.
 Keep per-operator credentials in provider secrets; do not embed or transfer them
 in bundles. The shared artifact contract, not the original username or absolute
 path, identifies the campaign.
@@ -198,8 +196,32 @@ Hard session termination can still lose work since the last durable checkpoint.
 
 ## Implementation tasks and acceptance
 
-All tasks below are **pending**. Complete them through package modules/CLI and
-thin notebook calls; do not place computation or persistence logic in cells.
+**BULK-01 through BULK-09 are implemented and locally tested.** BULK-10's
+software checks pass; live evidence remains pending. The notebook performs a
+tiny private save/restore probe and safe batch benchmark inside the first
+allocated session before generation, avoiding another allocation solely for
+preflight. A physical fresh-session handoff is checked at the next allocation.
+This refines the earlier separate-session prerequisite to match the owner's
+queue-saving approach; it does not claim that a live restart has passed.
+
+Evidence: full CPU suite passes; native batch fixtures cover ordering, padding,
+unfinished EOS and one model load. Worker tests cover fresh-root/operator resume,
+no model load after completion, failed-case retry, timed background saves,
+upload outage, pause, fencing and safe batch fallback during benchmarking.
+Transport tests cover corruption, ambiguous verification, private access and
+read-only review downloads without lease changes. Launch tests cover deadlines
+from setup and rejection of stale results. See `tests/test_bulk_*.py`.
+
+| Task | Software status | Live evidence still needed |
+| --- | --- | --- |
+| BULK-01, 02, 04, 06, 08, 09 | Implemented, local checks pass | Inspect real inputs/outputs, long-run timing and review usability. |
+| BULK-03 | Implemented, fixture checks pass | Actual 27B batch fit, warm throughput, memory reserve and Persian comparison replies. |
+| BULK-05 | Implemented, failure injection passes | First-session write/readback/restore with the selected private HF repository. |
+| BULK-07 | Implemented, different-operator fresh-root fixture passes | Physical Kaggle fresh-session restore with permitted collaborator access. |
+| BULK-10 | Local validation passes | Record the live checks above; no hardware evidence yet. |
+
+The table below retains the task contracts. Package modules/CLI implement them;
+notebook cells only bootstrap and call the package.
 
 | ID | Work | Acceptance evidence |
 | --- | --- | --- |
@@ -212,7 +234,7 @@ thin notebook calls; do not place computation or persistence logic in cells.
 | BULK-07 | Add portable fresh-session/collaborator handoff | A fresh root with another authorized operator restores the same campaign; credentials/paths stay outside semantic identity; conflicting writers fail clearly. |
 | BULK-08 | Add incremental review exports and pause control | Local CPU review sees case and label context from durable drafts; findings and human decisions remain distinct; no automatic adoption or training. |
 | BULK-09 | Update execution/reference notebooks, active request and handoff docs | One Run all bootstraps, restores, benchmarks/selects the frozen configuration, translates pending work, periodically saves and finalizes; historical gate remains selectable. |
-| BULK-10 | Validate locally, on the TPU and across a real restart | Fast checks pass; interrupted/resumed fixtures equal an uninterrupted run; live 27B batch fit, remote persistence and new-session restoration are recorded before a long run. |
+| BULK-10 | Validate locally, on the TPU and across a real restart | Fast checks pass; interrupted/resumed fixtures equal an uninterrupted run; live 27B batch fit and a tiny private save/restore pass before generation; physical new-session restoration is recorded at the next allocation. |
 
 For BULK-09, reuse recorded matching benchmark evidence on resume rather than
 changing the batch each session. A new benchmark decision/configuration needs
@@ -229,4 +251,5 @@ until the live evidence above exists.
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 2 | Oct 8, 2026 | Implement BULK-01 through BULK-09, verify local interruption/failure behavior, activate the pinned notebook, and transport complete-case shards in verified snapshot archives. Run storage/batch readiness inside the allocated session; physical new-session and real TPU evidence remain pending. |
 | 1 | Oct 7, 2026 | Plan bulk draft generation to reduce repeated TPU queue waits, with BF16 batching before quantization, atomic cases, verified remote saves and portable collaborator/session resume. |

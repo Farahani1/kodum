@@ -38,6 +38,14 @@ MODELS = {
 
 def load_request(path: Path = REQUEST) -> tuple[dict, list[dict]]:
     request = tomllib.loads(path.read_text(encoding="utf-8"))
+    if request.get("stage") == "bulk-translation":
+        from kodoom.bulk.data import load_request as bulk_request
+
+        catalog = tomllib.loads((path.parent / "recipes.toml").read_text("utf-8"))
+        recipes = [row for row in catalog["recipe"] if row["id"] == "bulk-translation"]
+        if len(recipes) != 1 or recipes[0]["status"] != "active":
+            raise ValueError("missing active bulk recipe")
+        return bulk_request(path), recipes
     expected = {
         "schema_version",
         "stage",
@@ -100,7 +108,9 @@ def load_request(path: Path = REQUEST) -> tuple[dict, list[dict]]:
         raise ValueError("invalid recipe catalog")
     active = [lookup[name] for name in request["recipes"]]
     for recipe in active:
-        if recipe["status"] != "active" or not all(isinstance(x, str) for x in recipe["args"]):
+        if recipe["status"] not in ("active", "historical") or not all(
+            isinstance(x, str) for x in recipe["args"]
+        ):
             raise ValueError("active recipes must contain command argument lists")
     return request, active
 
@@ -356,6 +366,8 @@ def restore_stage(provider: str, profile: str, mode: str, bundle: str | Path) ->
     if provider not in ("kaggle", "colab", "generic") or mode not in ("preflight", "gate"):
         raise ValueError("select provider and preflight/gate mode explicitly")
     request, _ = load_request()
+    if request["stage"] == "bulk-translation":
+        raise ValueError("Bulk checkpoints restore automatically through kodoom.bulk.launch.run")
     base = load_profile(profile)
     check_provider_paths(provider, base)
     root = artifact_root(base, request, mode)
@@ -377,6 +389,8 @@ def run_current(
     if provider not in ("kaggle", "colab", "generic") or mode not in ("preflight", "gate"):
         raise ValueError("select provider and preflight/gate mode explicitly")
     request, recipes = load_request(request_path)
+    if request["stage"] == "bulk-translation":
+        raise ValueError("Use kodoom.bulk.launch.run with an explicit campaign and private HF repo")
     base = load_profile(profile)
     if smoke and base.device != "cpu":
         raise ValueError("smoke mode requires a CPU profile")

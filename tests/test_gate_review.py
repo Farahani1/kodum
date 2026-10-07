@@ -6,17 +6,16 @@ from pathlib import Path
 
 import pytest
 
-import kodoom.workflow as workflow
 from kodoom.artifacts import export_bundle, verify_bundle
 from kodoom.schema import read_jsonl, write_jsonl
 from kodoom.translate.gate_review import compare_gate, review_summary
-from tests.test_workflow import fixture_run
+from tests.test_workflow import fixture_run, run_gate
 from tests.test_workflow_tpu import fake_tpu, run
 
 
 def test_label_review_counts_instances_and_preserves_annotations(tmp_path, monkeypatch):
     _, root = fixture_run(tmp_path, monkeypatch)
-    workflow.run_current(provider="generic", profile="test", smoke=True)
+    run_gate(provider="generic", profile="test", smoke=True)
     path = root / "review-labels-helmo.csv"
     with path.open(encoding="utf-8-sig") as stream:
         rows = list(csv.DictReader(stream))
@@ -29,7 +28,7 @@ def test_label_review_counts_instances_and_preserves_annotations(tmp_path, monke
         writer.writeheader()
         writer.writerows(rows)
     content = path.read_bytes()
-    workflow.run_current(provider="generic", profile="test", smoke=True)
+    run_gate(provider="generic", profile="test", smoke=True)
     assert path.read_bytes() == content
     result = review_summary(root)[path.name]
     assert result["reviewed"] == result["meaning_changes"] == 1
@@ -83,6 +82,6 @@ def test_paired_comparison_validates_sources_and_preserves_human_review(tmp_path
 
 def test_smoke_does_not_count_as_a_real_model_comparison(tmp_path, monkeypatch):
     fixture_run(tmp_path, monkeypatch, "gate")
-    gate = workflow.run_current(provider="generic", profile="test", mode="gate", smoke=True)
+    gate = run_gate(provider="generic", profile="test", mode="gate", smoke=True)
     with pytest.raises(ValueError, match="real gate"):
         compare_gate(gate, "unused")
