@@ -1,5 +1,8 @@
 # Run the resumable Gemma 3 27B campaign on Kaggle TPU
 
+For account creation, tokens, model attachment, notebook settings and restart
+steps, follow the [Hugging Face and Kaggle setup guide](kaggle-huggingface-setup-guide.md).
+
 The execution notebook implements project-plan **v21**, section 1.2, and the
 [bulk plan](tpu-bulk-translation-plan.md). It generates unreviewed drafts of all
 **1,600 typed cases (1,200 train / 400 test, 8,000 decisions)** and a deterministic
