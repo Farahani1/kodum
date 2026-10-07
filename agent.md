@@ -5,6 +5,13 @@ workflow; `docs/workflow-change-plan.md` tracks remaining migration work. The
 current Kaggle runner covers the free-text gate only; a live Kaggle run and
 fresh-session restore remain unverified.
 
+The owner-selected next development direction is the proposed
+[bulk translation plan](docs/tpu-bulk-translation-plan.md), linked from project
+plan v20. It permits generating unreviewed drafts before human gate acceptance
+to reduce repeated queue waits, with BF16 batching and durable session resume.
+Its `BULK-*` tasks are pending; this planning change does not switch the active
+request or make the existing gate notebook execute the bulk scope.
+
 ## Three separate sources of truth
 
 - `docs/project-plan.md`: research scope, datasets, licenses, milestones and

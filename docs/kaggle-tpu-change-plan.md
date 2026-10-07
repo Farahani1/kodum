@@ -1,6 +1,6 @@
 # Kaggle TPU v5e-8: change plan
 
-Version 3 | Oct 7, 2026 | Local implementation; TPU execution unverified
+Version 4 | Oct 7, 2026 | Local implementation; bulk extension planned; TPU execution unverified
 
 Branch: `codex/kaggle-tpu-v5e-8`. Baseline: `81f93a5` from
 `codex/portable-notebook-workflow`, whose tracked tree was clean and whose push
@@ -12,6 +12,13 @@ of truth, and [agent.md](../agent.md) defines execution and storage rules. This
 document tracks the implementation and operator handoff. The active request
 runs a bounded 27B experiment; it does not adopt a production translator
 or pass a research gate.
+
+The next proposed extension is the [resumable bulk translation plan](tpu-bulk-translation-plan.md)
+on `codex/tpu-bulk-resume-batching`, with separate `BULK-*` tasks. It records
+the owner's Oct 7 choice to generate the planned scope as review-pending drafts,
+measure BF16 batches before quantization and save verified progress remotely
+for fresh-session or authorized collaborator resume. The extension is planned,
+not implemented, and the active notebook remains the bounded experiment below.
 
 ## Objective and evidence
 
@@ -234,6 +241,7 @@ another model. Any alternative becomes an explicit new experiment.
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 4 | Oct 7, 2026 | Link the proposed bulk campaign, which changes draft-generation sequencing and adds planned batching, periodic durable checkpoints and portable handoffs. Existing TPU implementation and active request remain unchanged. |
 | 3 | Oct 7, 2026 | Add interpreter-specific Python 3.13 constraints after the observed Kaggle bootstrap failure; retain all model/backend pins and the older kernel lock. Live TPU validation remains pending. |
 | 2 | Oct 6, 2026 | Implement the software path and Kaggle handoff, including a 190-package Linux lock, sharded native generation, model-specific resume identities, short/long measured preflight and paired option review. Live TPU validation and human adoption remain pending. |
 | 1 | Oct 6, 2026 | Plan Gemma 3 27B JAX inference on Kaggle v5e-8, with explicit sharding, dependencies, provenance, restore validation and label-focused evaluation. |

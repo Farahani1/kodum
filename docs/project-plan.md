@@ -1,6 +1,6 @@
 # Persian Typed Decisions: Project Plan
 
-Version 19 · Oct 7, 2026 · @Shah
+Version 20 · Oct 7, 2026 · @Shah
 
 ## Overview
 
@@ -73,6 +73,15 @@ loads the versioned Kaggle Flax model read-only under `/kaggle/input`, and saves
 small private artifacts under `/kaggle/working`. The CPU development path stays
 lightweight. GPU profiles and the 4B decision remain the historical baseline;
 27B adoption depends on paired human review and measured resource costs.
+
+**Planned bulk campaign (Oct 7):** reduce repeated TPU queue waits by generating
+the planned English-to-Persian scope as unreviewed drafts, saving verified remote
+batches throughout each session and resuming pending work in a fresh session.
+Benchmark BF16 batches before considering quantization. A private Hugging Face
+repository is the proposed durable store; destination/access selection precedes
+any upload. See [tpu-bulk-translation-plan.md](tpu-bulk-translation-plan.md) for
+scope, rationale, atomic progress, collaborator handoffs and `BULK-*` tasks.
+Implementation is pending; the current notebook still runs the bounded gate.
 
 **Tiny random models.** For the laptop, build a copy of each real model from its own config, shrunk to about 2 layers and hidden size 64, with random weights and the real tokenizer. Only the config and tokenizer are downloaded, never the real weights. Most of the size is the vocabulary table (about 250k tokens × 64, roughly 60 MB), and a training step on a small batch should take well under a second on the laptop (an estimate, to confirm once the code exists). The copies use the same classes, input format, tokenizer and save/load code as the real models, so they catch shape, schema and pipeline bugs.
 
@@ -206,12 +215,25 @@ or detector coverage. A fresh representative sample remains part of step 5.
 The Oct 2 4B production decision is retained pending an explicit adoption decision;
 no full translation, training or publication is dispatched by this experiment.
 
+**Planned sequencing change (Oct 7):** the owner requested a resumable Gemma 3
+27B bulk draft campaign because repeated Kaggle allocation queues make a
+translate/review/reacquire cycle expensive. After technical preflight, generate
+the diagnostic review set and continue through all 1,600 typed-decisions cases
+and a frozen 2,000-record helmo selection. Review can proceed on the laptop as
+durable batches arrive. This permits speculative draft generation before human
+gate acceptance; it does not adopt 27B or waive the label, test-split, training
+license or publication requirements. Keep the diagnostic experiment reproducible.
+The [bulk plan](tpu-bulk-translation-plan.md) specifies batching before
+quantization, periodic private uploads, complete-case manifests and resume in
+fresh sessions or by authorized collaborators using their own accounts.
+Its implementation and live throughput/persistence validation remain pending.
+
 1. **Pilot, 50 cases.** Translate with two candidates, review both blind, and keep the translator and prompt that win. **Done (Sep 30):** five candidates were rated blind on 50 test records from one workflow. Claude Cowork running Claude Opus 5.5 did the rating, as a single LLM rater; no human rated. Gemma 3 12B (4-bit) won narrowly; Gemma 3 4B was effectively tied. **Decided (Oct 2): Gemma 3 4B is the translator for the whole dataset, including helmo.** 12B is too slow on a free T4 for a solo project's session budget and is no longer used, as a fallback or otherwise.
    - **Free-text gate, before the full run.** The pilot covered only `agent_trace_observability`, whose text is short and templated. The other workflows and helmo have not been translated by any model. Helmo is the biggest risk: every state is a unique technical paragraph (about 650 characters, 130+ topics in a 200-record sample) and the gold answer depends on one fact in it, so a translation that changes that fact leaves a wrong label that nothing downstream detects.
    - Sample: about 40 helmo records from the local sample, split evenly across choice, score and yes/no and spread over as many topics as possible, plus 15–20 customer_service and security_incidents cases. Translate them with Gemma 3 4B, using the exact prompt and settings of the full run, and rate them the same way as the pilot.
    - Pass bar, fixed before rating: at most 1 meaning change in the 40 helmo records, and at most 10–15% of records needing any edit. The same bar applies to the workflow cases.
    - The gate no longer chooses a translator (that's decided); it sizes the risk 4B carries into the full run. If it passes, proceed as planned. If it fails, there is no 12B to fall back to: shrink helmo to the topics that pass, lean harder on the automatic checks and meaning check (steps 3-4), and widen the helmo human-review sample (step 5) rather than switching models.
-2. **Full run.** All 1,600 typed-decisions cases plus the synthetic-typed-decisions sample, with the translator chosen at the gate (step 1). Save each finished case to Drive at once, so a dropped session resumes where it stopped.
+2. **Full run.** All 1,600 typed-decisions cases plus the synthetic-typed-decisions sample. The proposed 27B bulk campaign may generate drafts before the human gate decision, as specified above; approved data still requires that decision and steps 3-5. Save complete cases locally at once and upload verified batches to the configured private store throughout the run, so a new session resumes pending work. Colab retains its Drive path; the planned Kaggle bulk campaign uses the durable contract in the bulk plan.
    - Translate each helmo record in one call: the state, the question and the option descriptions together, not field by field, so a technical term is rendered the same way in the state and in the options that refer to it.
    - Tell the translator to keep acronyms, symbols, units, amounts and times as in the source (for example SSRI, 5-HT1A, LTV:CAC, $50k MRR, 0.5 pounds, 8 PM).
 3. **Automatic checks on every case:**
@@ -560,6 +582,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
+| 20 | Oct 7, 2026 | Plan a resumable 27B bulk draft campaign to reduce repeated TPU queue waits: all typed cases plus 2,000 helmo records, BF16 batching before quantization, verified private remote checkpoints and portable session/collaborator handoffs. Permit draft generation before human gate acceptance while retaining review/adoption requirements; implementation remains pending. |
 | 19 | Oct 7, 2026 | Fix the observed Kaggle Python 3.13 bootstrap failure with a separately resolved TensorFlow 2.20 dependency lock and interpreter-specific selection. Preserve older kernel pins and model versions; live TPU imports, inference and review remain pending. |
 | 18 | Oct 6, 2026 | Prepare a bounded Gemma 3 27B BF16/JAX experiment on Kaggle TPU v5e-8, with pinned Flax assets, sharded loading, local workflow tests, private restore contracts and label-focused paired review. Retain the 4B baseline; live TPU execution, persistence, Persian review and adoption remain pending. |
 | 17 | Oct 5, 2026 | Add the reference/execution notebook workflow and prepare the private Kaggle free-text gate with pinned code, resumable bundles and review outputs. Kaggle GPU/persistence validation and full training remain pending; no research gate is advanced. |
