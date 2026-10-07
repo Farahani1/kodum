@@ -47,6 +47,7 @@ tpu = [
 [project.scripts]
 kodoom = "kodoom.cli:main"
 kodoom-workflow = "kodoom.workflow:main"
+kodoom-bulk = "kodoom.bulk.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
