@@ -52,6 +52,18 @@ def test_interrupted_campaign_resumes_only_pending_work_on_fresh_session(tmp_pat
     for path in (tmp_path / "done/shards").glob("*.jsonl"):
         for record in json.loads(path.read_bytes())["persian"]:
             assert not record["human_reviewed"]
+    uninterrupted = run_campaign(
+        root=tmp_path / "uninterrupted",
+        campaign_id="fixture-campaign",
+        provider="generic",
+        profile="dev",
+        dev=True,
+        local_remote=tmp_path / "separate-remote",
+    )
+    assert uninterrupted["status"] == finished["status"]
+    assert {p.name: p.read_bytes() for p in (tmp_path / "done/shards").glob("*.jsonl")} == {
+        p.name: p.read_bytes() for p in (tmp_path / "uninterrupted/shards").glob("*.jsonl")
+    }
 
 
 def test_failed_whole_record_stays_pending_while_neighbors_finish(tmp_path):
