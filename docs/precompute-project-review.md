@@ -38,6 +38,26 @@ verification by this project. [CLINC150](https://huggingface.co/datasets/clinc/c
 lists CC BY 3.0; [BANKING77](https://huggingface.co/datasets/PolyAI/banking77) lists
 CC BY 4.0. None of these new sources has been downloaded, registered or adopted.
 
+## DibaOne and Laya: existing baselines considered
+
+All three were already in project-plan sections 2.2 and 2.4 and the historical
+data comparison. The first audit inherited those comparisons; their live cards
+were freshly checked following the owner's question on Oct 8. This is a
+document review, not independent reproduction of their measurements.
+
+| Work | What its current card establishes | Consequence for this project |
+| --- | --- | --- |
+| [DibaOne M3](https://huggingface.co/Dibachain/DibaOne-M3) | Persian-first model supporting choice, yes/no and score; weights CC BY-NC-SA 4.0. Its training sources include ParsiNLU and PersianQA. Its own evaluation is explicitly described as in-domain by task type. | Include as an evaluation baseline, especially for Persian classification and score tasks. Exclude those exposed task families from claims of held-out task generalization. Source exposure alone does not prove exact test-row leakage; verify splits and overlap separately. |
+| [DibaOne X1](https://huggingface.co/Dibachain/DibaOne-X1) | Apache-2.0, choice-only in v1; retriever plus cross-encoder with fast, balanced and best modes. Training focuses on dev-path, tool-call and Wiki Race tasks. Its card says comparisons against zero-shot Laya demonstrate task-specific training, not general model superiority. | Keep it as a Persian-first choice baseline. Record mode, shortlist coverage, precision and end-to-end latency. Do not use it as native support for score or yes/no without declaring a conversion protocol. |
+| [Laya-multilingual](https://huggingface.co/convaiinnovations/laya-multilingual) | Apache-2.0, mmBERT-base decision model supporting all three types. Its card discloses uncalibrated shipped temperatures, near-chance zero-shot typed-decisions performance and score-position bias. It defaults to 1,024 context tokens; an explicit long-context setting supports up to 8,192, while questions/options retain their own budget. | Keep it as the multilingual baseline and possible warm start. Evaluate raw and equally recalibrated results, test option/score bias, and explicitly configure context limits. Shared backbone alone does not make comparison a controlled training-data experiment. |
+
+These works already provide Persian-capable decision models. Our useful claim
+is an independent, reusable data/evaluation layer that can assess and improve
+them. M3's classification strength and X1's agent focus also argue for separate
+workflow/task results rather than one undifferentiated leaderboard. Their full
+training inventories, pinned revisions and exact benchmark exposure still need
+checking before our model evaluations; current card statements are not that audit.
+
 ## What the project can credibly contribute
 
 The defensible contribution is an independently auditable Persian evaluation
