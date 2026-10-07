@@ -8,6 +8,8 @@ dataset choices, newer Persian alternatives, community value and the separate
 draft-generation, release and training gates. Gemma 3 drafts remain outside the
 planned permissive reference-model training mix until a compatible license route
 is recorded. Helmo is optional augmentation and is never a benchmark source.
+The [published dataset specification](docs/dataset-release-spec.md) defines the
+final file formats, fields, review/provenance package and reproduction code.
 The separate [workflow change plan](docs/workflow-change-plan.md) covers the
 planned reference/execution notebook split and Colab/Kaggle portability.
 [agent.md](agent.md) defines that pipeline and how agents update each stage.

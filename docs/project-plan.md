@@ -1,6 +1,6 @@
 # Persian Typed Decisions: Project Plan
 
-Version 22 · Oct 8, 2026 · @Shah
+Version 23 · Oct 8, 2026 · @Shah
 
 ## Overview
 
@@ -111,7 +111,7 @@ The current notebook runs the bulk package: a live private save/restore probe an
 
 **What the laptop cannot catch.** fp16 overflow (the Gemma 3 / TranslateGemma issue), Qwen3.5's Gated DeltaNet layers in fp16, GPU memory at the real batch size and length, and real run times. The `colab-preflight` profile (real models, about 20 steps, about 5 minutes) catches these before a full session is spent.
 
-**Workflow:** laptop `dev` development -> selected-provider preflight -> the active stage. Kaggle's active stage is the private bulk draft campaign; full training support needs implementation and validation. The frozen request/notebook retain the v21 production recipe while this v22 research audit governs acceptance and downstream use.
+**Workflow:** laptop `dev` development -> selected-provider preflight -> the active stage. Kaggle's active stage is the private bulk draft campaign; full training support needs implementation and validation. The frozen request/notebook retain the v21 production recipe while this v23 plan governs acceptance, release packaging and downstream use.
 
 ### Storage budget: Google Drive, free 15 GB plan
 
@@ -287,6 +287,13 @@ Output: typed-decisions-fa (train and test, original gold unchanged) and a Persi
 
 ### 1.3 Packing
 
+The [published dataset specification](dataset-release-spec.md) defines the final
+package: separate licensed resources, paired decision configurations, Parquet
+and JSONL copies, immutable provenance/review manifests and pinned reproduction
+code. It distinguishes exact release rebuilding, deterministic skill generation
+and translation reruns. Packaging and release verification remain pending; this
+contract does not alter the frozen production campaign.
+
 **One record schema** for translated, native and synthetic data alike:
 
 - `id`, plus `source_id` (the original case, identical across languages)
@@ -307,6 +314,13 @@ Output: typed-decisions-fa (train and test, original gold unchanged) and a Persi
 - Versions: v0.1 is the pilot, v1.0 the full reviewed set.
 
 **Keep generators reproducible.** Store seeds and template files with the synthetic data, so anyone can regenerate it.
+
+**Release code alongside the data.** Link a pinned public code release containing
+converters, generators/templates, prompts/settings, correction replay, split
+checks and export/scoring recipes. Retain approved drafts and human correction
+patches needed to rebuild the exact reviewed records. Seeds alone cannot
+reproduce human edits or guarantee identical model inference. Static data must
+remain usable without running translation or our reference model.
 
 ## Part 2 — Implementation
 
@@ -620,6 +634,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
+| 23 | Oct 8, 2026 | Define the published data contract: separate resource licenses, paired decision rows, Parquet/JSONL exports, review/provenance and split manifests, pinned reproduction code and release checks. Distinguish rebuilding reviewed records from rerunning translation; exporters and release verification remain pending. Preserve the frozen v21 production campaign. |
 | 22 | Oct 8, 2026 | Audit community value and newer Persian alternatives before computation. Separate teacher agreement, source-label validity and translation fidelity; make helmo optional and enforce training-only use. Hold Gemma 3 drafts out of permissive-model training pending a license route; clarify review sampling, controlled ablations, context limits and acceptance gates. Preserve the frozen v21 production request and notebook pin. |
 | 21 | Oct 8, 2026 | Implement the bulk draft campaign: frozen complete scope, structured helmo text, native BF16 batches, one managed worker, atomic cases, verified private HF snapshot saves, deadlines, review downloads/pause and portable operator resume. Switch the notebook/active request; local checks pass, while live TPU/HF evidence and human adoption/release decisions remain pending. |
 | 20 | Oct 7, 2026 | Plan a resumable 27B bulk draft campaign to reduce repeated TPU queue waits: all typed cases plus 2,000 helmo records, BF16 batching before quantization, verified private remote checkpoints and portable session/collaborator handoffs. Permit draft generation before human gate acceptance while retaining review/adoption requirements; implementation remains pending. |

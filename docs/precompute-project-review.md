@@ -203,7 +203,9 @@ it does not silently migrate an existing campaign. A runtime change needs a new
 published pin and compatible campaign handling under the bulk identity rules.
 
 First useful release: reviewed typed-decisions-fa plus the Persian skills suite,
-cards and runnable scoring examples. Helmo can follow separately. A small
+cards and runnable scoring examples, packaged under the
+[published dataset specification](dataset-release-spec.md) added in plan v23.
+Helmo can follow separately. A small
 100–200-case Persian-authored everyday decision collection, with documented
 rules, negation, abstention and near-miss pairs, is a higher-value next extension
 than enlarging helmo blindly; it is optional after M1 and outside this run.
