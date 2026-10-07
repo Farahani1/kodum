@@ -82,8 +82,8 @@ def _libraries():
     return jax, jnp, gm, kd
 
 
-def load_generator():
-    if int(os.environ.get("KODOOM_TRANSLATION_BATCH_SIZE", "1")) != 1:
+def load_generator(*, bulk: bool = False):
+    if not bulk and int(os.environ.get("KODOOM_TRANSLATION_BATCH_SIZE", "1")) != 1:
         raise ValueError("The initial TPU translator supports batch size 1")
     input_limit = int(os.environ.get("KODOOM_INPUT_TOKENS", "3072"))
     output_limit = int(os.environ.get("KODOOM_OUTPUT_TOKENS", "768"))
@@ -148,9 +148,10 @@ def load_generator():
 
     def save_info():
         if path := os.environ.get("KODOOM_TPU_METRICS"):
+            from kodoom.bulk.state import atomic_write
+
             target = Path(path)
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(json.dumps(info, indent=2, default=str) + "\n", encoding="utf-8")
+            atomic_write(target, (json.dumps(info, indent=2, default=str) + "\n").encode("utf-8"))
 
     save_info()
     print(
@@ -159,14 +160,34 @@ def load_generator():
     )
     phase = "translation"
 
-    def generate(conversations):
+    def lengths_of(conversations):
+        lengths = [len(tokenizer.encode(format_prompt(msg), add_bos=True)) for msg in conversations]
+        for length in lengths:
+            validate_limits(length, input_limit, output_limit, cache_length)
+        return lengths
+
+    def generate(conversations, *, batch_size=1):
+        if batch_size not in (1, 2, 4, 8) or (not bulk and batch_size != 1):
+            raise ValueError("unsupported native batch size")
         prompts = [format_prompt(messages) for messages in conversations]
         # Validate the entire batch before generating any item; do not truncate.
         lengths = [len(tokenizer.encode(prompt, add_bos=True)) for prompt in prompts]
         for length in lengths:
             validate_limits(length, input_limit, output_limit, cache_length)
-        replies = []
-        for prompt, length in zip(prompts, lengths, strict=True):
+        replies = [None] * len(prompts)
+        order = (
+            sorted(range(len(prompts)), key=lengths.__getitem__)
+            if bulk
+            else list(range(len(prompts)))
+        )
+        for start in range(0, len(order), batch_size):
+            indexes = order[start : start + batch_size]
+            sent = [prompts[i] for i in indexes]
+            # Preserve one compiled shape for the final partial batch. Dummy
+            # replies are discarded and cannot become translated records.
+            sent.extend([sent[-1]] * (batch_size - len(sent)))
+            prompt = sent if bulk else sent[0]
+            length = max(lengths[i] for i in indexes)
             if time.monotonic() >= float(os.environ.get("KODOOM_DEADLINE", "inf")):
                 raise RuntimeError(
                     "TPU stage time budget exhausted; save and resume the partial bundle"
@@ -192,7 +213,11 @@ def load_generator():
                 }
                 save_info()
                 raise
-            tokens = jax.device_get(result.tokens).tolist()
+            token_rows = jax.device_get(result.tokens).tolist()
+            if not bulk:
+                token_rows = [token_rows]
+            if len(token_rows) != batch_size:
+                raise RuntimeError("native sampler returned the wrong batch shape")
             elapsed = time.perf_counter() - started
             cache_leaves = jax.tree.leaves(result.state.cache)
             compilation = {
@@ -206,9 +231,12 @@ def load_generator():
                     "phase": phase,
                     "compilation_seconds": compilation,
                     "warm": compile_seconds == 0,
-                    "output_tokens": next(
-                        (i for i, t in enumerate(tokens) if t in (1, 106)), len(tokens)
+                    "output_tokens": sum(
+                        next((i for i, t in enumerate(tokens) if t in (1, 106)), len(tokens))
+                        for tokens in token_rows[: len(indexes)]
                     ),
+                    "batch_size": batch_size,
+                    "items": len(indexes),
                     "cache_dtypes": sorted({str(leaf.dtype) for leaf in cache_leaves}),
                     "cache_bytes": sum(leaf.nbytes for leaf in cache_leaves),
                     "cache_replicated": all(
@@ -217,11 +245,35 @@ def load_generator():
                     "devices": memory_snapshot(jax.devices()),
                 }
             )
+            if bulk and len(info["calls"]) > 128:
+                del info["calls"][:-128]
             save_info()
-            replies.append(decode_completed(tokenizer, tokens))
+            for index, tokens in zip(indexes, token_rows, strict=False):
+                try:
+                    replies[index] = decode_completed(tokenizer, tokens)
+                except RuntimeError:
+                    if not bulk:
+                        raise
+                    # The bulk worker records this unit as unfinished; valid
+                    # neighboring cases remain usable after a truncated reply.
+                    replies[index] = None
             # Never forward last_state: every translation starts a fresh conversation.
             del result
         return replies
+
+    def batch(conversations, size):
+        return generate(conversations, batch_size=size)
+
+    def recover():
+        import gc
+
+        gc.collect()
+        jax.clear_caches()
+
+    generate.batch = batch
+    generate.lengths = lengths_of
+    generate.info = info
+    generate.recover = recover
 
     if os.environ.get("KODOOM_TPU_WARMUP") == "1" and prompt_lengths:
         phase = "preflight-warmup"
