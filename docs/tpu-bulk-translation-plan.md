@@ -1,8 +1,17 @@
 # Resumable bulk translation on Kaggle TPU
 
-Version 3 | Oct 8, 2026 | Research audit added; live TPU/HF and physical restart validation pending
+Version 4 | Oct 8, 2026 | CPU-first access checks added; live model/HF and physical restart validation pending
 
 Branch: `codex/tpu-bulk-resume-batching`.
+
+CPU preflight follows project-plan v24. The Oct 8 notebook reached an
+eight-device BF16 probe, then failed because HF_TOKEN was unavailable. The
+execution notebook now defaults to RUN_TPU=False and runs CPU checks before
+accelerator installation. A published runtime pin adds private HF write/readback,
+mounted Flax input checks, source/prompt screening, storage and resume checks,
+and dependency resolution. Actual 27B inference and durable saves remain
+unverified. The v21 data request is unchanged; incompatible old code identities
+are rejected rather than silently resumed under the new runtime.
 Baseline: `bc0c679` on `codex/kaggle-tpu-v5e-8`, including the correction for
 Kaggle's observed Python 3.13 kernel.
 
@@ -10,9 +19,11 @@ This extends [project-plan.md](project-plan.md), section 1.2 (v21), and the
 [TPU implementation plan](kaggle-tpu-change-plan.md). Tasks use `BULK-*` IDs.
 The execution notebook now runs the implemented bulk package. Local software checks pass; live hardware/storage results and research acceptance remain pending.
 
-Project-plan v22 and the [precompute review](precompute-project-review.md) now
-govern research acceptance. The v21 request, notebook pin and existing campaign
-identity remain unchanged. This audit does not add a source or swap a model.
+Project-plan v24 and the [precompute review](precompute-project-review.md)
+govern research acceptance. The v21 data request remains unchanged. The v24
+CPU-first runtime has a new notebook pin; existing campaign identities are
+checked for compatibility rather than silently migrated. This adds no source
+and does not swap the model.
 Helmo is optional augmentation, not a benchmark; Gemma 3 drafts are held out of
 the permissive reference-model training mix until a compatible license route is
 recorded. Source-label validity is reviewed separately from translation fidelity.
@@ -229,7 +240,7 @@ from setup and rejection of stale results. See `tests/test_bulk_*.py`.
 | BULK-03 | Implemented, fixture checks pass | Actual 27B batch fit, warm throughput, memory reserve and Persian comparison replies. |
 | BULK-05 | Implemented, failure injection passes | First-session write/readback/restore with the selected private HF repository. |
 | BULK-07 | Implemented, different-operator fresh-root fixture passes | Physical Kaggle fresh-session restore with permitted collaborator access. |
-| BULK-10 | Local validation passes | Record the live checks above; no hardware evidence yet. |
+| BULK-10 | Local validation passes; Oct 8 eight-device BF16 probe observed | Record live model fit/inference, private saving and a physical restart; the observed run failed at missing HF_TOKEN before the bulk worker. |
 
 The table below retains the task contracts. Package modules/CLI implement them;
 notebook cells only bootstrap and call the package.
@@ -262,6 +273,7 @@ until the live evidence above exists.
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 4 | Oct 8, 2026 | Add CPU-first account/input/storage/dependency checks after the observed missing-HF_TOKEN failure. Default the notebook to RUN_TPU=False, require explicit TPU opt-in, and publish a new runtime pin. Preserve the v21 request and reject incompatible old saved identities. Eight-device BF16 readiness was observed, but live 27B inference/HF saving and physical restore remain pending. |
 | 3 | Oct 8, 2026 | Add the precompute source/value audit and v22 research gates. Preserve the frozen v21 production identity; distinguish optional helmo augmentation, teacher agreement, source-label validity and downstream translation-training eligibility. |
 | 2 | Oct 8, 2026 | Implement BULK-01 through BULK-09, verify local interruption/failure behavior, activate the pinned notebook, and transport complete-case shards in verified snapshot archives. Run storage/batch readiness inside the allocated session; physical new-session and real TPU evidence remain pending. |
 | 1 | Oct 7, 2026 | Plan bulk draft generation to reduce repeated TPU queue waits, with BF16 batching before quantization, atomic cases, verified remote saves and portable collaborator/session resume. |

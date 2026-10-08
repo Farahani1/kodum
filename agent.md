@@ -5,9 +5,11 @@ workflow; `docs/workflow-change-plan.md` tracks remaining migration work. The
 current Kaggle runner covers the bulk draft campaign; a live Kaggle run and
 fresh-session restore remain unverified.
 
-Research acceptance follows project-plan v22 and
+Research acceptance follows project-plan v24 and
 [the precompute audit](docs/precompute-project-review.md). The active request
-and notebook pin retain the frozen v21 production recipe. Do not silently change
+retains the frozen v21 data recipe. The CPU-first notebook uses a newly published
+runtime pin and defaults to RUN_TPU=False; run its early cells on Kaggle CPU before
+explicitly enabling TPU execution. Do not silently change
 a campaign identity to follow document revisions. Helmo is training-only and
 optional; Gemma 3 translations remain ineligible for the planned permissive
 training mix until a compatible licensing route is recorded. The source registry
@@ -49,6 +51,14 @@ replace its active request and summaries, so Run all performs only the approved
 current work. Completed pilots and optional experiments belong in the reference.
 The operational sequence is settings, bootstrap, restore, readiness check,
 current-stage execution, artifact report and persistence confirmation.
+
+CPU preparation checks secrets before dependency installation, checks out the
+exact revision without accelerator setup and runs lightweight checks in an
+isolated CPU environment. It performs a tiny private HF write/read/delete probe,
+validates attached Flax assets, source inputs, prompt limits, writable paths,
+resume state and dependency resolution. It does not claim legal eligibility,
+load model weights, initialize JAX or acquire a campaign writer lease. The saved
+TPU session repeats the checks because secrets and mounts are session-specific.
 
 Both notebooks call the same tested `kodoom` package. Dataset processing,
 translation, training, evaluation, recipe dispatch and artifact handling belong

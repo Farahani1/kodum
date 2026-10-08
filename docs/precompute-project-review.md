@@ -197,9 +197,11 @@ generated tokens/second is insufficient. The frozen 3,072 input / 1,536 output
 limits may reject long or expanded structured records; report affected IDs and
 change a campaign deliberately if necessary. No silent truncation or scope loss.
 
-The current request and notebook pin remain the v21 production recipe.
-This v22 audit changes research interpretation and the local helmo split guard;
-it does not silently migrate an existing campaign. A runtime change needs a new
+This v22 audit preserved the v21 production request and notebook pin while
+changing research interpretation and the local helmo split guard. The later
+v24 CPU-first handoff deliberately updates the runtime pin while retaining
+the v21 data recipe; it rejects incompatible old saved identities. Neither
+revision silently migrates an existing campaign. Runtime changes need a new
 published pin and compatible campaign handling under the bulk identity rules.
 
 First useful release: reviewed typed-decisions-fa plus the Persian skills suite,

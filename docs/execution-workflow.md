@@ -3,15 +3,15 @@
 For account creation, tokens, model attachment, notebook settings and restart
 steps, follow the [Hugging Face and Kaggle setup guide](kaggle-huggingface-setup-guide.md).
 
-The execution notebook implements project-plan **v21**, section 1.2, and the
+The execution notebook retains the project-plan **v21** data recipe, section 1.2, and the
 [bulk plan](tpu-bulk-translation-plan.md). It generates unreviewed drafts of all
 **1,600 typed cases (1,200 train / 400 test, 8,000 decisions)** and a deterministic
 **2,000-record helmo selection**. Local checks pass. Real TPU fit, throughput,
 private HF access and a second live session still need runtime evidence.
 
 Before running, read the [project review](precompute-project-review.md) and
-project-plan v22. The v21 request and code pin are intentionally preserved as
-the frozen production recipe. The scientific interpretation is narrower:
+project-plan v24. The v21 request is preserved; the notebook's new runtime pin
+adds CPU checks before requesting TPU time. The scientific interpretation is narrower:
 typed-decisions measures teacher agreement, helmo is optional training
 augmentation, and Gemma 3 drafts are held out of permissive-model training until
 a compatible licensing route is recorded. A private completed draft campaign
@@ -24,6 +24,21 @@ as they arrive. The 40/20 diagnostic set is screening, not a random estimate of
 the corpus error rate. All 400 test cases still need human review.
 
 ## Set up the notebook
+
+First select **Accelerator=None** and leave **RUN_TPU=False**. Run the early
+cells (or Run all in this safe mode) until **CPU PREFLIGHT PASSED**. The checks
+verify the GitHub checkout, Python/platform, secret access, private HF read/write
+and cleanup, mounted version-1 Flax model files, source inputs and prompt limits,
+storage paths, resume state and pinned dependency resolution. They install only
+lightweight tools into an isolated CPU environment. The HF probe creates and
+removes a unique tiny private file; its two commits remain in repository history.
+CPU checks do not initialize JAX, load weights, or acquire the campaign lease.
+
+Then stop the CPU session, select TPU v5e-8, set **RUN_TPU=True**, and submit
+**Save Version → Save & Run All**. The saved session reruns the early checks
+before accelerator dependencies/probes. Live fit, ABI, kernels and throughput
+remain TPU checks. CPU model checks establish mounted access to the selected
+Kaggle asset, not an independent legal interpretation of its license.
 
 1. Import [execution.ipynb](../notebooks/execution.ipynb) from
    `codex/tpu-bulk-resume-batching` into a **private** Kaggle notebook. Keep its
@@ -50,7 +65,7 @@ the corpus error rate. All 400 test cases still need human review.
 6. Choose a stable `CAMPAIGN_ID`, such as `gemma27b-bulk-v1`, and a short
    non-secret `OPERATOR` name. Keep `TAKEOVER=False` for ordinary starts/resumes.
    Keep `PROVIDER="kaggle"`, `PROFILE="kaggle-tpu"`, `BACKEND="jax"`.
-7. Use **Save Version → Save & Run All** for a server-side run. Bootstrap,
+7. After the CPU checks pass, set `RUN_TPU=True` and use **Save Version → Save & Run All** for a server-side run. Bootstrap,
    secret lookup and restore all run in that new session. The laptop can sleep
    after submission; this does not extend Kaggle's limits. Inspect execution
    logs and the latest verified HF checkpoint while it runs.
@@ -59,6 +74,13 @@ The deadline is eight hours from the bootstrap cell, including setup, loading,
 compilation and inference, with a 30-minute finalization reserve. Weekly quota
 is separate from a session limit; use the limits shown for the actual account.
 No automatic account rotation or quota workaround is implemented.
+
+The attached Oct 8 failure occurred after a successful eight-device BF16 probe,
+when `HF_TOKEN` was missing/inaccessible. It establishes neither model loading
+nor a checkpoint save. CPU preparation now catches that error before TPU setup.
+Its exported notebook also lists no attached input sources; confirm the exact
+Flax model is attached. New code pins remain incompatible with older saved
+campaign identities unless explicitly migrated; preflight reports this conflict.
 
 ## What Run all does
 

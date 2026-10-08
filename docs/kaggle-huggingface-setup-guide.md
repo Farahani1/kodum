@@ -2,7 +2,7 @@
 
 Prepared October 8, 2026. This guide uses the current
 [execution notebook](../notebooks/execution.ipynb), the frozen v21 draft recipe,
-and the research/release boundaries in [project-plan v23](project-plan.md).
+and the research/release boundaries in [project-plan v24](project-plan.md).
 It sets up private translation drafts; human review, training and publication
 remain separate decisions. Live TPU performance and a physical fresh-session
 restore still need to be demonstrated.
@@ -96,7 +96,7 @@ manifests; use **Files and versions** to inspect it.
    the active stage is **bulk-translation**.
 
 If downloading the notebook from GitHub, use the
-[published bulk handoff notebook](https://github.com/Farahani1/kodum/blob/ea2411c48f11497738032bf2c8660eef9811b892/notebooks/execution.ipynb).
+[published CPU-first bulk handoff notebook](https://github.com/Farahani1/kodum/blob/codex/tpu-bulk-resume-batching/notebooks/execution.ipynb).
 Download its `.ipynb` file using the raw/download control, then import that file.
 Do not import `reference.ipynb` or the legacy `colab.ipynb` for this run.
 
@@ -110,12 +110,13 @@ notebook. Preserve the settings shown in step 9.
 In the notebook's session/settings controls:
 
 1. Enable **Internet**.
-2. Select **TPU v5e-8** as the accelerator.
+2. Select **None** as the accelerator for the initial CPU checks.
 3. Keep Python as the notebook language and start from a fresh session/kernel.
 4. Check that your account has TPU time available. Complete any account
    verification Kaggle requests to enable these features.
 
-The runner requires eight v5e devices on one host. If that accelerator is
+After the CPU checks pass, select **TPU v5e-8** for translation. The runner requires
+eight v5e devices on one host. If that accelerator is
 unavailable, wait for an allocation or resolve account access; CPU, GPU and
 another TPU type will not satisfy this campaign's readiness check.
 
@@ -178,11 +179,12 @@ step 2:
 PROVIDER = "kaggle"
 PROFILE = "kaggle-tpu"
 BACKEND = "jax"
-CODE_REVISION = "4d6af170cd05e64e31d3ffee0a433702c21fb043"
+CODE_REVISION = "c95d48c9ebd3790e35fd7d271d8b79a9e60a41bf"
 CHECKOUT = "/tmp/kodoom-tpu-code"
 CAMPAIGN_ID = "gemma27b-bulk-v1"
 HF_DATASET_REPO = "your-hf-username/kodoom-kaggle-checkpoints"
 OPERATOR = "owner"
+RUN_TPU = False
 TAKEOVER = False
 ```
 
@@ -198,9 +200,26 @@ precision or scope requires deliberate campaign handling, not an ordinary resume
 
 ## 10. Submit one server-side run
 
+First run the notebook on **Accelerator=None** with **RUN_TPU=False**. Run all
+or the first two code cells, and wait for **CPU PREFLIGHT PASSED**. The original
+failure was a missing/inaccessible HF_TOKEN after TPU setup; this mode catches
+it before requesting an accelerator. The secret must be both saved and enabled.
+
+CPU checks use an isolated environment and cover Python/platform, GitHub,
+private HF read/write/readback, attached version-1 Flax assets, source inputs,
+prompt lengths, writable paths, resume state and pinned dependency resolution.
+The private HF write check adds, verifies and removes a tiny temporary file;
+two commits remain in the dataset's history. No writer lease is taken, no JAX
+is initialized and no weights are loaded. Fix every FAIL item before continuing.
+Dependency resolution may take a few minutes and download package metadata/wheels.
+
+After PASS, stop the CPU session, select **TPU v5e-8**, and set **RUN_TPU=True**.
+Keep this flag False whenever you want CPU checks only. The saved TPU run repeats
+the access checks because secrets, paths and environments are session-specific.
+
 1. Recheck private visibility, Internet, TPU v5e-8, attached Flax model,
    enabled `HF_TOKEN`, repository ID and campaign ID.
-2. Confirm another worker is not already running this campaign. Do not run
+2. Confirm `RUN_TPU=True` and another worker is not already running this campaign. Do not run
    an interactive bulk worker and a saved background version simultaneously.
 3. Click **Save Version → Save & Run All** and submit the version.
 4. Open that version's execution logs/status to follow the run.
@@ -215,7 +234,8 @@ loading, compilation and generation, with 30 minutes reserved for finalization.
 Expect these stages, allowing time for installation, TPU allocation, model
 loading and compilation:
 
-1. Bootstrap prints the resolved code revision and an eight-device BF16 TPU probe.
+1. CPU checks print PASS/FAIL/SKIP items and a resolved code revision. After PASS,
+   the opted-in TPU setup prints an eight-device BF16 probe.
 2. The worker checks the private HF repository, acquires a writer lease and
    prints **Restored progress**. A new campaign normally starts at zero.
 3. It saves and reads back a snapshot and restores it into a fresh directory
@@ -283,7 +303,10 @@ from a successful save.
 
 1. Confirm the previous Kaggle execution has ended.
 2. Start a fresh session with the same bulk notebook and exact Flax model.
-3. Keep the same `CODE_REVISION`, `CAMPAIGN_ID` and `HF_DATASET_REPO`.
+3. Keep the same `CODE_REVISION`, `CAMPAIGN_ID` and `HF_DATASET_REPO` as the saved
+   campaign. This newly pinned runner cannot silently resume an older code identity;
+   preflight reports that conflict. The failed missing-token run stopped before
+   starting its HF worker, so that attempt did not create a campaign checkpoint.
 4. Recheck Internet, TPU availability and that the token is enabled.
 5. For a cleanly finalized run, leave `TAKEOVER=False`.
 6. If the previous session was abruptly killed and a writer-conflict error
@@ -291,7 +314,8 @@ from a successful save.
    `TAKEOVER=True` for the replacement attempt. Return it to `False` afterwards.
 7. If you explicitly paused the campaign, clear the pause control before
    resuming; see [pause/resume instructions](execution-workflow.md#review-during-generation-and-pause).
-8. Submit **Save Version → Save & Run All** again.
+8. Run the CPU checks again first if setup changed, then select the TPU, set
+   `RUN_TPU=True` and submit **Save Version → Save & Run All** again.
 9. Check that **Restored progress** reflects the previously verified completed
    units. Only pending/failed work should be processed. This second physical
    session is the live restoration evidence the plan still needs.
