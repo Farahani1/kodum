@@ -45,6 +45,74 @@ def test_checkout_only_bootstrap_never_installs_or_sets_tpu_platform(tmp_path, m
     assert "JAX_PLATFORMS" not in runtime.os.environ
 
 
+@pytest.mark.parametrize("existing", [False, True])
+def test_cpu_environment_bootstraps_pip_without_ensurepip(tmp_path, monkeypatch, existing):
+    environment = tmp_path / "cpu-tools"
+    python = environment / ("Scripts/python.exe" if runtime.os.name == "nt" else "bin/python")
+    if existing:
+        python.parent.mkdir(parents=True)
+        python.touch()
+    calls = []
+    pip_ready = False
+    child_env = {"JAX_PLATFORMS": "cpu", "HF_TOKEN": "hidden-fixture"}
+
+    def run(words, **kwargs):
+        nonlocal pip_ready
+        calls.append(words)
+        assert kwargs["env"] == child_env
+        if "venv" in words:
+            assert "--without-pip" in words
+            python.parent.mkdir(parents=True)
+            python.touch()
+        if "--python" in words:
+            assert words[words.index("--python") + 1] == str(python)
+            assert "pip==25.2" in words
+            pip_ready = True
+        result = 0 if "--version" not in words or pip_ready else 1
+        return types.SimpleNamespace(returncode=result)
+
+    monkeypatch.setattr(runtime.subprocess, "run", run)
+    assert runtime._prepare_cpu_environment(environment, child_env) == python
+    assert any("venv" in words for words in calls) is not existing
+    assert pip_ready
+    assert not any("ensurepip" in words or "--system-site-packages" in words for words in calls)
+    assert not any("jax" in words or "torch" in words for words in calls)
+
+
+def test_cpu_environment_reuses_working_pip(tmp_path, monkeypatch):
+    python = tmp_path / ("Scripts/python.exe" if runtime.os.name == "nt" else "bin/python")
+    python.parent.mkdir(parents=True)
+    python.touch()
+    calls = []
+
+    def run(words, **kwargs):
+        calls.append(words)
+        return types.SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(runtime.subprocess, "run", run)
+    assert runtime._prepare_cpu_environment(tmp_path, {}) == python
+    assert calls == [[str(python), "-m", "pip", "--version"]]
+
+
+@pytest.mark.parametrize("failure", ["create", "install", "timeout", "oserror"])
+def test_cpu_environment_errors_hide_credentials(tmp_path, monkeypatch, failure):
+    leaked = "hf_secret-fixture https://user:password@example.test"
+
+    def run(words, **kwargs):
+        if failure == "timeout":
+            raise subprocess.TimeoutExpired(words, kwargs["timeout"], stderr=leaked)
+        if failure == "oserror":
+            raise OSError(leaked)
+        status = 1 if failure == "create" or "venv" not in words else 0
+        return types.SimpleNamespace(returncode=status, stdout=leaked, stderr=leaked)
+
+    monkeypatch.setattr(runtime.subprocess, "run", run)
+    with pytest.raises(RuntimeError) as error:
+        runtime._prepare_cpu_environment(tmp_path, {"HF_TOKEN": leaked})
+    assert leaked not in str(error.value)
+    assert error.value.__cause__ is None
+
+
 def test_mounted_model_check_never_downloads_and_requires_exact_version(tmp_path, monkeypatch):
     wrong = tmp_path / "gemma-3/flax/gemma3-27b-it/2"
     wrong.mkdir(parents=True)

@@ -143,6 +143,55 @@ def bootstrap(
     return checkout
 
 
+def _prepare_cpu_environment(environment: Path, child_env: dict[str, str]) -> Path:
+    """Create/repair an isolated environment without relying on provider ensurepip."""
+    python = environment / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+
+    def run(words, timeout, message, *, required=True):
+        try:
+            result = subprocess.run(
+                words, env=child_env, capture_output=True, text=True, timeout=timeout
+            )
+        except subprocess.TimeoutExpired:
+            raise RuntimeError(message + " (timed out; retry on CPU)") from None
+        except OSError:
+            raise RuntimeError(
+                message + " (check Python availability and writable scratch space)"
+            ) from None
+        if required and result.returncode:
+            # Provider/pip diagnostics can include credentials. Report only the exit status.
+            raise RuntimeError(message + f" (exit status {result.returncode})") from None
+        return result
+
+    if not python.exists():
+        run(
+            [sys.executable, "-m", "venv", "--without-pip", str(environment)],
+            90,
+            "Could not create the isolated CPU preflight environment without pip",
+        )
+    # A failed ensurepip attempt can leave Python in place with no usable pip.
+    if run(
+        [str(python), "-m", "pip", "--version"], 30, "Could not check isolated pip", required=False
+    ).returncode:
+        run(
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "--python",
+                str(python),
+                "install",
+                "pip==25.2",
+                "--disable-pip-version-check",
+            ],
+            120,
+            "Could not install pip in the isolated CPU environment; "
+            "check Internet/PyPI access and that the notebook pip supports --python (22.3+)",
+        )
+        run([str(python), "-m", "pip", "--version"], 30, "Isolated CPU pip is still unavailable")
+    return python
+
+
 def cpu_preflight(
     provider,
     revision,
@@ -185,7 +234,6 @@ def cpu_preflight(
     checkout = bootstrap(provider, revision, directory, backend="jax", install_dependencies=False)
     # An isolated CPU environment avoids downgrading Kaggle's preinstalled ML stack.
     environment = Path(f"/tmp/kodoom-cpu-preflight-py{sys.version_info[0]}{sys.version_info[1]}")
-    python = environment / "bin/python"
     child_env = dict(os.environ, PYTHONPATH=str(checkout / "src"), JAX_PLATFORMS="cpu")
 
     def checked(words, timeout, message):
@@ -198,12 +246,7 @@ def cpu_preflight(
         if result.returncode:
             raise RuntimeError(message) from None
 
-    if not python.exists():
-        checked(
-            [sys.executable, "-m", "venv", str(environment)],
-            90,
-            "Could not create the isolated CPU preflight environment",
-        )
+    python = _prepare_cpu_environment(environment, child_env)
     constraints = "tpu-py313.txt" if sys.version_info[:2] == (3, 13) else "tpu.txt"
     print("Installing lightweight CPU checks in /tmp (no JAX or model weights)...", flush=True)
     checked(
