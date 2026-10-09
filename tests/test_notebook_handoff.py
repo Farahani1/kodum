@@ -1,8 +1,13 @@
 import ast
 import json
 import re
+import sys
 import tomllib
+import types
+import urllib.request
 from pathlib import Path
+
+import pytest
 
 from kodoom.config import load_profile
 from kodoom.workflow import ROOT, load_request
@@ -59,6 +64,80 @@ def test_cpu_run_all_skips_bootstrap_and_translation(capsys):
     exec("".join(notebook["cells"][7]["source"]), namespace)
     assert namespace["result"] is None
     assert "CPU-only mode" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("cached_token", [False, True])
+def test_public_bootstrap_ignores_attached_and_cached_github_tokens(
+    tmp_path, monkeypatch, cached_token
+):
+    import io
+
+    import kodoom.runtime as runtime
+
+    notebook = json.loads((ROOT / "notebooks/execution.ipynb").read_text("utf-8"))
+    namespace = {}
+    exec("".join(notebook["cells"][1]["source"]), namespace)
+    namespace["HF_DATASET_REPO"] = "owner/private-dataset"
+    monkeypatch.delenv("HF_TOKEN", raising=False)
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    if cached_token:
+        monkeypatch.setenv("GITHUB_TOKEN", "expired-github-fixture")
+    requested_secrets = []
+
+    def get_secret(name):
+        requested_secrets.append(name)
+        return "dataset-fixture" if name == "HF_TOKEN" else "expired-github-fixture"
+
+    secrets_module = types.ModuleType("kaggle_secrets")
+    secrets_module.UserSecretsClient = lambda: types.SimpleNamespace(get_secret=get_secret)
+    monkeypatch.setitem(sys.modules, "kaggle_secrets", secrets_module)
+    requests = []
+
+    def urlopen(url, timeout):
+        requests.append((url, timeout))
+        return io.BytesIO((ROOT / "src/kodoom/runtime.py").read_bytes())
+
+    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(sys, "version_info", (3, 13))
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr(runtime.platform, "libc_ver", lambda: ("glibc", "2.35"))
+    monkeypatch.setattr(runtime.os, "chdir", lambda _: None)
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    calls = []
+
+    def run(words, **kwargs):
+        calls.append((words, kwargs))
+        return types.SimpleNamespace(returncode=0, stdout="a" * 40 if "rev-parse" in words else "")
+
+    monkeypatch.setattr(runtime.subprocess, "run", run)
+    # Stop before remote HF writes/dependency checks; exercise both checkout calls below.
+    cell = ast.parse("".join(notebook["cells"][3]["source"]))
+    assert cell.body[-1].targets[0].id == "preflight"
+    cell.body.pop()
+    exec(compile(cell, "execution.ipynb", "exec"), namespace)
+    loaded_runtime = namespace["runtime"]
+    assert requests == [
+        (
+            "https://raw.githubusercontent.com/Farahani1/kodum/"
+            + namespace["CODE_REVISION"]
+            + "/src/kodoom/runtime.py",
+            30,
+        )
+    ]
+    for install in (False, True):
+        loaded_runtime.bootstrap(
+            "kaggle",
+            namespace["CODE_REVISION"],
+            tmp_path,
+            backend="jax",
+            install_dependencies=install,
+        )
+    assert requested_secrets == ["HF_TOKEN"]
+    assert runtime.os.environ["HF_TOKEN"] == "dataset-fixture"
+    git_calls = [kwargs for words, kwargs in calls if words[0] == "git"]
+    assert git_calls
+    assert all("extraheader" not in str(kwargs["env"]) for kwargs in git_calls)
+    assert "expired-github-fixture" not in " ".join(request for request, _ in requests)
 
 
 def test_failed_preflight_cannot_enter_tpu_bootstrap():

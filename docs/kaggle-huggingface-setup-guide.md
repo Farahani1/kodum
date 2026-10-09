@@ -72,6 +72,17 @@ ensure the token is approved before running.
 The token belongs in Kaggle Secrets. Do not place it in the notebook settings,
 an output cell, a repository README or a chat message.
 
+For this TPU notebook, `HF_TOKEN` only needs private dataset read/write access.
+Gemma weights and the tokenizer come from the attached Kaggle Flax model; accept
+the model terms on Kaggle as described in step 8. An HF model grant is not used.
+
+For other notebooks that download Gemma from Hugging Face, one token can serve
+both purposes if its owner has the model access grant and its permissions cover
+both dataset writes and gated-model reads. A fine-grained token scoped only to
+the dataset does not automatically cover Gemma. Separate tokens are optional;
+acceptance/access is attached to the HF user account, not to an individual token.
+[Gated-model access documentation](https://huggingface.co/docs/hub/models-gated).
+
 ## 4. Check available Hugging Face storage
 
 Check the owner's storage usage against its current allowance. Hugging Face
@@ -104,6 +115,13 @@ The handoff notebook and its runtime have different revisions. The notebook's
 `CODE_REVISION` below deliberately points to the tested runtime. Downloading
 the notebook itself from that runtime revision would retrieve an older gate
 notebook. Preserve the settings shown in step 9.
+
+The code pin must actually exist on GitHub before running. On Oct 9, an anonymous
+check returned `No commit found for the ref` for the local CPU notebook's
+`c95d48c9ebd3790e35fd7d271d8b79a9e60a41bf` pin. Publish the runtime commit before
+using that notebook. The then-published bulk branch ended at `ea2411c` and did
+not contain `cpu_preflight`; substituting that older revision cannot run these
+CPU checks. An HTTP 404 for the pin is separate from invalid-token HTTP 401.
 
 ## 6. Configure Kaggle Internet and accelerator
 
@@ -141,13 +159,18 @@ requires a secret to be attached to the kernel before it can be retrieved.
 You do not need a separate Kaggle API token for the notebook's attached model.
 
 For the currently public project code, a `GITHUB_TOKEN` is unnecessary. If an
-old, invalid `GITHUB_TOKEN` is attached, disable it for this notebook: the
-bootstrap sends an available token, so an invalid one can break a public fetch.
+old notebook reports HTTP 401, disable its `GITHUB_TOKEN` secret and restart the
+session to clear any token already copied into the environment. GitHub rejects
+invalid credentials even for public files. The updated bulk notebook fetches
+the pinned public source without authentication and ignores `GITHUB_TOKEN` for
+both CPU and TPU Git checkouts, including an attached or cached stale secret.
 
 If the GitHub repository becomes private, create a fine-grained GitHub token
 for `Farahani1/kodum` with repository **Contents: Read-only**, and add/enable it
 under the exact Kaggle secret label `GITHUB_TOKEN`. Confirm any organization
-approval requirements. [GitHub token instructions](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens).
+approval requirements and use a bootstrap configured for private code; the bulk
+notebook described here explicitly uses public code access.
+[GitHub token instructions](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens).
 
 ## 8. Accept Gemma access and attach the exact Flax model
 
