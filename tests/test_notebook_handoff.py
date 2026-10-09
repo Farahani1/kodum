@@ -28,9 +28,9 @@ def test_operational_notebook_settings_and_summaries_match_the_active_request():
     assert profile.device == "tpu" and profile.precision == request["precision"] == "bf16"
     assert re.fullmatch(r"[0-9a-f]{40}", values["CODE_REVISION"])
     assert values["TAKEOVER"] is False
-    assert values["RUN_TPU"] is False
-    assert notebook["metadata"]["kaggle"]["accelerator"] == "none"
-    assert values["HF_DATASET_REPO"] == ""
+    assert values["RUN_TPU"] is True
+    assert notebook["metadata"]["kaggle"]["accelerator"] == "tpu"
+    assert values["HF_DATASET_REPO"] == "Farahani/kodoom-kaggle-checkpoints"
     assert request["stage"] == recipes[0]["id"] == "bulk-translation"
     assert request["typed_train_cases"] == 1200 and request["typed_test_cases"] == 400
     assert request["helmo_limit"] == 2000 and request["batch_sizes"] == [1, 2, 4, 8]
@@ -49,7 +49,7 @@ def test_operational_notebook_settings_and_summaries_match_the_active_request():
     assert "v21" in text and "backend=BACKEND" in text
     assert "from kodoom.bulk.launch import run" in text
     assert "session_started=SESSION_STARTED" in text
-    assert "runtime.cpu_preflight(" in text and "CPU PREFLIGHT PASSED" in text
+    assert "runtime.cpu_preflight(" in text and "Optional CPU-only diagnosis" in text
     assert text.index("runtime.cpu_preflight(") < text.index("runtime.bootstrap(")
     reference = (ROOT / "notebooks/reference.ipynb").read_text("utf-8")
     assert "Gemma 3 27B" in reference and "v21" in reference and "v19" in reference

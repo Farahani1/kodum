@@ -5,11 +5,13 @@ workflow; `docs/workflow-change-plan.md` tracks remaining migration work. The
 current Kaggle runner covers the bulk draft campaign; a live Kaggle run and
 fresh-session restore remain unverified.
 
-Research acceptance follows project-plan v25 and
+Research acceptance follows project-plan v26 and
 [the precompute audit](docs/precompute-project-review.md). The active request
 retains the frozen v21 data recipe. The CPU-first notebook uses a newly published
-runtime pin and defaults to RUN_TPU=False; run its early cells on Kaggle CPU before
-explicitly enabling TPU execution. Do not silently change
+runtime pin. At the owner's request, the canonical notebook now defaults to
+RUN_TPU=True with the confirmed private HF dataset prefilled. Optional CPU
+diagnosis uses RUN_TPU=False and Accelerator=None; normal imports launch the
+approved draft translation after session setup checks. Do not silently change
 a campaign identity to follow document revisions. Helmo is training-only and
 optional; Gemma 3 translations remain ineligible for the planned permissive
 training mix until a compatible licensing route is recorded. The source registry

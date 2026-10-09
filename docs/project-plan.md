@@ -1,6 +1,6 @@
 # Persian Typed Decisions: Project Plan
 
-Version 25 · Oct 9, 2026 · @Shah
+Version 26 · Oct 9, 2026 · @Shah
 
 ## Overview
 
@@ -74,8 +74,14 @@ small private artifacts under `/kaggle/working`. The CPU development path stays
 lightweight. GPU profiles and the 4B decision remain the historical baseline;
 27B adoption depends on paired human review and measured resource costs.
 
-**Access and setup before the TPU queue (v25):** the operational notebook defaults
-to `RUN_TPU=False`. With Accelerator=None, check the exact GitHub pin, runtime,
+**Configured production handoff (v26):** the owner requests one stable import
+location with no code edits before running. The published execution notebook
+prepopulates the confirmed private dataset and tested runtime pin, and defaults
+to `RUN_TPU=True` for translation. Kaggle Internet, TPU v5e-8, enabled HF_TOKEN
+and accepted/attached version-1 model remain session setup prerequisites.
+
+Optional CPU diagnosis uses `RUN_TPU=False` with Accelerator=None. Check the
+exact GitHub pin, runtime,
 HF token/private dataset read/write/readback, writable storage, resume state and
 the attached version-1 Flax model. The default installs only the HF client into
 an isolated CPU environment. Source/prompt audits and a TPU dependency dry-run
@@ -656,6 +662,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
+| 26 | Oct 9, 2026 | At the owner's request, configure one stable published notebook with the confirmed private dataset and tested runtime pin, defaulting to TPU translation without code edits. Retain short session/production checks and optional CPU diagnosis; Kaggle secrets, consent and model attachment remain prerequisites. Preserve the frozen v21 campaign and research gates. |
 | 25 | Oct 9, 2026 | Narrow default CPU preparation to access, storage, resume and attached-model setup; keep source/prompt/dependency audits as optional diagnostics. Skip the CPU environment in allocated TPU sessions while repeating short session checks and retaining production validation. Record a successful private HF access probe and unresolved model attachment; preserve the v21 recipe and research gates. |
 | 24 | Oct 8, 2026 | Add an explicit CPU-first notebook preflight after the observed missing-HF_TOKEN failure. Check access, private checkpoint writes, mounted Flax inputs, source/prompt validity, storage, resume conflicts and dependency resolution before TPU setup. Default to CPU-only; require an explicit TPU opt-in and a new published runtime pin. Preserve the v21 data recipe and scientific gates; reject incompatible old campaign identities. |
 | 23 | Oct 8, 2026 | Define the published data contract: separate resource licenses, paired decision rows, Parquet/JSONL exports, review/provenance and split manifests, pinned reproduction code and release checks. Distinguish rebuilding reviewed records from rerunning translation; exporters and release verification remain pending. Preserve the frozen v21 production campaign. |

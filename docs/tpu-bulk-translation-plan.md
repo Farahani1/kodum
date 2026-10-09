@@ -1,11 +1,12 @@
 # Resumable bulk translation on Kaggle TPU
 
-Version 5 | Oct 9, 2026 | Compact setup checks; live HF probe passed; model attachment and TPU execution pending
+Version 6 | Oct 9, 2026 | Stable configured import defaults to TPU translation at the owner's request
 
 Branch: `codex/tpu-bulk-resume-batching`.
 
-Setup follows project-plan v25 and the frozen v21 data recipe. The default CPU
-preparation checks GitHub, HF private read/write/readback, storage, resume state
+Setup follows project-plan v26 and the frozen v21 data recipe. The canonical
+notebook prepopulates the confirmed dataset/runtime and defaults to RUN_TPU=True
+at the owner's request. Optional CPU preparation checks GitHub, HF private read/write/readback, storage, resume state
 and attached Flax files. Source/prompt/dependency audits are optional deep
 diagnostics. With RUN_TPU=True, skip the isolated CPU environment and repeat
 only short setup checks using the production dependencies. The worker retains
@@ -20,9 +21,9 @@ This extends [project-plan.md](project-plan.md), section 1.2 (v21), and the
 [TPU implementation plan](kaggle-tpu-change-plan.md). Tasks use `BULK-*` IDs.
 The execution notebook now runs the implemented bulk package. Local software checks pass; live hardware/storage results and research acceptance remain pending.
 
-Project-plan v25 and the [precompute review](precompute-project-review.md)
-govern research acceptance. The v21 data request remains unchanged. The v25
-CPU-first runtime has a new notebook pin; existing campaign identities are
+Project-plan v26 and the [precompute review](precompute-project-review.md)
+govern research acceptance. The v21 data request remains unchanged. The v26
+configured runtime has a new notebook pin; existing campaign identities are
 checked for compatibility rather than silently migrated. This adds no source
 and does not swap the model.
 Helmo is optional augmentation, not a benchmark; Gemma 3 drafts are held out of
@@ -274,6 +275,7 @@ until the live evidence above exists.
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 6 | Oct 9, 2026 | Provide one stable configured notebook import with the confirmed dataset and runtime pin; default to TPU translation at the owner's request. Keep optional CPU diagnosis and short session/production checks. |
 | 5 | Oct 9, 2026 | Make access/setup the default CPU check and deep audits optional. Skip isolated preparation in TPU sessions while retaining short session and production checks; record passed HF probe and unresolved Flax attachment. |
 | 4 | Oct 8, 2026 | Add CPU-first account/input/storage/dependency checks after the observed missing-HF_TOKEN failure. Default the notebook to RUN_TPU=False, require explicit TPU opt-in, and publish a new runtime pin. Preserve the v21 request and reject incompatible old saved identities. Eight-device BF16 readiness was observed, but live 27B inference/HF saving and physical restore remain pending. |
 | 3 | Oct 8, 2026 | Add the precompute source/value audit and v22 research gates. Preserve the frozen v21 production identity; distinguish optional helmo augmentation, teacher agreement, source-label validity and downstream translation-training eligibility. |

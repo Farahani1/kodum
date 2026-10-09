@@ -2,7 +2,7 @@
 
 Prepared October 8, 2026. This guide uses the current
 [execution notebook](../notebooks/execution.ipynb), the frozen v21 draft recipe,
-and the research/release boundaries in [project-plan v25](project-plan.md).
+and the research/release boundaries in [project-plan v26](project-plan.md).
 It sets up private translation drafts; human review, training and publication
 remain separate decisions. Live TPU performance and a physical fresh-session
 restore still need to be demonstrated.
@@ -128,12 +128,13 @@ pin is separate from invalid-token HTTP 401.
 In the notebook's session/settings controls:
 
 1. Enable **Internet**.
-2. Select **None** as the accelerator for the initial CPU checks.
+2. Select **TPU v5e-8** for the configured translation notebook.
 3. Keep Python as the notebook language and start from a fresh session/kernel.
 4. Check that your account has TPU time available. Complete any account
    verification Kaggle requests to enable these features.
 
-After the CPU checks pass, select **TPU v5e-8** for translation. The runner requires
+For optional CPU-only diagnosis, select **None** and set RUN_TPU=False.
+Normal imports already have RUN_TPU=True and use **TPU v5e-8** for translation. The runner requires
 eight v5e devices on one host. If that accelerator is
 unavailable, wait for an allocation or resolve account access; CPU, GPU and
 another TPU type will not satisfy this campaign's readiness check.
@@ -193,10 +194,13 @@ An HF token does not grant Kaggle model access, and the runner does not use an
 HF Transformers checkpoint in place of this Flax asset. No manual model download
 to your laptop, Google Drive or the checkpoint repository is required.
 
-## 9. Fill the notebook settings cell
+## 9. Use the configured notebook settings
 
-Use the following settings, changing the repository ID to the real value from
-step 2:
+The stable [configured notebook download](https://raw.githubusercontent.com/Farahani1/kodum/codex/tpu-bulk-resume-batching/notebooks/execution.ipynb)
+already contains the following settings for the owner's confirmed dataset.
+Import that file each time instead of reusing an old download or editing the pin.
+No settings edits are required for the configured TPU translation run. Other operators using a
+different checkpoint repository must deliberately update that destination:
 
 ```python
 PROVIDER = "kaggle"
@@ -205,9 +209,9 @@ BACKEND = "jax"
 CODE_REVISION = "74e992e439d7bfb5f26e5d19ea8eea704769df6e"
 CHECKOUT = "/tmp/kodoom-tpu-code"
 CAMPAIGN_ID = "gemma27b-bulk-v1"
-HF_DATASET_REPO = "your-hf-username/kodoom-kaggle-checkpoints"
+HF_DATASET_REPO = "Farahani/kodoom-kaggle-checkpoints"
 OPERATOR = "owner"
-RUN_TPU = False
+RUN_TPU = True
 TAKEOVER = False
 ```
 
@@ -223,29 +227,22 @@ precision or scope requires deliberate campaign handling, not an ordinary resume
 
 ## 10. Submit one server-side run
 
-First run the notebook on **Accelerator=None** with **RUN_TPU=False**. Run all
-or the first two code cells, and wait for **CPU PREFLIGHT PASSED**. The original
-failure was a missing/inaccessible HF_TOKEN after TPU setup; this mode catches
-it before requesting an accelerator. The secret must be both saved and enabled.
+Import the [configured notebook](https://raw.githubusercontent.com/Farahani1/kodum/codex/tpu-bulk-resume-batching/notebooks/execution.ipynb).
+It defaults to RUN_TPU=True for the owner-requested translation run, with the
+confirmed dataset and tested runtime pin already filled. Keep the notebook
+private, enable Internet, choose TPU v5e-8, enable HF_TOKEN, and accept/attach the
+exact version-1 Flax model. Then submit Save Version > Save & Run All.
 
-Default CPU checks install only the HF client in an isolated environment and
-cover Python/platform, GitHub, private HF read/write/readback, attached version-1
-Flax assets, writable paths and resume state. They do not audit the corpus,
-tokenize all prompts or resolve the entire TPU dependency lock.
-The private HF write check adds, verifies and removes a tiny temporary file;
-two commits remain in the dataset's history. No writer lease is taken, no JAX
-is initialized and no weights are loaded. Fix every FAIL item before continuing.
-Advanced diagnostics are optional: add `deep=True` to the CPU
-`runtime.cpu_preflight(...)` call to audit sources/prompts and perform dependency
-resolution. That mode installs additional CPU tools and can download package
-metadata/wheels. The default notebook does not run it.
+The early cell skips the isolated CPU environment and dependency dry-run. After
+production installation, short access/storage/model/resume checks must pass
+before translation. The worker retains its real source/token/library/TPU checks.
+This runner cannot enable a Kaggle secret or accept model terms on your behalf.
 
-After PASS, stop the CPU session, select **TPU v5e-8**, and set **RUN_TPU=True**.
-Keep this flag False whenever you want CPU checks only. With RUN_TPU=True, the
-early cell skips isolated CPU preparation. After installing production packages,
-the next cell repeats short access/storage/model checks using that environment.
-Secrets and mounts are session-specific; skipping these short checks could miss
-a disabled secret or missing model. Production input/token/TPU checks remain.
+Optional CPU-only diagnosis uses Accelerator=None and RUN_TPU=False. It checks
+GitHub, HF read/write/readback, writable paths, attached model and resume state.
+The private HF probe adds and removes a tiny file, leaving two history commits.
+Deep source/prompt/dependency audits require deep=True in runtime.cpu_preflight;
+they are not part of ordinary imports or TPU runs.
 
 1. Recheck private visibility, Internet, TPU v5e-8, attached Flax model,
    enabled `HF_TOKEN`, repository ID and campaign ID.
