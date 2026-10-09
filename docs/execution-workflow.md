@@ -34,6 +34,13 @@ lightweight tools into an isolated CPU environment. The HF probe creates and
 removes a unique tiny private file; its two commits remain in repository history.
 CPU checks do not initialize JAX, load weights, or acquire the campaign lease.
 
+The Oct 9 runtime correction creates this environment with `venv --without-pip`
+and uses the notebook's existing pip (22.3+) to install pip into that interpreter.
+This avoids relying on provider `ensurepip` and repairs a previous partial setup.
+Import the updated notebook and restart after the observed environment-creation
+failure; its new code pin is required. Existing saved campaign identities remain
+subject to the code-revision compatibility check.
+
 Then stop the CPU session, select TPU v5e-8, set **RUN_TPU=True**, and submit
 **Save Version → Save & Run All**. The saved session reruns the early checks
 before accelerator dependencies/probes. Live fit, ABI, kernels and throughput

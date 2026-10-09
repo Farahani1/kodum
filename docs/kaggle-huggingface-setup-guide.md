@@ -116,12 +116,11 @@ The handoff notebook and its runtime have different revisions. The notebook's
 the notebook itself from that runtime revision would retrieve an older gate
 notebook. Preserve the settings shown in step 9.
 
-The code pin must actually exist on GitHub before running. On Oct 9, an anonymous
-check returned `No commit found for the ref` for the local CPU notebook's
-`c95d48c9ebd3790e35fd7d271d8b79a9e60a41bf` pin. Publish the runtime commit before
-using that notebook. The then-published bulk branch ended at `ea2411c` and did
-not contain `cpu_preflight`; substituting that older revision cannot run these
-CPU checks. An HTTP 404 for the pin is separate from invalid-token HTTP 401.
+The code pin must actually exist on GitHub before running. The Oct 9 missing-pin
+HTTP 404 was resolved by publishing the CPU runtime. The current pin below also
+repairs isolated environment setup after an observed Kaggle Python 3.13 failure.
+Do not substitute an older revision without `cpu_preflight`. An HTTP 404 for the
+pin is separate from invalid-token HTTP 401.
 
 ## 6. Configure Kaggle Internet and accelerator
 
@@ -202,7 +201,7 @@ step 2:
 PROVIDER = "kaggle"
 PROFILE = "kaggle-tpu"
 BACKEND = "jax"
-CODE_REVISION = "c95d48c9ebd3790e35fd7d271d8b79a9e60a41bf"
+CODE_REVISION = "fbb73579ed31c8959a056b2aa95233e23b2d0edb"
 CHECKOUT = "/tmp/kodoom-tpu-code"
 CAMPAIGN_ID = "gemma27b-bulk-v1"
 HF_DATASET_REPO = "your-hf-username/kodoom-kaggle-checkpoints"
@@ -370,6 +369,7 @@ own credentials. A change of operator alone is compatible with resume.
 | `Bulk checkpoints require a private HF dataset repository` | Check the dataset's visibility. A public repository fails this runner's storage check. |
 | GitHub bootstrap HTTP 401/403 | Disable an unnecessary expired/invalid `GITHUB_TOKEN` for public code, or enable a valid read token for private code. |
 | GitHub bootstrap HTTP 404 | Check the exact repository and runtime pin; private repositories also require authorized access. |
+| `Could not create the isolated CPU preflight environment` | Use the current runtime pin above and restart the session. It creates venv without `ensurepip`, then uses notebook pip to install pip into the isolated interpreter; it also repairs a partial environment. Check writable `/tmp`, Internet/PyPI and notebook pip 22.3+ if setup still fails. |
 | TPU probe/device error | Select v5e-8, use a fresh session, and let bootstrap install its pinned dependencies. |
 | Missing Flax model/tokenizer or access denied | Accept terms using this Kaggle account and attach the exact version-1 model from step 8. |
 | Writer conflict | Confirm the previous run has ended. Use takeover only for an abandoned lease; never start a second live writer. |
