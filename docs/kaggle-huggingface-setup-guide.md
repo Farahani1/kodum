@@ -2,7 +2,7 @@
 
 Prepared October 8, 2026. This guide uses the current
 [execution notebook](../notebooks/execution.ipynb), the frozen v21 draft recipe,
-and the research/release boundaries in [project-plan v24](project-plan.md).
+and the research/release boundaries in [project-plan v25](project-plan.md).
 It sets up private translation drafts; human review, training and publication
 remain separate decisions. Live TPU performance and a physical fresh-session
 restore still need to be demonstrated.
@@ -118,7 +118,8 @@ notebook. Preserve the settings shown in step 9.
 
 The code pin must actually exist on GitHub before running. The Oct 9 missing-pin
 HTTP 404 was resolved by publishing the CPU runtime. The current pin below also
-repairs isolated environment setup after an observed Kaggle Python 3.13 failure.
+repairs isolated environment setup and narrows default preparation to access/setup
+after observed Kaggle Python 3.13 failures. Deep audits are optional.
 Do not substitute an older revision without `cpu_preflight`. An HTTP 404 for the
 pin is separate from invalid-token HTTP 401.
 
@@ -201,7 +202,7 @@ step 2:
 PROVIDER = "kaggle"
 PROFILE = "kaggle-tpu"
 BACKEND = "jax"
-CODE_REVISION = "fbb73579ed31c8959a056b2aa95233e23b2d0edb"
+CODE_REVISION = "74e992e439d7bfb5f26e5d19ea8eea704769df6e"
 CHECKOUT = "/tmp/kodoom-tpu-code"
 CAMPAIGN_ID = "gemma27b-bulk-v1"
 HF_DATASET_REPO = "your-hf-username/kodoom-kaggle-checkpoints"
@@ -227,17 +228,24 @@ or the first two code cells, and wait for **CPU PREFLIGHT PASSED**. The original
 failure was a missing/inaccessible HF_TOKEN after TPU setup; this mode catches
 it before requesting an accelerator. The secret must be both saved and enabled.
 
-CPU checks use an isolated environment and cover Python/platform, GitHub,
-private HF read/write/readback, attached version-1 Flax assets, source inputs,
-prompt lengths, writable paths, resume state and pinned dependency resolution.
+Default CPU checks install only the HF client in an isolated environment and
+cover Python/platform, GitHub, private HF read/write/readback, attached version-1
+Flax assets, writable paths and resume state. They do not audit the corpus,
+tokenize all prompts or resolve the entire TPU dependency lock.
 The private HF write check adds, verifies and removes a tiny temporary file;
 two commits remain in the dataset's history. No writer lease is taken, no JAX
 is initialized and no weights are loaded. Fix every FAIL item before continuing.
-Dependency resolution may take a few minutes and download package metadata/wheels.
+Advanced diagnostics are optional: add `deep=True` to the CPU
+`runtime.cpu_preflight(...)` call to audit sources/prompts and perform dependency
+resolution. That mode installs additional CPU tools and can download package
+metadata/wheels. The default notebook does not run it.
 
 After PASS, stop the CPU session, select **TPU v5e-8**, and set **RUN_TPU=True**.
-Keep this flag False whenever you want CPU checks only. The saved TPU run repeats
-the access checks because secrets, paths and environments are session-specific.
+Keep this flag False whenever you want CPU checks only. With RUN_TPU=True, the
+early cell skips isolated CPU preparation. After installing production packages,
+the next cell repeats short access/storage/model checks using that environment.
+Secrets and mounts are session-specific; skipping these short checks could miss
+a disabled secret or missing model. Production input/token/TPU checks remain.
 
 1. Recheck private visibility, Internet, TPU v5e-8, attached Flax model,
    enabled `HF_TOKEN`, repository ID and campaign ID.
@@ -370,6 +378,7 @@ own credentials. A change of operator alone is compatible with resume.
 | GitHub bootstrap HTTP 401/403 | Disable an unnecessary expired/invalid `GITHUB_TOKEN` for public code, or enable a valid read token for private code. |
 | GitHub bootstrap HTTP 404 | Check the exact repository and runtime pin; private repositories also require authorized access. |
 | `Could not create the isolated CPU preflight environment` | Use the current runtime pin above and restart the session. It creates venv without `ensurepip`, then uses notebook pip to install pip into the isolated interpreter; it also repairs a partial environment. Check writable `/tmp`, Internet/PyPI and notebook pip 22.3+ if setup still fails. |
+| `Error in sitecustomize ... wrapt` | This provider startup warning did not stop the reported checks. The current pin runs isolated checks without provider sitecustomize; it does not install wrapt into the notebook. |
 | TPU probe/device error | Select v5e-8, use a fresh session, and let bootstrap install its pinned dependencies. |
 | Missing Flax model/tokenizer or access denied | Accept terms using this Kaggle account and attach the exact version-1 model from step 8. |
 | Writer conflict | Confirm the previous run has ended. Use takeover only for an abandoned lease; never start a second live writer. |

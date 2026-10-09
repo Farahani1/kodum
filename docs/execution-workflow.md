@@ -10,7 +10,7 @@ The execution notebook retains the project-plan **v21** data recipe, section 1.2
 private HF access and a second live session still need runtime evidence.
 
 Before running, read the [project review](precompute-project-review.md) and
-project-plan v24. The v21 request is preserved; the notebook's new runtime pin
+project-plan v25. The v21 request is preserved; the notebook's new runtime pin
 adds CPU checks before requesting TPU time. The scientific interpretation is narrower:
 typed-decisions measures teacher agreement, helmo is optional training
 augmentation, and Gemma 3 drafts are held out of permissive-model training until
@@ -28,22 +28,25 @@ the corpus error rate. All 400 test cases still need human review.
 First select **Accelerator=None** and leave **RUN_TPU=False**. Run the early
 cells (or Run all in this safe mode) until **CPU PREFLIGHT PASSED**. The checks
 verify the GitHub checkout, Python/platform, secret access, private HF read/write
-and cleanup, mounted version-1 Flax model files, source inputs and prompt limits,
-storage paths, resume state and pinned dependency resolution. They install only
-lightweight tools into an isolated CPU environment. The HF probe creates and
+and cleanup, mounted version-1 Flax model files, storage paths and resume state.
+They install only the HF client into an isolated CPU environment. Source, prompt
+and dependency audits are optional deep diagnostics. The HF probe creates and
 removes a unique tiny private file; its two commits remain in repository history.
 CPU checks do not initialize JAX, load weights, or acquire the campaign lease.
 
 The Oct 9 runtime correction creates this environment with `venv --without-pip`
 and uses the notebook's existing pip (22.3+) to install pip into that interpreter.
 This avoids relying on provider `ensurepip` and repairs a previous partial setup.
+Isolated check startup also skips provider sitecustomize, avoiding its missing-wrapt warning.
 Import the updated notebook and restart after the observed environment-creation
 failure; its new code pin is required. Existing saved campaign identities remain
 subject to the code-revision compatibility check.
 
 Then stop the CPU session, select TPU v5e-8, set **RUN_TPU=True**, and submit
-**Save Version → Save & Run All**. The saved session reruns the early checks
-before accelerator dependencies/probes. Live fit, ABI, kernels and throughput
+**Save Version → Save & Run All**. With RUN_TPU=True, the early cell skips the
+isolated CPU environment and dependency dry-run. After production dependencies
+and the device probe, short session checks run before translation. The worker
+retains its source, token, model and restore validation. Live fit, ABI, kernels and throughput
 remain TPU checks. CPU model checks establish mounted access to the selected
 Kaggle asset, not an independent legal interpretation of its license.
 

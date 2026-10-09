@@ -112,8 +112,9 @@ def test_public_bootstrap_ignores_attached_and_cached_github_tokens(
     monkeypatch.setattr(runtime.subprocess, "run", run)
     # Stop before remote HF writes/dependency checks; exercise both checkout calls below.
     cell = ast.parse("".join(notebook["cells"][3]["source"]))
-    assert cell.body[-1].targets[0].id == "preflight"
-    cell.body.pop()
+    assert isinstance(cell.body[-1], ast.If)
+    assert cell.body[-2].targets[0].id == "preflight"
+    cell.body = cell.body[:-2]
     exec(compile(cell, "execution.ipynb", "exec"), namespace)
     loaded_runtime = namespace["runtime"]
     assert requests == [
@@ -140,13 +141,60 @@ def test_public_bootstrap_ignores_attached_and_cached_github_tokens(
     assert "expired-github-fixture" not in " ".join(request for request, _ in requests)
 
 
-def test_failed_preflight_cannot_enter_tpu_bootstrap():
-    import pytest
+def test_tpu_mode_skips_isolated_cpu_preparation(monkeypatch, capsys):
+    notebook = json.loads((ROOT / "notebooks/execution.ipynb").read_text("utf-8"))
+    namespace = {}
+    exec("".join(notebook["cells"][1]["source"]), namespace)
+    namespace.update(RUN_TPU=True, HF_DATASET_REPO="owner/private-data")
+    source = (
+        "def secret(provider, name): return 'fixture'\n"
+        "def cpu_preflight(*args, **kwargs): raise AssertionError('CPU environment used on TPU')\n"
+    )
+    import io
+
+    monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **kw: io.BytesIO(source.encode()))
+    monkeypatch.setattr(sys, "version_info", (3, 13))
+    exec("".join(notebook["cells"][3]["source"]), namespace)
+    assert namespace["preflight"] is None
+    assert "isolated CPU preparation skipped" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("passed", [False, True])
+def test_translation_requires_current_session_setup(monkeypatch, passed):
+    import kodoom.bulk.launch as launch
+    import kodoom.notebook_preflight as preflight
 
     notebook = json.loads((ROOT / "notebooks/execution.ipynb").read_text("utf-8"))
-    namespace = {"RUN_TPU": True, "preflight": {"passed": False}}
-    with pytest.raises(RuntimeError, match="must pass"):
+    namespace = {}
+    exec("".join(notebook["cells"][1]["source"]), namespace)
+    namespace.update(RUN_TPU=True, HF_DATASET_REPO="owner/private-data", SESSION_STARTED=123)
+    calls = []
+
+    def bootstrap(*args, **kwargs):
+        calls.append("bootstrap")
+        return Path("/tmp/code")
+
+    def setup(**kwargs):
+        calls.append("setup")
+        assert not kwargs.get("deep", False)
+        return {"passed": passed}
+
+    def run(**kwargs):
+        calls.append("translate")
+        assert passed
+        return "fixture-result"
+
+    namespace["runtime"] = types.SimpleNamespace(bootstrap=bootstrap)
+    monkeypatch.setattr(preflight, "run_checks", setup)
+    monkeypatch.setattr(launch, "run", run)
+    if passed:
         exec("".join(notebook["cells"][5]["source"]), namespace)
+        assert namespace["result"] == "fixture-result"
+        assert calls == ["bootstrap", "setup", "translate"]
+    else:
+        with pytest.raises(RuntimeError, match="Session setup failed"):
+            exec("".join(notebook["cells"][5]["source"]), namespace)
+        assert calls == ["bootstrap", "setup"]
 
 
 def test_historical_tpu_request_remains_selectable():
