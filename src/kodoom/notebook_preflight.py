@@ -152,7 +152,7 @@ def prompt_audit(units, directory, request):
     return f"CPU SentencePiece screening: {count} prompts, max={maximum}; TPU tokenizer rechecks"
 
 
-def run_checks(*, repo, campaign_id, operator, revision, takeover, report_path):
+def run_checks(*, repo, campaign_id, operator, revision, takeover, report_path, deep=False):
     """Aggregate independent failures and skip dependent checks explicitly."""
     results = []
     values = {}
@@ -219,21 +219,27 @@ def run_checks(*, repo, campaign_id, operator, revision, takeover, report_path):
                 check_record(record)
         return units
 
-    check(
-        "pinned source inputs", inputs, "Pinned English sources could not be downloaded/validated"
-    )
-    check(
-        "prompt limits",
-        lambda: prompt_audit(
-            values["pinned source inputs"], values["attached Flax model"][0], load_request()
-        ),
-        "Could not parse tokenizer or measure production prompts",
-        needs=("attached Flax model", "pinned source inputs"),
-    )
-    check("TPU dependency resolution", dependency_resolution, "Resolution timed out; retry on CPU")
+    if deep:
+        check(
+            "pinned source inputs",
+            inputs,
+            "Pinned English sources could not be downloaded/validated",
+        )
+        check(
+            "prompt limits",
+            lambda: prompt_audit(
+                values["pinned source inputs"], values["attached Flax model"][0], load_request()
+            ),
+            "Could not parse tokenizer or measure production prompts",
+            needs=("attached Flax model", "pinned source inputs"),
+        )
+        check(
+            "TPU dependency resolution", dependency_resolution, "Resolution timed out; retry on CPU"
+        )
     report = {
         "schema_version": 1,
         "code_revision": revision,
+        "scope": "deep-diagnostic" if deep else "access-and-setup",
         "passed": all(result["status"] == "PASS" for result in results),
         "checks": results,
         "remaining": [
@@ -244,7 +250,7 @@ def run_checks(*, repo, campaign_id, operator, revision, takeover, report_path):
         ],
     }
     atomic_write(Path(report_path), encoded(report))
-    print("CPU PREFLIGHT " + ("PASSED" if report["passed"] else "FAILED"), flush=True)
+    print("SETUP CHECKS " + ("PASSED" if report["passed"] else "FAILED"), flush=True)
     print(
         "CPU checks do not certify TPU memory fit, model quality or training-license eligibility."
     )
@@ -259,6 +265,11 @@ def main():
     parser.add_argument("--revision", required=True)
     parser.add_argument("--report", required=True)
     parser.add_argument("--takeover", action="store_true")
+    parser.add_argument(
+        "--deep",
+        action="store_true",
+        help="Also audit sources/prompts and resolve TPU dependencies",
+    )
     args = parser.parse_args()
     result = run_checks(
         repo=args.repo,
@@ -267,6 +278,7 @@ def main():
         revision=args.revision,
         takeover=args.takeover,
         report_path=args.report,
+        deep=args.deep,
     )
     return 0 if result["passed"] else 1
 

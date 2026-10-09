@@ -192,6 +192,26 @@ def _prepare_cpu_environment(environment: Path, child_env: dict[str, str]) -> Pa
     return python
 
 
+def _isolated_module_command(python: Path, module: str) -> list[str]:
+    """Load only the venv packages, without running Kaggle's system sitecustomize."""
+    environment = python.parent.parent
+    packages = environment / (
+        "Lib/site-packages"
+        if os.name == "nt"
+        else f"lib/python{sys.version_info[0]}.{sys.version_info[1]}/site-packages"
+    )
+    return [
+        str(python),
+        "-u",
+        "-S",
+        "-c",
+        "import runpy,site,sys; site.addsitedir(sys.argv.pop(1)); "
+        "runpy.run_module(sys.argv.pop(1), run_name='__main__', alter_sys=True)",
+        str(packages),
+        module,
+    ]
+
+
 def cpu_preflight(
     provider,
     revision,
@@ -203,6 +223,7 @@ def cpu_preflight(
     takeover=False,
     profile="kaggle-tpu",
     backend="jax",
+    deep=False,
 ):
     """Check cheap failures before a TPU queue, without changing the notebook environment."""
     import json
@@ -232,7 +253,7 @@ def cpu_preflight(
     os.environ["HF_TOKEN"] = token
     print("PASS: Python/platform, settings and HF_TOKEN availability (token hidden)", flush=True)
     checkout = bootstrap(provider, revision, directory, backend="jax", install_dependencies=False)
-    # An isolated CPU environment avoids downgrading Kaggle's preinstalled ML stack.
+    # Only HF access needs a third-party package on the default preparation path.
     environment = Path(f"/tmp/kodoom-cpu-preflight-py{sys.version_info[0]}{sys.version_info[1]}")
     child_env = dict(os.environ, PYTHONPATH=str(checkout / "src"), JAX_PLATFORMS="cpu")
 
@@ -248,7 +269,7 @@ def cpu_preflight(
 
     python = _prepare_cpu_environment(environment, child_env)
     constraints = "tpu-py313.txt" if sys.version_info[:2] == (3, 13) else "tpu.txt"
-    print("Installing lightweight CPU checks in /tmp (no JAX or model weights)...", flush=True)
+    print("Preparing HF access checks in /tmp (no accelerator dependencies)...", flush=True)
     checked(
         [
             str(python),
@@ -256,7 +277,7 @@ def cpu_preflight(
             "pip",
             "install",
             "-e",
-            f"{checkout}[preflight]",
+            f"{checkout}[{'preflight' if deep else 'preflight-access'}]",
             "-c",
             str(checkout / "constraints" / constraints),
             "--disable-pip-version-check",
@@ -267,10 +288,7 @@ def cpu_preflight(
     report_path = Path("/kaggle/working/kodoom/cpu-preflight.json")
     report_path.unlink(missing_ok=True)
     words = [
-        str(python),
-        "-u",
-        "-m",
-        "kodoom.notebook_preflight",
+        *_isolated_module_command(python, "kodoom.notebook_preflight"),
         "--repo",
         repo,
         "--campaign",
@@ -284,6 +302,8 @@ def cpu_preflight(
     ]
     if takeover:
         words.append("--takeover")
+    if deep:
+        words.append("--deep")
     # The child emits only explicitly safe check results, never provider exception text.
     try:
         outcome = subprocess.run(words, env=child_env, timeout=900, check=False)
@@ -291,4 +311,6 @@ def cpu_preflight(
         raise RuntimeError("CPU preflight timed out; retry it before requesting a TPU") from None
     if outcome.returncode or not report_path.exists():
         raise RuntimeError("CPU preflight failed. Fix the FAIL items above before requesting a TPU")
-    return json.loads(report_path.read_text("utf-8"))
+    report = json.loads(report_path.read_text("utf-8"))
+    print("CPU PREFLIGHT PASSED", flush=True)
+    return report

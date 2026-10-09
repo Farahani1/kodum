@@ -5,7 +5,7 @@ workflow; `docs/workflow-change-plan.md` tracks remaining migration work. The
 current Kaggle runner covers the bulk draft campaign; a live Kaggle run and
 fresh-session restore remain unverified.
 
-Research acceptance follows project-plan v24 and
+Research acceptance follows project-plan v25 and
 [the precompute audit](docs/precompute-project-review.md). The active request
 retains the frozen v21 data recipe. The CPU-first notebook uses a newly published
 runtime pin and defaults to RUN_TPU=False; run its early cells on Kaggle CPU before
@@ -55,10 +55,11 @@ current-stage execution, artifact report and persistence confirmation.
 CPU preparation checks secrets before dependency installation, checks out the
 exact revision without accelerator setup and runs lightweight checks in an
 isolated CPU environment. It performs a tiny private HF write/read/delete probe,
-validates attached Flax assets, source inputs, prompt limits, writable paths,
-resume state and dependency resolution. It does not claim legal eligibility,
-load model weights, initialize JAX or acquire a campaign writer lease. The saved
-TPU session repeats the checks because secrets and mounts are session-specific.
+validates attached Flax assets, writable paths and resume state. It does not claim legal eligibility,
+load model weights, initialize JAX or acquire a campaign writer lease. Source/prompt/dependency audits are optional deep diagnostics. The saved
+TPU session skips the isolated CPU environment and repeats short setup checks
+because secrets and mounts are session-specific. Production validation remains
+in the worker.
 
 Both notebooks call the same tested `kodoom` package. Dataset processing,
 translation, training, evaluation, recipe dispatch and artifact handling belong

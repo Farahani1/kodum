@@ -1,6 +1,6 @@
 # Persian Typed Decisions: Project Plan
 
-Version 24 · Oct 8, 2026 · @Shah
+Version 25 · Oct 9, 2026 · @Shah
 
 ## Overview
 
@@ -74,17 +74,27 @@ small private artifacts under `/kaggle/working`. The CPU development path stays
 lightweight. GPU profiles and the 4B decision remain the historical baseline;
 27B adoption depends on paired human review and measured resource costs.
 
-**CPU checks before the TPU queue (v24):** the operational notebook defaults to
-`RUN_TPU=False`. On Kaggle with Accelerator=None, its early cells check Python,
-the exact GitHub pin, HF secret availability/private dataset read/write/readback,
-mounted version-1 Flax assets, source inputs, prompt lengths, writable storage,
-resume conflicts and dependency resolution. CPU tools use an isolated environment;
-these checks never load weights or acquire the campaign writer lease. After a
-passing report, explicitly set `RUN_TPU=True`, select v5e-8 and submit a saved run.
-The new runtime must be published and pinned; old campaign code identities are
-not silently migrated. Dataset scope, prompts and research gates remain unchanged.
-The Oct 8 failed notebook reached an eight-device BF16 probe, then stopped because
-HF_TOKEN was unavailable; model fit, translation and durable saving were not proven.
+**Access and setup before the TPU queue (v25):** the operational notebook defaults
+to `RUN_TPU=False`. With Accelerator=None, check the exact GitHub pin, runtime,
+HF token/private dataset read/write/readback, writable storage, resume state and
+the attached version-1 Flax model. The default installs only the HF client into
+an isolated CPU environment. Source/prompt audits and a TPU dependency dry-run
+are optional deep diagnostics, rather than default queue prerequisites.
+
+With `RUN_TPU=True`, skip the isolated CPU environment and deep audits. Install
+the pinned production dependencies, then repeat the short access/storage/model
+checks in that allocated session before translation. The production worker
+still validates inputs, token limits, restore identity, real TPU libraries,
+eight-device BF16 readiness and model loading. A previous CPU pass is not a
+certificate for a fresh session. Publish and pin the changed runtime; reject
+incompatible saved campaign identities rather than silently migrating them.
+
+The Oct 9 CPU run passed GitHub and a private HF write/readback/cleanup probe,
+but failed to find the attached Flax model. A provider `sitecustomize` warning
+about `wrapt` did not stop the checks; isolated checks now avoid that startup
+hook. The model attachment must be resolved before queuing. Real 27B loading,
+translation, throughput and a physical fresh-session campaign restore remain
+unverified. The frozen v21 recipe and research gates are unchanged.
 
 **Implemented bulk campaign (Oct 8; live validation pending):** reduce repeated TPU queue waits by generating
 the planned English-to-Persian scope as unreviewed drafts, saving verified remote
@@ -646,6 +656,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
+| 25 | Oct 9, 2026 | Narrow default CPU preparation to access, storage, resume and attached-model setup; keep source/prompt/dependency audits as optional diagnostics. Skip the CPU environment in allocated TPU sessions while repeating short session checks and retaining production validation. Record a successful private HF access probe and unresolved model attachment; preserve the v21 recipe and research gates. |
 | 24 | Oct 8, 2026 | Add an explicit CPU-first notebook preflight after the observed missing-HF_TOKEN failure. Check access, private checkpoint writes, mounted Flax inputs, source/prompt validity, storage, resume conflicts and dependency resolution before TPU setup. Default to CPU-only; require an explicit TPU opt-in and a new published runtime pin. Preserve the v21 data recipe and scientific gates; reject incompatible old campaign identities. |
 | 23 | Oct 8, 2026 | Define the published data contract: separate resource licenses, paired decision rows, Parquet/JSONL exports, review/provenance and split manifests, pinned reproduction code and release checks. Distinguish rebuilding reviewed records from rerunning translation; exporters and release verification remain pending. Preserve the frozen v21 production campaign. |
 | 22 | Oct 8, 2026 | Audit community value and newer Persian alternatives before computation. Separate teacher agreement, source-label validity and translation fidelity; make helmo optional and enforce training-only use. Hold Gemma 3 drafts out of permissive-model training pending a license route; clarify review sampling, controlled ablations, context limits and acceptance gates. Preserve the frozen v21 production request and notebook pin. |

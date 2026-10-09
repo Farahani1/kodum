@@ -2,6 +2,7 @@ import json
 import subprocess
 import sys
 import types
+import venv
 from pathlib import Path
 
 import pytest
@@ -113,6 +114,32 @@ def test_cpu_environment_errors_hide_credentials(tmp_path, monkeypatch, failure)
     assert error.value.__cause__ is None
 
 
+def test_isolated_checks_skip_provider_sitecustomize_but_load_venv_packages(tmp_path):
+    environment = tmp_path / "isolated"
+    venv.EnvBuilder(with_pip=False).create(environment)
+    python = environment / ("Scripts/python.exe" if runtime.os.name == "nt" else "bin/python")
+    command = runtime._isolated_module_command(python, "setup_fixture")
+    packages = Path(command[-2])
+    (packages / "setup_fixture.py").write_text(
+        "import sys\nassert 'sitecustomize' not in sys.modules\nprint(sys.argv[1])\n",
+        encoding="utf-8",
+    )
+    custom = tmp_path / "provider"
+    custom.mkdir()
+    (custom / "sitecustomize.py").write_text(
+        "raise ImportError('wrapt fixture')\n", encoding="utf-8"
+    )
+    result = subprocess.run(
+        [*command, "isolated check passed"],
+        env=dict(runtime.os.environ, PYTHONPATH=str(custom)),
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert result.stdout.strip() == "isolated check passed"
+    assert not result.stderr
+
+
 def test_mounted_model_check_never_downloads_and_requires_exact_version(tmp_path, monkeypatch):
     wrong = tmp_path / "gemma-3/flax/gemma3-27b-it/2"
     wrong.mkdir(parents=True)
@@ -220,6 +247,7 @@ def test_failed_access_is_reported_without_secret_text_and_dependent_checks_skip
         revision="a" * 40,
         takeover=False,
         report_path=report,
+        deep=True,
     )
     assert result["passed"] is False
     assert leaked not in report.read_text("utf-8") + capsys.readouterr().out
@@ -260,7 +288,7 @@ def test_preflight_module_import_has_no_accelerator_side_effects():
     assert result.returncode == 0, result.stderr
 
 
-def test_all_checks_pass_only_when_every_prerequisite_succeeds(tmp_path, monkeypatch):
+def test_deep_checks_pass_only_when_every_prerequisite_succeeds(tmp_path, monkeypatch):
     profile = types.SimpleNamespace(data_dir=tmp_path, runs_dir=tmp_path, scratch_dir=tmp_path)
     monkeypatch.setattr(preflight, "validate_tpu_runtime", lambda: None)
     monkeypatch.setattr(preflight, "host_resources", lambda: {})
@@ -280,8 +308,47 @@ def test_all_checks_pass_only_when_every_prerequisite_succeeds(tmp_path, monkeyp
         revision="a" * 40,
         takeover=False,
         report_path=tmp_path / "report.json",
+        deep=True,
     )
     assert result["passed"] and all(row["status"] == "PASS" for row in result["checks"])
+
+
+@pytest.mark.parametrize("model_attached", [False, True])
+def test_basic_setup_skips_audits_but_still_requires_the_model(
+    tmp_path, monkeypatch, model_attached
+):
+    profile = types.SimpleNamespace(data_dir=tmp_path, runs_dir=tmp_path, scratch_dir=tmp_path)
+    monkeypatch.setattr(preflight, "validate_tpu_runtime", lambda: None)
+    monkeypatch.setattr(preflight, "host_resources", lambda: {})
+    monkeypatch.setattr(preflight, "load_profile", lambda _: profile)
+    monkeypatch.setattr(preflight, "HFRemote", lambda *args: object())
+    monkeypatch.setattr(preflight, "resume_check", lambda *args: "new")
+    monkeypatch.setattr(preflight, "write_probe", lambda *args: "verified")
+
+    def attached():
+        if not model_attached:
+            raise preflight.CheckFailure("Attach version-1 Gemma")
+        return tmp_path, {}
+
+    def expensive(*args):
+        pytest.fail("Basic access/setup must not audit sources, prompts or dependencies")
+
+    monkeypatch.setattr(preflight, "attached_checkpoint", attached)
+    for name in ("prepare_units", "prompt_audit", "dependency_resolution"):
+        monkeypatch.setattr(preflight, name, expensive)
+    result = preflight.run_checks(
+        repo="owner/private-data",
+        campaign_id="smoke-campaign",
+        operator="owner",
+        revision="a" * 40,
+        takeover=False,
+        report_path=tmp_path / "report.json",
+    )
+    assert result["passed"] is model_attached
+    assert result["scope"] == "access-and-setup"
+    names = {row["check"] for row in result["checks"]}
+    assert {"attached Flax model", "resume state", "private HF write/readback"} <= names
+    assert not {"pinned source inputs", "prompt limits", "TPU dependency resolution"} & names
 
 
 def test_overlong_production_prompt_fails_on_cpu(tmp_path, monkeypatch):
