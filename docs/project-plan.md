@@ -1,6 +1,6 @@
 # Persian Typed Decisions: Project Plan
 
-Version 27 · Oct 15, 2026 · @Shah
+Version 28 · Oct 15, 2026 · @Shah
 
 ## Current status — Oct 15, 2026
 
@@ -33,8 +33,17 @@ exact model/checkpoint IDs and unknown historical settings remain unknown. The
 Gemma campaign identity describes the frozen source selection, not the actual
 translator of these supplied files. Use per-chunk provenance for attribution.
 The Oct 13 AI audit sampled 50 cases per source (100 cases, 300 questions);
-it is not human review. All 400 typed-decisions test cases still await human
-translation review, and recorded suggestions are not completed corrections.
+it is not human review. **Owner decision (Oct 15): accept the supplied
+translations as sufficient and skip the planned human translation review**, including
+all 400 test cases and the training/Helmo review samples. Human review is no longer
+an M1 prerequisite for this corpus. Preserve the actual machine-translated and
+AI-audited status; do not mark unreviewed records as human-reviewed or suggestions
+as applied corrections. Disclose this decision and the absence of a measured
+human translation-error rate in release cards and evaluation reports.
+
+The owner reran `python scripts/validate_dataset.py --output .` successfully:
+8 configurations, 14 splits, 10,000 questions, 3,600 cases and 307 files.
+The next technical step is verifying compatibility with kodoom's record schema.
 
 **Next work, in order:**
 
@@ -42,8 +51,9 @@ translation review, and recorded suggestions are not completed corrections.
    coverage, bilingual alignment, preserved gold, case IDs and split membership.
    Reconcile the existing exports with the release specification and map the
    bilingual question rows into kodoom's record schema without retranslating.
-2. Complete semantic checks and human review (1.2 steps 3–5), apply versioned
-   corrections, and record source-label issues and exclusions separately.
+2. Preserve existing automatic checks and AI-audit findings during import; record
+   any later corrections or source-label exclusions with provenance. Human
+   translation review is waived for this corpus by the owner (1.2 step 5).
 3. Complete the reproducible Persian skills suite and remaining M1 release
    checks. Resolve the translation-specific license grant and record actual
    source/teacher/translator eligibility before publication or training.
@@ -67,7 +77,7 @@ The test for every deliverable: could a developer drop this project's model enti
 
 **Deliverables**, each publishable on its own, in order of importance:
 
-1. **typed-decisions-fa**: a Persian translation of LocalLLaMA/typed-decisions, same case IDs, splits and gold distributions as the English original, so the same case can be scored in both languages. Every test case is human-reviewed (Part 1).
+1. **typed-decisions-fa**: a Persian translation of LocalLLaMA/typed-decisions, same case IDs, splits and gold distributions as the English original, so the same case can be scored in both languages. Human translation review is waived for the current corpus by owner decision; its actual review status is disclosed (Part 1).
 2. **Persian skills suite**: executable generators for Jalali dates, digit forms, Toman and Rial, business hours and Iranian formats, with labels computed by code and minimal pairs, regenerable by anyone from published seeds and templates (Part 1).
 3. **Evaluation harness and report**: a model-agnostic harness that scores any decision model on the Persian sets, raw predictions for every model evaluated, and a report on accuracy, calibration, the English–Persian gap and CPU latency (Part 3).
 4. **Reference models**: a fine-tuned mmBERT-base (main) and Qwen3.5-0.8B (challenger), trained only on permissively licensed data, each with a model card, a CPU export and a `calibration.json` (Part 2). How much of this is trained depends on the decision gate (2.4).
@@ -198,7 +208,7 @@ The current notebook runs the bulk package: a live private save/restore probe an
 
 **What the laptop cannot catch.** fp16 overflow (the Gemma 3 / TranslateGemma issue), Qwen3.5's Gated DeltaNet layers in fp16, GPU memory at the real batch size and length, and real run times. The `colab-preflight` profile (real models, about 20 steps, about 5 minutes) catches these before a full session is spent.
 
-**Workflow:** laptop validation/import of the completed dataset -> review and M1 acceptance -> M2 baselines -> decision gate -> selected-provider training preflight if needed. Full Kaggle training support still needs implementation and validation. The frozen request/notebook retain the v21 bulk recipe; this v27 plan governs current research priorities, acceptance and downstream use.
+**Workflow:** laptop validation/import of the completed dataset -> review and M1 acceptance -> M2 baselines -> decision gate -> selected-provider training preflight if needed. Full Kaggle training support still needs implementation and validation. The frozen request/notebook retain the v21 bulk recipe; this v28 plan governs current research priorities, acceptance and downstream use.
 
 ### Storage budget: Google Drive, free 15 GB plan
 
@@ -257,7 +267,7 @@ as evaluation-only complementary work. These sources are not registered or
 added to the active campaign. Full comparisons, CLINC150/BANKING77 candidates
 and research gates are in [the review](precompute-project-review.md).
 
-The first useful release is the reviewed bilingual workflow corpus and the
+The first useful release is the bilingual workflow corpus accepted by the owner and the
 reproducible skills suite, with cards and scoring examples. A small independently
 authored Persian decision set is an optional post-M1 extension; do not replace
 the current scope or enlarge helmo merely to increase the row count.
@@ -313,7 +323,8 @@ Preparation: write 5–10 Persian templates per generator, colloquial and formal
 package described in Current status. The candidate table, experiments and
 steps 1–2 below preserve the earlier generation recipe. They do not identify the
 actual translator of the supplied package or require another full run. Steps
-3–6 remain quality requirements; credit only checks evidenced in the package.
+3–4 and 6 remain technical quality requirements; step 5 records the owner
+waiver of human review. Credit only checks evidenced in the package.
 Apply Gemma-specific restrictions only where provenance actually identifies
 Gemma-derived data; the supplied translations still need their own documented
 distribution terms and downstream training eligibility.
@@ -371,7 +382,15 @@ Its software is implemented and locally tested. The active notebook performs a p
 4. **Meaning check.** The checker compares English and Persian for each case. It flags any change in meaning, urgency, negation, or who did what.
    - For helmo, also an answer comparison: the checker answers the question once from the English record and once from the Persian one, and a large difference between the two answers flags the record. This targets exactly the error that makes a label wrong.
    - This is an acceptance step still to implement/validate against human findings; the bulk runner's structural checks are not a meaning checker. Measure missed errors and false flags. Agreement in both languages cannot validate the source answer.
-5. **Human review.**
+5. **Human review — waived for the supplied corpus (owner decision, Oct 15).**
+   The owner accepts the existing translations as sufficient and directs the project
+   to skip this review. The test, training and Helmo review samples below are the
+   historical protocol, retained as optional future work rather than release or
+   training prerequisites. Preserve existing quality flags and AI-audit evidence;
+   disclose that no human translation-error rate has been established. This waiver
+   does not change source targets, split rules or licensing requirements.
+
+   **Historical optional protocol:**
    - **Test split: all 400 cases**, English and Persian side by side, including every decision and option description. At 2–4 minutes a case this is roughly 13–27 hours before corrections and bookkeeping. Time ten real cases to budget the work. Seek a second native reader for at least 40 cases and disputed cases; record adjudication, or disclose single-reviewer limitations.
    - **Train split:** every flagged case plus 100–150 random unflagged ones. The error rate in the random sample goes into the dataset card.
    - **Helmo:** about 100 random unflagged records of its own, spread across topics, on top of the typed-decisions sample, because no fixed template covers its text. Its error rate is reported on its own line in the dataset card, never blended with typed-decisions.
@@ -413,9 +432,9 @@ grant has not been supplied. Preserve that limitation until resolved; the
 source-license and target-card requirements below do not establish such a grant.
 
 - Same splits, labels and case IDs as the original.
-- Dataset card: source revision, translator and checker models, how the translator was chosen (a blind LLM rating by Claude Opus 5.5 via Cowork, not a human review), prompt summary, glossary, the full test-split review and its fix count, the train review sample size and measured error rate, known limits (translationese, unlocalized numbers, labels from a teacher model), Apache-2.0 attribution. Use the [Russian](https://huggingface.co/datasets/yyhlm/typed-decisions-ru) and [Japanese](https://huggingface.co/datasets/GeneLab/typed-decisions-ja) cards as models.
+- Dataset card: source revision, translator and checker models, how the translator was chosen (a blind LLM rating by Claude Opus 5.5 via Cowork, not a human review), prompt summary, glossary, the owner waiver of human translation review, actual AI-audit coverage, any applied fix counts, and the absence of a measured human translation-error rate, known limits (translationese, unlocalized numbers, labels from a teacher model), Apache-2.0 attribution. Use the [Russian](https://huggingface.co/datasets/yyhlm/typed-decisions-ru) and [Japanese](https://huggingface.co/datasets/GeneLab/typed-decisions-ja) cards as models.
 - **Provenance statement** on every published dataset card: which parts involved a model and which did not. Translations come from the models recorded in the supplied provenance; describe the actual AI audit separately and claim checker-model coverage only where evidenced; typed-decisions gold comes from its source's teacher model (roughly 4B-class); the synthetic-typed-decisions sample is as generated by its source; the skills suite involves no model at all (code and templates). Readers comparing with DibaOne X1, which uses no third-party model in its data, can then see the difference exactly.
-- Versions: v0.1 is the pilot, v1.0 the full reviewed set.
+- Versions: v0.1 is the pilot; v1.0 is the full accepted set, with the human-review waiver and actual quality status disclosed.
 
 **Keep generators reproducible.** Store seeds and template files with the synthetic data, so anyone can regenerate it.
 
@@ -448,7 +467,7 @@ Licenses checked against each repository's LICENSE or NOTICE file (September 202
 
 **Training sources**, all compatible with a permissively licensed model: MASSIVE (CC BY 4.0, attribution in the model card), FarsTail (Apache-2.0), and Part 1's data (Apache-2.0 and MIT sources, and the project's own CC0-1.0 skills data). Everything else is test-only or excluded.
 
-**From Part 1:** the code-labeled Persian data (training templates only), plus reviewed typed-decisions-fa and optionally the Persian synthetic-typed-decisions sample **only after the source/teacher/translator license gate is satisfied**. Import the existing bilingual package rather than rerunning translation. Determine eligibility from its actual per-chunk provenance and unresolved translation terms; do not infer Gemma authorship from a campaign name. Actual Gemma 3 drafts are held out by default. Training eligibility is not implied by a dataset's source-license field or a successful translation run.
+**From Part 1:** the code-labeled Persian data (training templates only), plus owner-accepted typed-decisions-fa and optionally the Persian synthetic-typed-decisions sample **only after the source/teacher/translator license gate is satisfied**. Import the existing bilingual package rather than rerunning translation. Determine eligibility from its actual per-chunk provenance and unresolved translation terms; do not infer Gemma authorship from a campaign name. Actual Gemma 3 drafts are held out by default. Training eligibility is not implied by a dataset's source-license field or a successful translation run.
 
 **English slice:** the original English typed-decisions train split, plus some records with an English question over a Persian state. This keeps the model usable the way a foreign client would use it.
 
@@ -632,7 +651,7 @@ The model is judged on Persian it never trained on, on how honest its confidence
 
 **Resource criteria**, which do not depend on the model:
 
-- [ ] Every one of the 400 typed-decisions-fa test cases has been human-reviewed; the number of fixed and dropped cases is published.
+- [ ] Release documentation records the owner waiver of human translation review, actual AI-audit coverage, and any fixed or excluded cases; unreviewed records retain their actual status.
 - [ ] The harness has scored at least three models this project did not train (for example Laya-multilingual, DibaOne X1 and prompted Qwen3.5-0.8B), with their raw predictions published.
 - [ ] The skills suite regenerates identically from the published seeds and templates.
 - [ ] Every training source's license allows a permissively licensed model, and the model card lists them.
@@ -696,7 +715,7 @@ Stopping at any gate still leaves something published; M1 alone is a complete, u
 
 **Current milestone position (Oct 15):** M1 translation generation and initial
 local Hugging Face packaging are complete. M1 remains open for validation against
-the release contract, human review/corrections, skills-suite acceptance, licensing
+the release contract, disclosed review waiver, skills-suite acceptance, licensing
 and the owner's publication decision. M2 baselines and M3 training are not marked
 complete by the availability of translated data.
 
@@ -704,7 +723,7 @@ Changes since the milestone diagram was drawn (the diagram itself still needs up
 
 - **Gate 2** now also applies the decision gate (2.4): its thresholds are written down before the baselines run, and its outcome (A, B or C) is recorded.
 - **M3's scope depends on the gate outcome**: the full run plan, a reduced one, or a light fine-tune of Laya-multilingual.
-- **M1 now includes the full review of the 400-case test split** (1.2 step 5), and the skills suite with minimal pairs.
+- **M1 retains the skills suite with minimal pairs.** The owner waived the planned full human review of the 400-case test split and training/Helmo samples on Oct 15 (1.2 step 5); release documentation must disclose the waiver.
 - **M1 may ship without helmo or a new model.** Its gate requires translation/source-label review status, correction/exclusion manifests, honest provenance, attribution and runnable scoring examples. Private draft completion is not M1 completion.
 - **Before M3:** record the translation-training license route and enforce it in the mix builder; freeze leakage/context audits, calibration split, M2 thresholds/outcome and matched ablations. The bulk campaign establishes none of these automatically.
 
@@ -744,6 +763,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
+| 28 | Oct 15, 2026 | Record the owner decision to accept supplied translations and skip human translation review for the current corpus. Remove that review as an M1 prerequisite, preserve actual quality flags and AI-audit evidence, require honest release disclosure, and record the successful owner-run validator. Next: kodoom schema compatibility/import. |
 | 27 | Oct 15, 2026 | Record completion of the planned translation scope and local Hugging Face packaging in `D:\Coding\hf-data`: 1,600 typed-decisions cases and 2,000 selected Helmo items. Distinguish untranslated Helmo originals, actual Codex provenance and AI audit from historical Gemma recipes and human review. Shift next work to import/validation, review, skills, release terms and baselines; retain M1 and training gates. |
 | 26 | Oct 9, 2026 | At the owner's request, configure one stable published notebook with the confirmed private dataset and tested runtime pin, defaulting to TPU translation without code edits. Retain short session/production checks and optional CPU diagnosis; Kaggle secrets, consent and model attachment remain prerequisites. Preserve the frozen v21 campaign and research gates. |
 | 25 | Oct 9, 2026 | Narrow default CPU preparation to access, storage, resume and attached-model setup; keep source/prompt/dependency audits as optional diagnostics. Skip the CPU environment in allocated TPU sessions while repeating short session checks and retaining production validation. Record a successful private HF access probe and unresolved model attachment; preserve the v21 recipe and research gates. |
