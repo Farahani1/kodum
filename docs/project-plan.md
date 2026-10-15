@@ -1,6 +1,61 @@
 # Persian Typed Decisions: Project Plan
 
-Version 26 · Oct 9, 2026 · @Shah
+Version 27 · Oct 15, 2026 · @Shah
+
+## Current status — Oct 15, 2026
+
+**Translation of the planned English scope is complete.** The owner-confirmed
+local Hugging Face dataset package is at `D:\Coding\hf-data`; its dataset card,
+provenance and quality reports are the starting point for the remaining work.
+
+| Available bilingual configuration | Coverage | Question rows |
+| --- | --- | --- |
+| `typed_decisions`, train | All 1,200 original training cases | 6,000 |
+| `typed_decisions`, test | All 400 original test cases | 2,000 |
+| `helmo`, train only | Frozen 2,000-item training selection | 2,000 |
+
+That is 3,600 translated cases and 10,000 bilingual question rows. The package
+also preserves the full original datasets: all 1,600 typed-decisions cases and
+9,879 Helmo items. The other 7,879 Helmo originals have no supplied translation
+and are outside the completed planned scope; translating them is not a remaining
+M1 requirement. Original workflow configurations overlap `original_typed_decisions`
+and must not be concatenated as additional independent examples.
+
+**Available now:** Hugging Face-compatible Parquet configurations, aligned
+English/Persian fields and options, original targets and splits, archived build
+inputs, pinned source snapshots, provenance manifests, and local build/validation
+scripts. See `README.md`, `provenance/release.json`, `provenance/translation_runs.jsonl`
+and `quality/validation.json` inside that directory. This is local package
+availability, not a claim of public Hub publication or Viewer verification.
+
+The supplied translation manifests report display names such as **GPT-6 (Codex)**;
+exact model/checkpoint IDs and unknown historical settings remain unknown. The
+Gemma campaign identity describes the frozen source selection, not the actual
+translator of these supplied files. Use per-chunk provenance for attribution.
+The Oct 13 AI audit sampled 50 cases per source (100 cases, 300 questions);
+it is not human review. All 400 typed-decisions test cases still await human
+translation review, and recorded suggestions are not completed corrections.
+
+**Next work, in order:**
+
+1. Pin the local package revision/checksums and run its validation script; verify
+   coverage, bilingual alignment, preserved gold, case IDs and split membership.
+   Reconcile the existing exports with the release specification and map the
+   bilingual question rows into kodoom's record schema without retranslating.
+2. Complete semantic checks and human review (1.2 steps 3–5), apply versioned
+   corrections, and record source-label issues and exclusions separately.
+3. Complete the reproducible Persian skills suite and remaining M1 release
+   checks. Resolve the translation-specific license grant and record actual
+   source/teacher/translator eligibility before publication or training.
+4. Prepare native Persian sources, leakage-safe training/validation/calibration
+   splits and M2 baselines; record the decision gate before choosing M3's scope.
+
+Bulk translation is no longer on the critical path. The accelerator recipes below
+remain historical reproduction/repair instructions, not an instruction to rerun
+the completed corpus. This plan update does not change the frozen execution
+request or notebook; select and update an appropriate validated workflow before
+running the next stage. Translation completion does not itself complete M1,
+human review, public release, or reference-model training eligibility.
 
 ## Overview
 
@@ -20,7 +75,7 @@ The test for every deliverable: could a developer drop this project's model enti
 
 **Constraints**
 
-- The existing training plan targets the free Colab tier: a T4 GPU (16 GB), no bf16, no FlashAttention 2, sessions that drop. A private Kaggle runner now prepares the resumable 27B bulk draft campaign; live TPU execution and Kaggle training are not yet validated.
+- The existing training plan targets the free Colab tier: a T4 GPU (16 GB), no bf16, no FlashAttention 2, sessions that drop. The planned translations are now available locally; the Kaggle bulk runner is retained as a historical recipe. Kaggle training is not yet validated.
 - Google Drive storage is the free 15 GB plan, shared with Gmail and Photos, so less than 15 GB is actually free. Drive is scratch space, not an archive (see Environments: Storage budget).
 - Data preparation, generation and small-model evaluation run on the laptop CPU.
 - The laptop is modest: Intel i3-1005G1 (2 cores, 4 threads), about 12 GB RAM, and an NVIDIA MX110 (2 GB) that is not used. It proves the code works; it does not train the real models (see Environments).
@@ -45,6 +100,10 @@ The test for every deliverable: could a developer drop this project's model enti
 Translated and native data meet only in the training mix, and only their train splits; every test set reaches Part 3 untouched.
 
 ## Environments: laptop development, Colab and Kaggle runs
+
+**Status:** the translation setup below records the earlier campaign workflow.
+Current work consumes `D:\Coding\hf-data`; historical provider checks are not
+prerequisites for using the existing package. Training still needs its own preflight.
 
 **Execution notebooks:** [execution.ipynb](../notebooks/execution.ipynb) prepares
 the resumable bulk draft campaign on Kaggle; [reference.ipynb](../notebooks/reference.ipynb)
@@ -139,7 +198,7 @@ The current notebook runs the bulk package: a live private save/restore probe an
 
 **What the laptop cannot catch.** fp16 overflow (the Gemma 3 / TranslateGemma issue), Qwen3.5's Gated DeltaNet layers in fp16, GPU memory at the real batch size and length, and real run times. The `colab-preflight` profile (real models, about 20 steps, about 5 minutes) catches these before a full session is spent.
 
-**Workflow:** laptop `dev` development -> selected-provider preflight -> the active stage. Kaggle's active stage is the private bulk draft campaign; full training support needs implementation and validation. The frozen request/notebook retain the v21 production recipe while this v23 plan governs acceptance, release packaging and downstream use.
+**Workflow:** laptop validation/import of the completed dataset -> review and M1 acceptance -> M2 baselines -> decision gate -> selected-provider training preflight if needed. Full Kaggle training support still needs implementation and validation. The frozen request/notebook retain the v21 bulk recipe; this v27 plan governs current research priorities, acceptance and downstream use.
 
 ### Storage budget: Google Drive, free 15 GB plan
 
@@ -205,7 +264,7 @@ the current scope or enlarge helmo merely to increase the row count.
 
 ### 1.1 Data preparation
 
-**Sources to translate**
+**Translated sources (planned scope complete; validation/adoption rules retained)**
 
 | Dataset | Size | License | Why this one | Preparation needed |
 | --- | --- | --- | --- | --- |
@@ -246,9 +305,18 @@ Preparation: write 5–10 Persian templates per generator, colloquial and formal
 
 **Task families.** Every record names its task family (for example `workflow`, `topics`, `intent`, `entailment`, `reading`, `sentiment`, `paraphrase`, `skill-dates`, `skill-currency`), so results can be reported for families seen in training vs unseen ones (3.2).
 
-**Pilot first.** Take 50 typed-decisions cases through all of 1.2 before the full run.
+**Historical pilot-first recipe.** The pilot and bulk generation are already complete. Use the saved translations for the remaining acceptance checks; do not repeat the pilot as a prerequisite for importing them.
 
 ### 1.2 Translation
+
+**Generation complete; acceptance work remains.** Consume the supplied bilingual
+package described in Current status. The candidate table, experiments and
+steps 1–2 below preserve the earlier generation recipe. They do not identify the
+actual translator of the supplied package or require another full run. Steps
+3–6 remain quality requirements; credit only checks evidenced in the package.
+Apply Gemma-specific restrictions only where provenance actually identifies
+Gemma-derived data; the supplied translations still need their own documented
+distribution terms and downstream training eligibility.
 
 | Candidate | Runs on | Why | Watch out for |
 | --- | --- | --- | --- |
@@ -287,11 +355,11 @@ fresh sessions or by authorized collaborators using their own accounts.
 Its software is implemented and locally tested. The active notebook performs a private save/restore probe and batch benchmark before bulk generation; real TPU throughput, Persian quality and a second live session remain unverified.
 
 1. **Pilot, 50 cases.** Translate with two candidates, review both blind, and keep the translator and prompt that win. **Done (Sep 30):** five candidates were rated blind on 50 test records from one workflow. Claude Cowork running Claude Opus 5.5 did the rating, as a single LLM rater; no human rated. Gemma 3 12B (4-bit) won narrowly; Gemma 3 4B was effectively tied. **Decided (Oct 2): Gemma 3 4B is the translator for the whole dataset, including helmo.** 12B is too slow on a free T4 for a solo project's session budget and is no longer used, as a fallback or otherwise.
-   - **Free-text gate, before the full run.** The pilot covered only `agent_trace_observability`, whose text is short and templated. The other workflows and helmo have not been translated by any model. Helmo is the biggest risk: every state is a unique technical paragraph (about 650 characters, 130+ topics in a 200-record sample) and the gold answer depends on one fact in it, so a translation that changes that fact leaves a wrong label that nothing downstream detects.
+   - **Free-text gate, before the full run.** The pilot covered only `agent_trace_observability`, whose text is short and templated. At the time of that pilot, the other workflows and helmo had not yet been translated; their planned scope is now complete. Helmo is the biggest risk: every state is a unique technical paragraph (about 650 characters, 130+ topics in a 200-record sample) and the gold answer depends on one fact in it, so a translation that changes that fact leaves a wrong label that nothing downstream detects.
    - Sample: about 40 helmo records from the local sample, split evenly across choice, score and yes/no and spread over as many topics as possible, plus 15–20 customer_service and security_incidents cases. Translate them with Gemma 3 4B, using the exact prompt and settings of the full run, and rate them the same way as the pilot.
    - Pass bar, fixed before rating: at most 1 meaning change in the 40 helmo records, and at most 10–15% of records needing any edit. The same bar applies to the workflow cases.
    - The gate no longer chooses a translator (that's decided); it sizes the risk 4B carries into the full run. If it passes, proceed as planned. If it fails, there is no 12B to fall back to: shrink helmo to the topics that pass, lean harder on the automatic checks and meaning check (steps 3-4), and widen the helmo human-review sample (step 5) rather than switching models.
-2. **Full run.** All 1,600 typed-decisions cases plus the synthetic-typed-decisions sample. The 27B bulk campaign may generate drafts before the human gate decision, as specified above; approved data still requires that decision and steps 3-5. Save complete cases locally at once and upload verified batches to the configured private store throughout the run, so a new session resumes pending work. Colab retains its Drive path; the implemented Kaggle bulk campaign uses the durable contract in the bulk plan.
+2. **Full run — complete for the planned scope.** All 1,600 typed-decisions cases plus the frozen 2,000-record synthetic-typed-decisions sample are available in `D:\Coding\hf-data`. The following describes the historical generation recipe. The 27B bulk campaign may generate drafts before the human gate decision, as specified above; approved data still requires that decision and steps 3-5. Save complete cases locally at once and upload verified batches to the configured private store throughout the run, so a new session resumes pending work. Colab retains its Drive path; the implemented Kaggle bulk campaign uses the durable contract in the bulk plan.
    - Translate each helmo record in one call: the state, the question and the option descriptions together, not field by field, so a technical term is rendered the same way in the state and in the options that refer to it.
    - Tell the translator to keep acronyms, symbols, units, amounts and times as in the source (for example SSRI, 5-HT1A, LTV:CAC, $50k MRR, 0.5 pounds, 8 PM).
 3. **Automatic checks on every case:**
@@ -319,8 +387,11 @@ The [published dataset specification](dataset-release-spec.md) defines the final
 package: separate licensed resources, paired decision configurations, Parquet
 and JSONL copies, immutable provenance/review manifests and pinned reproduction
 code. It distinguishes exact release rebuilding, deterministic skill generation
-and translation reruns. Packaging and release verification remain pending; this
-contract does not alter the frozen production campaign.
+and translation reruns. The local Hugging Face package now exists at `D:\Coding\hf-data`, including
+Parquet exports and rebuild/provenance artifacts. Reconcile that package against
+this contract (including JSONL exports and review manifests) and complete release
+verification; packaging availability alone does not establish full conformance.
+The frozen production campaign is retained for reproducibility.
 
 **One record schema** for translated, native and synthetic data alike:
 
@@ -334,11 +405,16 @@ contract does not alter the frozen production campaign.
 - `task_family` (1.1)
 - Quality flags: automatic checks passed, meaning-check flag, human-reviewed
 
-**Publish typed-decisions-fa on Hugging Face**
+**Publish typed-decisions-fa on Hugging Face (after remaining release gates)**
+
+The current package declares component licenses and translation terms rather
+than a blanket Apache-2.0 grant. Its card says a separate translation license
+grant has not been supplied. Preserve that limitation until resolved; the
+source-license and target-card requirements below do not establish such a grant.
 
 - Same splits, labels and case IDs as the original.
 - Dataset card: source revision, translator and checker models, how the translator was chosen (a blind LLM rating by Claude Opus 5.5 via Cowork, not a human review), prompt summary, glossary, the full test-split review and its fix count, the train review sample size and measured error rate, known limits (translationese, unlocalized numbers, labels from a teacher model), Apache-2.0 attribution. Use the [Russian](https://huggingface.co/datasets/yyhlm/typed-decisions-ru) and [Japanese](https://huggingface.co/datasets/GeneLab/typed-decisions-ja) cards as models.
-- **Provenance statement** on every published dataset card: which parts involved a model and which did not. Translations come from a translator model and were checked by a checker model; typed-decisions gold comes from its source's teacher model (roughly 4B-class); the synthetic-typed-decisions sample is as generated by its source; the skills suite involves no model at all (code and templates). Readers comparing with DibaOne X1, which uses no third-party model in its data, can then see the difference exactly.
+- **Provenance statement** on every published dataset card: which parts involved a model and which did not. Translations come from the models recorded in the supplied provenance; describe the actual AI audit separately and claim checker-model coverage only where evidenced; typed-decisions gold comes from its source's teacher model (roughly 4B-class); the synthetic-typed-decisions sample is as generated by its source; the skills suite involves no model at all (code and templates). Readers comparing with DibaOne X1, which uses no third-party model in its data, can then see the difference exactly.
 - Versions: v0.1 is the pilot, v1.0 the full reviewed set.
 
 **Keep generators reproducible.** Store seeds and template files with the synthetic data, so anyone can regenerate it.
@@ -372,7 +448,7 @@ Licenses checked against each repository's LICENSE or NOTICE file (September 202
 
 **Training sources**, all compatible with a permissively licensed model: MASSIVE (CC BY 4.0, attribution in the model card), FarsTail (Apache-2.0), and Part 1's data (Apache-2.0 and MIT sources, and the project's own CC0-1.0 skills data). Everything else is test-only or excluded.
 
-**From Part 1:** the code-labeled Persian data (training templates only), plus reviewed typed-decisions-fa and optionally the Persian synthetic-typed-decisions sample **only after the source/teacher/translator license gate is satisfied**. Gemma 3 drafts are held out by default. Training eligibility is not implied by a dataset's source-license field or a successful translation run.
+**From Part 1:** the code-labeled Persian data (training templates only), plus reviewed typed-decisions-fa and optionally the Persian synthetic-typed-decisions sample **only after the source/teacher/translator license gate is satisfied**. Import the existing bilingual package rather than rerunning translation. Determine eligibility from its actual per-chunk provenance and unresolved translation terms; do not infer Gemma authorship from a campaign name. Actual Gemma 3 drafts are held out by default. Training eligibility is not implied by a dataset's source-license field or a successful translation run.
 
 **English slice:** the original English typed-decisions train split, plus some records with an English question over a Persian state. This keeps the model usable the way a foreign client would use it.
 
@@ -618,6 +694,12 @@ Likelihood and impact are judgment calls for a solo project on free Colab; revis
 
 Stopping at any gate still leaves something published; M1 alone is a complete, useful result.
 
+**Current milestone position (Oct 15):** M1 translation generation and initial
+local Hugging Face packaging are complete. M1 remains open for validation against
+the release contract, human review/corrections, skills-suite acceptance, licensing
+and the owner's publication decision. M2 baselines and M3 training are not marked
+complete by the availability of translated data.
+
 Changes since the milestone diagram was drawn (the diagram itself still needs updating):
 
 - **Gate 2** now also applies the decision gate (2.4): its thresholds are written down before the baselines run, and its outcome (A, B or C) is recorded.
@@ -662,6 +744,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
+| 27 | Oct 15, 2026 | Record completion of the planned translation scope and local Hugging Face packaging in `D:\Coding\hf-data`: 1,600 typed-decisions cases and 2,000 selected Helmo items. Distinguish untranslated Helmo originals, actual Codex provenance and AI audit from historical Gemma recipes and human review. Shift next work to import/validation, review, skills, release terms and baselines; retain M1 and training gates. |
 | 26 | Oct 9, 2026 | At the owner's request, configure one stable published notebook with the confirmed private dataset and tested runtime pin, defaulting to TPU translation without code edits. Retain short session/production checks and optional CPU diagnosis; Kaggle secrets, consent and model attachment remain prerequisites. Preserve the frozen v21 campaign and research gates. |
 | 25 | Oct 9, 2026 | Narrow default CPU preparation to access, storage, resume and attached-model setup; keep source/prompt/dependency audits as optional diagnostics. Skip the CPU environment in allocated TPU sessions while repeating short session checks and retaining production validation. Record a successful private HF access probe and unresolved model attachment; preserve the v21 recipe and research gates. |
 | 24 | Oct 8, 2026 | Add an explicit CPU-first notebook preflight after the observed missing-HF_TOKEN failure. Check access, private checkpoint writes, mounted Flax inputs, source/prompt validity, storage, resume conflicts and dependency resolution before TPU setup. Default to CPU-only; require an explicit TPU opt-in and a new published runtime pin. Preserve the v21 data recipe and scientific gates; reject incompatible old campaign identities. |
