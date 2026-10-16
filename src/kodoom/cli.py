@@ -129,6 +129,15 @@ def _parser() -> argparse.ArgumentParser:
     import_package.add_argument("--out", type=Path, required=True)
     import_package.set_defaults(func=_import_package, writes_data=True)
 
+    release_skills = commands.add_parser(
+        "release-skills", help="build a private reproducible skills candidate (plan 1.3)"
+    )
+    _add_profile_args(release_skills)
+    release_skills.add_argument("--out", type=Path, required=True)
+    release_skills.add_argument("--seed", type=int)
+    release_skills.add_argument("--pairs-per-kind", type=int, default=DEFAULT_PAIRS_PER_KIND)
+    release_skills.set_defaults(func=_release_skills, writes_data=True)
+
     info = commands.add_parser("info", help="show the resolved settings of a profile")
     _add_profile_args(info)
     info.set_defaults(func=_info)
@@ -891,6 +900,19 @@ def _import_package(args: argparse.Namespace) -> int:
 
     _load(args)
     report = import_package(args.source, args.out, args.manifest_sha256)
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0
+
+
+def _release_skills(args: argparse.Namespace) -> int:
+    from kodoom.skill_release import build_skills
+
+    profile = _load(args)
+    report = build_skills(
+        args.out,
+        seed=profile.seed if args.seed is None else args.seed,
+        pairs_per_kind=args.pairs_per_kind,
+    )
     print(json.dumps(report, ensure_ascii=False, indent=2))
     return 0
 
