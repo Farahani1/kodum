@@ -1,12 +1,14 @@
 # Published dataset specification
 
-Oct 8, 2026 · release contract for project-plan v23, section 1.3
+Updated Oct 16, 2026 · release contract for project-plan section 1.3
 
 The final data deliverable is a versioned, ready-to-use dataset with an audit
 trail and runnable reproduction recipes. People should be able to use it for
 evaluation or permitted training without running our translator or adopting our
 reference model. This document specifies the target release; it does not claim
-that packaging, human review or publication has already been completed.
+that final acceptance or publication has already been completed. The owner
+waived human translation review for the supplied corpus on Oct 15; disclose
+that waiver and the absence of a measured human translation-error rate.
 
 ## What to publish
 
@@ -88,7 +90,8 @@ their logical types. The export/import adapter must recover the original
 `Record`, including sparse gold maps if present. This avoids an expanding column
 schema for different option IDs and metadata. The card must show this small
 conversion and a working loading example for both formats. The adapter and
-round-trip verification are release work still to implement.
+round-trip verification are implemented in `kodoom.transport`; private candidate
+builders use the same frozen records for both formats.
 
 Preserve full context, protected tokens, raw digit forms and spelling variants.
 Published translations receive only the planned orthographic cleanup; model
@@ -178,14 +181,18 @@ Document three different reproduction promises:
 
 Require schema validation and JSONL/Parquet round trips; matching bilingual keys,
 source option IDs and unchanged gold; count/hash checks; split and minimal-pair
-leakage checks; complete review of all 400 test cases; documented training-sample
-review and unresolved flags; license/attribution/provenance review; and a fresh
+leakage checks; the disclosed human-review waiver and actual AI-audit coverage;
+automatic and meaning-check status and unresolved flags;
+license/attribution/provenance review; and a fresh
 CPU-only loading, rebuilding and scoring example by someone other than the
 release author where possible. A pilot must clearly state its smaller scope
 and incomplete coverage. A public upload still waits for the owner's release
 decision under the project plan.
 
-Existing schema, converters, generators and validators provide part of this
-foundation. The final exporter, manifests, correction replay and end-to-end
-release verification must be implemented and checked before claiming a
-reproducible v1.0. This specification does not advance that gate.
+`kodoom import-package`, `kodoom release-skills` and `kodoom release-package`
+provide the local import and private candidate exports. They retain supplied
+quality evidence and raw bilingual inputs, replay orthographic cleanup, and
+leave AI correction suggestions unapplied. Semantic checking, decisions about
+unresolved flags/source exclusions, permissions and final release verification
+remain acceptance requirements. See [the acceptance handoff](part-1-acceptance.md).
+Private candidate availability does not advance the publication gate.

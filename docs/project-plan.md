@@ -1,8 +1,8 @@
 # Persian Typed Decisions: Project Plan
 
-Version 28 · Oct 15, 2026 · @Shah
+Version 29 · Oct 16, 2026 · @Shah
 
-## Current status — Oct 15, 2026
+## Current status — Oct 16, 2026
 
 **Translation of the planned English scope is complete.** The owner-confirmed
 local Hugging Face dataset package is at `D:\Coding\hf-data`; its dataset card,
@@ -43,20 +43,34 @@ human translation-error rate in release cards and evaluation reports.
 
 The owner reran `python scripts/validate_dataset.py --output .` successfully:
 8 configurations, 14 splits, 10,000 questions, 3,600 cases and 307 files.
-The next technical step is verifying compatibility with kodoom's record schema.
+The package was also validated on a private local copy. The supplied package is
+pinned by its release-manifest checksum; all 10,000 bilingual decisions now
+import into kodoom Records with original gold, source IDs and splits preserved.
+English/Persian Record JSONL and versioned Parquet round trips pass. A local
+skills candidate contains 4,200 decisions / 2,100 minimal pairs, with exact
+regeneration, held-out templates and split checks. Static CPU loading/scoring
+examples exercise the harness; they are not M2 model measurements.
+
+Broader automatic checks flag 4,398 Persian decisions across 1,842 cases, mostly
+glossary wording and retained English. These are screening findings, not a
+translation-error rate; no number-loss finding was reported. The full meaning
+check has not run. Private candidate exporters retain provenance, raw bilingual
+inputs, AI-audit findings and the human-review waiver. See the
+[acceptance handoff](part-1-acceptance.md) for input pins, commands and limits.
 
 **Next work, in order:**
 
-1. Pin the local package revision/checksums and run its validation script; verify
-   coverage, bilingual alignment, preserved gold, case IDs and split membership.
-   Reconcile the existing exports with the release specification and map the
-   bilingual question rows into kodoom's record schema without retranslating.
-2. Preserve existing automatic checks and AI-audit findings during import; record
-   any later corrections or source-label exclusions with provenance. Human
-   translation review is waived for this corpus by the owner (1.2 step 5).
-3. Complete the reproducible Persian skills suite and remaining M1 release
-   checks. Resolve the translation-specific license grant and record actual
-   source/teacher/translator eligibility before publication or training.
+1. Triage automatic flags and prepare/validate the meaning-check execution route
+   (1.2 step 4). Preserve the existing AI audit; record later corrections and
+   source-label exclusions with provenance. Human translation review stays
+   waived for this corpus (1.2 step 5); semantic acceptance is not waived.
+2. Obtain the translation-specific license grant. Decide optional Helmo
+   adoption only after its required source-label audit and unresolved holds;
+   it is not an M1 blocker. Record actual source/teacher/translator eligibility
+   separately before training.
+3. Finish final release acceptance and obtain the owner's publication decision.
+   Private candidate builds, checksums and CPU examples are available; public
+   Hub loading/Viewer checks and an external reproduction remain unverified.
 4. Prepare native Persian sources, leakage-safe training/validation/calibration
    splits and M2 baselines; record the decision gate before choosing M3's scope.
 
@@ -713,11 +727,13 @@ Likelihood and impact are judgment calls for a solo project on free Colab; revis
 
 Stopping at any gate still leaves something published; M1 alone is a complete, useful result.
 
-**Current milestone position (Oct 15):** M1 translation generation and initial
-local Hugging Face packaging are complete. M1 remains open for validation against
-the release contract, disclosed review waiver, skills-suite acceptance, licensing
-and the owner's publication decision. M2 baselines and M3 training are not marked
-complete by the availability of translated data.
+**Current milestone position (Oct 16):** M1 translation generation, local package
+validation, kodoom schema import and private skills/bilingual candidate tooling
+are complete locally. The 4,200-item skills candidate passes reproducibility,
+pair/split and transport checks. M1 remains open for semantic acceptance and
+flag disposition, translation permissions, final release verification and the
+owner's publication decision. M2 baselines and M3 training are not advanced by
+these static CPU harness checks.
 
 Changes since the milestone diagram was drawn (the diagram itself still needs updating):
 
@@ -763,6 +779,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
+| 29 | Oct 16, 2026 | Record the pinned package validation and full kodoom Record import, lossless JSONL/Parquet transport, and private bilingual/4,200-item skills candidate tooling. Preserve screening flags and AI-audit evidence without treating them as semantic acceptance. Keep meaning-check execution, translation permissions and publication open; document the local acceptance handoff. |
 | 28 | Oct 15, 2026 | Record the owner decision to accept supplied translations and skip human translation review for the current corpus. Remove that review as an M1 prerequisite, preserve actual quality flags and AI-audit evidence, require honest release disclosure, and record the successful owner-run validator. Next: kodoom schema compatibility/import. |
 | 27 | Oct 15, 2026 | Record completion of the planned translation scope and local Hugging Face packaging in `D:\Coding\hf-data`: 1,600 typed-decisions cases and 2,000 selected Helmo items. Distinguish untranslated Helmo originals, actual Codex provenance and AI audit from historical Gemma recipes and human review. Shift next work to import/validation, review, skills, release terms and baselines; retain M1 and training gates. |
 | 26 | Oct 9, 2026 | At the owner's request, configure one stable published notebook with the confirmed private dataset and tested runtime pin, defaulting to TPU translation without code edits. Retain short session/production checks and optional CPU diagnosis; Kaggle secrets, consent and model attachment remain prerequisites. Preserve the frozen v21 campaign and research gates. |
