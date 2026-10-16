@@ -138,6 +138,15 @@ def _parser() -> argparse.ArgumentParser:
     release_skills.add_argument("--pairs-per-kind", type=int, default=DEFAULT_PAIRS_PER_KIND)
     release_skills.set_defaults(func=_release_skills, writes_data=True)
 
+    release_package = commands.add_parser(
+        "release-package", help="stage separate private bilingual resources (plan 1.3)"
+    )
+    _add_profile_args(release_package)
+    release_package.add_argument("--source", type=Path, required=True)
+    release_package.add_argument("--imported", type=Path, required=True)
+    release_package.add_argument("--out", type=Path, required=True)
+    release_package.set_defaults(func=_release_package, writes_data=True)
+
     info = commands.add_parser("info", help="show the resolved settings of a profile")
     _add_profile_args(info)
     info.set_defaults(func=_info)
@@ -913,6 +922,15 @@ def _release_skills(args: argparse.Namespace) -> int:
         seed=profile.seed if args.seed is None else args.seed,
         pairs_per_kind=args.pairs_per_kind,
     )
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0
+
+
+def _release_package(args: argparse.Namespace) -> int:
+    from kodoom.dataset_release import build_resources
+
+    _load(args)
+    report = build_resources(args.source, args.imported, args.out)
     print(json.dumps(report, ensure_ascii=False, indent=2))
     return 0
 
