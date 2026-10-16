@@ -2,11 +2,13 @@
 
 Read this together with `AGENTS.md`. This file defines the shared execution
 workflow; `docs/workflow-change-plan.md` tracks remaining migration work. The
-current Kaggle runner covers the bulk draft campaign; a live Kaggle run and
-fresh-session restore remain unverified.
+retained Kaggle runner covers the historical bulk draft campaign; a live Kaggle
+run and fresh-session restore remain unverified.
 
-Research acceptance follows project-plan v26 and
-[the precompute audit](docs/precompute-project-review.md). The active request
+**Historical translation execution context:** these provider requirements
+record project-plan v26 and [the precompute audit](docs/precompute-project-review.md).
+Current model scope follows project-plan v31 and the ownership update below.
+The stored request
 retains the frozen v21 data recipe. The CPU-first notebook uses a newly published
 runtime pin. At the owner's request, the canonical notebook now defaults to
 RUN_TPU=True with the confirmed private HF dataset prefilled. Optional CPU
@@ -17,16 +19,18 @@ optional; Gemma 3 translations remain ineligible for the planned permissive
 training mix until a compatible licensing route is recorded. The source registry
 alone does not enforce translator-derived model licensing.
 
-The owner-selected active direction is the implemented
-[bulk translation plan](docs/tpu-bulk-translation-plan.md), project-plan v21.
-Generate unreviewed drafts to reduce queue waits, with BF16 batching and verified
-private HF snapshots. BULK-01 through BULK-09 are implemented; live TPU, private
-storage and a physical new-session handoff remain unverified. Human adoption,
-release and training decisions have not advanced.
+**Ownership update (Oct 16, project-plan v31):** kodum now consumes an accepted,
+explicitly versioned dataset from `D:\Coding\hf-data`. Dataset development,
+review/checks and publication belong to that project's `docs/project-plan.md`.
+The provider descriptions above and bulk translation recipes below are
+historical reproduction instructions. They do not make dataset review a kodum
+prerequisite or authorize another translation campaign. Prepare a separately
+validated model-stage handoff before model execution. This plan update does
+not modify `workflows/current.toml` or the notebook's frozen runtime pin.
 
 ## Three separate sources of truth
 
-- `docs/project-plan.md`: research scope, datasets, licenses, milestones and
+- `docs/project-plan.md`: model research scope, dataset consumption, milestones and
   scientific decision gates. These do not advance merely because a workflow
   task is complete.
 - `docs/workflow-change-plan.md`: the environment and notebook migration, with
@@ -35,8 +39,11 @@ release and training decisions have not advanced.
   each project stage. It records a main-plan reference, recipe IDs, parameters,
   prerequisites and a review stop. It is configuration, not another research plan.
 
-Do not infer the active stage from the last notebook cell or from the existence
-of an output file. The active step is bulk draft generation in main-plan section 1.2 (v21), using Gemma 3 27B BF16/JAX on Kaggle TPU v5e-8. Historical gate requests remain explicit recipes. The 4B adoption baseline and human review requirements remain in force.
+Do not infer the active research stage from the last notebook cell or an output
+file. The stored request still selects the historical v21 bulk draft campaign,
+using Gemma 3 27B BF16/JAX on Kaggle TPU v5e-8. It is not the v31 model
+development stage. Historical gate requirements describe those recipes; the
+current dataset acceptance and human-review decisions are governed by hf-data.
 
 ## Two notebooks, one package
 

@@ -9,7 +9,18 @@ workflow and Kaggle support are targets until that migration passes validation.
 
 ## The project
 
-kodoom builds a Persian typed-decision data and evaluation layer (dataset, skills suite, harness) with small reference models on top. `docs/project-plan.md` is the big picture and the source of truth for scope, data rules, licenses and milestones. Read the parts relevant to your task before changing code, and do not work against it. If a change needs the plan to change, update the plan in the same piece of work, bump its version and add a row to its version history.
+kodum develops Persian typed-decision models and an evaluation harness; the
+Python package/command remains `kodoom`. `docs/project-plan.md` is the source
+of truth for model scope, consumption rules and milestones. Dataset development,
+review/checks, Argilla, canonical corrections and dataset releases belong to
+`D:\Coding\hf-data\docs\project-plan.md`. Treat the selected hf-data release as
+an accepted input; retain consumer schema/hash/role and model-leakage checks.
+Existing dataset modules remain for historical reproduction until migrated;
+do not reopen data acceptance or start new dataset work here by default.
+Read the relevant plan before changing code. If a change needs the plan to
+change, update it in the same piece of work, bump its version and add a version
+history row. The previous combined research plan is archived in
+`docs/project-plan-v30-archive.md`.
 
 ## Commits: one insightful commit for every change
 

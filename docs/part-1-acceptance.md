@@ -1,6 +1,12 @@
 # Part 1 acceptance handoff
 
-This is the local acceptance workflow for project-plan Part 1. It consumes the
+> Historical dataset acceptance evidence and recipes. Project-plan v31 accepts
+> the existing data for kodum consumption and transfers remaining dataset
+> review/checks, releases and publication to
+> `D:\Coding\hf-data\docs\project-plan.md`. The tasks below are not the active
+> kodum backlog; statuses remain factual historical evidence.
+
+This records the former local acceptance workflow. It consumes the
 completed translations; it does not rerun the historical TPU campaign.
 All generated files below stay in git-ignored `data/part1/`.
 

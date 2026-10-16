@@ -1,6 +1,15 @@
 # kodoom
 
-Persian Typed Decisions: an open bilingual dataset, a Persian skills suite and an evaluation harness for typed-decision models (choice, score and yes/no questions answered with calibrated probabilities), with CPU-friendly reference models.
+Persian typed-decision models and an evaluation harness for choice, score and
+yes/no questions answered with calibrated probabilities, with CPU-friendly
+reference models. The project is `kodum`; the Python package/command is `kodoom`.
+
+Dataset development, review/checks, Argilla and dataset releases belong to
+`D:\Coding\hf-data`, governed by its `docs/project-plan.md`. Kodum treats the
+existing dataset as accepted input and consumes exact version/schema/checksum
+pins (current baseline: package 1.0.1, schema 1.0.0). Ongoing data improvements
+do not block model implementation. Existing data commands below are retained
+for historical reproduction during migration; they are not the active backlog.
 
 The big picture of the whole project is in [docs/project-plan.md](docs/project-plan.md).
 The [Oct 8 precompute review](docs/precompute-project-review.md) evaluates the
@@ -8,8 +17,8 @@ dataset choices, newer Persian alternatives, community value and the separate
 draft-generation, release and training gates. Gemma 3 drafts remain outside the
 planned permissive reference-model training mix until a compatible license route
 is recorded. Helmo is optional augmentation and is never a benchmark source.
-The [published dataset specification](docs/dataset-release-spec.md) defines the
-final file formats, fields, review/provenance package and reproduction code.
+The [historical dataset specification](docs/dataset-release-spec.md) records
+file formats and the earlier review/provenance contract for migration to hf-data.
 The separate [workflow change plan](docs/workflow-change-plan.md) covers the
 planned reference/execution notebook split and Colab/Kaggle portability.
 [agent.md](agent.md) defines that pipeline and how agents update each stage.
@@ -48,9 +57,9 @@ kodoom runs --profile dev                 # runs on disk and what can be resumed
 
 The existing [`notebooks/colab.ipynb`](notebooks/colab.ipynb) mixes historical trials
 with current work; run setup and only the cells for your active stage, not Run all.
-The Colab free-text gate remains a historical recipe; the active draft campaign uses Kaggle TPU.
+The Colab free-text gate and Kaggle TPU draft campaign remain historical recipes.
 Updating, resuming and Drive storage: [docs/colab.md](docs/colab.md).
-The current resumable Kaggle TPU v5e-8 / Gemma 3 27B bulk draft runner is [`notebooks/execution.ipynb`](notebooks/execution.ipynb);
+The historical resumable Kaggle TPU v5e-8 / Gemma 3 27B bulk draft runner is [`notebooks/execution.ipynb`](notebooks/execution.ipynb);
 the complete recipe record is [`notebooks/reference.ipynb`](notebooks/reference.ipynb).
 Kaggle setup, verified private HF checkpoints, collaborator resume and review are in
 [docs/execution-workflow.md](docs/execution-workflow.md). Training stages and

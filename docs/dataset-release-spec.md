@@ -1,5 +1,9 @@
 # Published dataset specification
 
+> Historical dataset contract retained for migration/reproduction. Since
+> project-plan v31, dataset development and release requirements are owned by
+> `D:\Coding\hf-data\docs\project-plan.md`. They are not kodum model gates.
+
 Updated Oct 16, 2026 · release contract for project-plan section 1.3
 
 The final data deliverable is a versioned, ready-to-use dataset with an audit
