@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "status": "granted",
+  "license": "Apache-2.0",
+  "grantor": "Project owner and supplier of the Persian translations",
+  "effective_date": "2026-10-16",
+  "scope": "Supplied Persian translation contributions in typed_decisions and helmo",
+  "rights_qualification": "Only rights held by the grantor; upstream materials retain their original licenses and notices.",
+  "grant_text": "To the extent I hold rights in the supplied Persian translation contributions, I license those contributions under Apache License 2.0. Upstream materials retain their original licenses and notices.",
+  "authorization": "Explicit owner approval in the project conversation on 2026-10-16.",
+  "license_file": "licenses/Apache-2.0.txt",
+  "license_text_sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+  "source_package_manifest_before_grant_sha256": "05758f7e10d7e58cb90f7ece4058e2597b1535b2937acf2a26567eb1b752ba05",
+  "source_licenses": {
+    "LocalLLaMA/typed-decisions": "Apache-2.0",
+    "helmo/synthetic-typed-decisions": "MIT"
+  },
+  "training_eligibility": "Separate source/teacher/translator review remains required."
+}

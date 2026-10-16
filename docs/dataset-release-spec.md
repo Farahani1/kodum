@@ -27,6 +27,14 @@ converted source text only after its permissions and attribution are checked;
 otherwise provide instructions to obtain it from the original source. Restricted
 or private evaluation texts are not part of the public bundle.
 
+The owner granted Apache-2.0 for rights held in the supplied Persian translation
+contributions on Oct 16, 2026. Preserve `TRANSLATION-LICENSE.md`, the full
+`licenses/Apache-2.0.txt`, and `provenance/translation_license.json` from the
+authoritative hf-data package. Source Apache-2.0/MIT licenses and notices remain
+applicable; row `license` fields continue to identify source terms. The combined
+dataset card explains that scope. This declaration does not establish downstream
+model-training eligibility or authorize publication.
+
 Use **Parquet for convenient loading and browsing**, plus **UTF-8 JSONL as an
 auditable interchange copy** of the same records. Hugging Face recommends
 Parquet for most datasets and supports JSONL for nested data. Both copies must

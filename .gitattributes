@@ -1,0 +1,2 @@
+# The approved grant pins the exact bytes of the bundled Apache license text.
+licenses/*.txt text eol=lf

@@ -23,6 +23,29 @@ def dump_json(path: Path, value: dict) -> None:
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def translation_grant(source: Path, release: dict) -> dict | None:
+    """Read an explicit inventoried grant; source license labels imply no grant."""
+    relative = "provenance/translation_license.json"
+    path = source / relative
+    if not path.exists():
+        return None
+    inventory = {entry["path"] for entry in release["files"]}
+    grant = json.loads(path.read_text(encoding="utf-8"))
+    if grant.get("status") != "granted" or grant.get("license") != "Apache-2.0":
+        raise RecordError("unsupported translation contribution grant")
+    for key in ("grantor", "effective_date", "scope", "rights_qualification", "grant_text"):
+        if not isinstance(grant.get(key), str) or not grant[key].strip():
+            raise RecordError(f"translation grant lacks {key}")
+    if grant.get("license_file") != "licenses/Apache-2.0.txt":
+        raise RecordError("unsupported translation license text path")
+    for name in (relative, grant["license_file"], "TRANSLATION-LICENSE.md"):
+        if name not in inventory:
+            raise RecordError(f"translation license evidence is not inventoried: {name}")
+    if file_sha(source / grant["license_file"]) != grant.get("license_text_sha256"):
+        raise RecordError("translation license text differs from the approved grant")
+    return grant
+
+
 def build_resources(source: Path, imported: Path, out: Path) -> dict:
     """Verify the import's two formats, then make standalone private resources."""
     if out.exists():
@@ -36,6 +59,7 @@ def build_resources(source: Path, imported: Path, out: Path) -> dict:
     if report["status"] != "passed-structural-import":
         raise RecordError("a successful structural import is required")
     release = verify_inventory(source, report["input_manifest_sha256"])
+    grant = translation_grant(source, release)
     if not report.get("files"):
         raise RecordError("import report lacks output checksums; rerun the import")
     for entry in report["files"]:
@@ -141,6 +165,14 @@ def build_resources(source: Path, imported: Path, out: Path) -> dict:
                 dest = root / "provenance/supplied" / entry["path"]
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(checked_path(source, entry["path"]), dest)
+            elif Path(entry["path"]).parts[0] == "source_snapshots" and Path(
+                entry["path"]
+            ).name in {"LICENSE", "NOTICE", "LICENSE.txt", "NOTICE.txt"}:
+                # Component LICENSE/NOTICE text references these original files.
+                # Keep their paths and bytes intact in standalone exports too.
+                dest = root / entry["path"]
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(checked_path(source, entry["path"]), dest)
         dest = root / "provenance/supplied/provenance/release.json"
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source / "provenance/release.json", dest)
@@ -174,7 +206,7 @@ def build_resources(source: Path, imported: Path, out: Path) -> dict:
                 "input_manifest_sha256": report["input_manifest_sha256"],
                 "import_report_sha256": file_sha(imported / "import-report.json"),
                 "meaning_check": "not_run",
-                "translation_license_grant": "not_supplied",
+                "translation_license_grant": grant or "not_supplied",
                 "training_eligibility": "unresolved",
                 "human_review": "waived-2026-10-15",
             },
@@ -183,6 +215,29 @@ def build_resources(source: Path, imported: Path, out: Path) -> dict:
             if name not in {entry["path"] for entry in release["files"]}:
                 raise RecordError(f"source inventory lacks {name}")
             shutil.copyfile(source / name, root / name)
+        if grant:
+            # Keep the byte hash in the approved grant stable across Windows checkouts.
+            (root / ".gitattributes").write_text("licenses/*.txt text eol=lf\n", encoding="utf-8")
+            for name in ("TRANSLATION-LICENSE.md", grant["license_file"]):
+                dest = root / name
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source / name, dest)
+            # Keep the canonical relative grant link in the copied declaration usable.
+            shutil.copyfile(
+                source / "provenance/translation_license.json",
+                root / "provenance/translation_license.json",
+            )
+        license_description = (
+            "The owner granted Apache-2.0 for rights held in the supplied Persian\n"
+            "translation contributions. See TRANSLATION-LICENSE.md and\n"
+            "provenance/translation_license.json; full terms are in\n"
+            "licenses/Apache-2.0.txt. Upstream Apache-2.0/MIT component terms and\n"
+            "notices remain applicable. The row license field identifies source\n"
+            "terms; translation contribution rights are declared separately.\n"
+            if grant
+            else "A translation-specific license grant has not been supplied. LICENSE\n"
+            "and NOTICE retain actual component terms and source attribution.\n"
+        )
         metadata = ""
         for lang in ("en", "fa"):
             metadata += f"- config_name: {lang}\n  data_files:\n"
@@ -207,8 +262,7 @@ def build_resources(source: Path, imported: Path, out: Path) -> dict:
             "are retained in `provenance/supplied/quality`. Proposals are unapplied.\n"
             "Automatic flags are screening findings, not confirmed semantic errors.\n"
             "Full semantic checking has not run; see `review/status.json`.\n\n"
-            "A translation-specific license grant has not been supplied. LICENSE\n"
-            "and NOTICE retain actual component terms and source attribution.\n"
+            f"{license_description}"
             "Publication and downstream permissive-model training remain blocked\n"
             "pending their separate decisions. No upload is performed by this build.\n\n"
             "JSONL follows Record.to_dict(). Parquet stores gold as ordered\n"

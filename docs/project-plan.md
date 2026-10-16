@@ -1,6 +1,6 @@
 # Persian Typed Decisions: Project Plan
 
-Version 29 · Oct 16, 2026 · @Shah
+Version 30 · Oct 16, 2026 · @Shah
 
 ## Current status — Oct 16, 2026
 
@@ -58,13 +58,24 @@ check has not run. Private candidate exporters retain provenance, raw bilingual
 inputs, AI-audit findings and the human-review waiver. See the
 [acceptance handoff](part-1-acceptance.md) for input pins, commands and limits.
 
+**Translation contribution grant recorded (Oct 16).** The owner authorizes
+Apache-2.0 for rights they hold in the supplied Persian translation contributions.
+The authoritative declaration is in `D:\Coding\hf-data` package v1.0.1:
+`TRANSLATION-LICENSE.md`, `provenance/translation_license.json`, the full Apache
+terms, and component-aware LICENSE/NOTICE/card. This repository mirrors the
+[declaration](../TRANSLATION-LICENSE.md). Upstream workflow Apache-2.0 and Helmo
+MIT terms and notices remain applicable. All 171 frozen payload files are
+unchanged and package validation passes. This resolves the missing owner grant;
+third-party rights, source/teacher/translator training eligibility and the
+separate publication decision remain open.
+
 **Next work, in order:**
 
 1. Triage automatic flags and prepare/validate the meaning-check execution route
    (1.2 step 4). Preserve the existing AI audit; record later corrections and
    source-label exclusions with provenance. Human translation review stays
    waived for this corpus (1.2 step 5); semantic acceptance is not waived.
-2. Obtain the translation-specific license grant. Decide optional Helmo
+2. Preserve the recorded translation contribution grant. Decide optional Helmo
    adoption only after its required source-label audit and unresolved holds;
    it is not an M1 blocker. Record actual source/teacher/translator eligibility
    separately before training.
@@ -440,10 +451,12 @@ The frozen production campaign is retained for reproducibility.
 
 **Publish typed-decisions-fa on Hugging Face (after remaining release gates)**
 
-The current package declares component licenses and translation terms rather
-than a blanket Apache-2.0 grant. Its card says a separate translation license
-grant has not been supplied. Preserve that limitation until resolved; the
-source-license and target-card requirements below do not establish such a grant.
+The package retains component licenses and records the owner's Oct 16 Apache-2.0
+grant for rights held in the supplied Persian translation contributions. It is
+not a replacement of Helmo's MIT source terms or original attribution. The
+authoritative grant, full Apache terms and source notices travel with the
+dataset; the combined card explains component scope. Source/teacher/translator
+training eligibility is still a separate gate.
 
 - Same splits, labels and case IDs as the original.
 - Dataset card: source revision, translator and checker models, how the translator was chosen (a blind LLM rating by Claude Opus 5.5 via Cowork, not a human review), prompt summary, glossary, the owner waiver of human translation review, actual AI-audit coverage, any applied fix counts, and the absence of a measured human translation-error rate, known limits (translationese, unlocalized numbers, labels from a teacher model), Apache-2.0 attribution. Use the [Russian](https://huggingface.co/datasets/yyhlm/typed-decisions-ru) and [Japanese](https://huggingface.co/datasets/GeneLab/typed-decisions-ja) cards as models.
@@ -731,7 +744,7 @@ Stopping at any gate still leaves something published; M1 alone is a complete, u
 validation, kodoom schema import and private skills/bilingual candidate tooling
 are complete locally. The 4,200-item skills candidate passes reproducibility,
 pair/split and transport checks. M1 remains open for semantic acceptance and
-flag disposition, translation permissions, final release verification and the
+flag disposition, remaining third-party permissions, final release verification and the
 owner's publication decision. M2 baselines and M3 training are not advanced by
 these static CPU harness checks.
 
@@ -779,6 +792,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
+| 30 | Oct 16, 2026 | Record the owner-approved Apache-2.0 translation contribution grant in hf-data v1.0.1 and mirror it in kodum. Preserve upstream Apache-2.0/MIT terms, full license text, attribution and source-license fields. Teach exporters to carry only explicit inventoried grants; retain separate training and publication gates. |
 | 29 | Oct 16, 2026 | Record the pinned package validation and full kodoom Record import, lossless JSONL/Parquet transport, and private bilingual/4,200-item skills candidate tooling. Preserve screening flags and AI-audit evidence without treating them as semantic acceptance. Keep meaning-check execution, translation permissions and publication open; document the local acceptance handoff. |
 | 28 | Oct 15, 2026 | Record the owner decision to accept supplied translations and skip human translation review for the current corpus. Remove that review as an M1 prerequisite, preserve actual quality flags and AI-audit evidence, require honest release disclosure, and record the successful owner-run validator. Next: kodoom schema compatibility/import. |
 | 27 | Oct 15, 2026 | Record completion of the planned translation scope and local Hugging Face packaging in `D:\Coding\hf-data`: 1,600 typed-decisions cases and 2,000 selected Helmo items. Distinguish untranslated Helmo originals, actual Codex provenance and AI audit from historical Gemma recipes and human review. Shift next work to import/validation, review, skills, release terms and baselines; retain M1 and training gates. |

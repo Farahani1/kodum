@@ -6,26 +6,29 @@ All generated files below stay in git-ignored `data/part1/`.
 
 ## Frozen input and import
 
-The supplied package is `D:\Coding\hf-data`. Its original
-`provenance/release.json` SHA-256 is:
+The supplied package is `D:\Coding\hf-data`. After the owner-approved license
+declaration, package v1.0.1 has this `provenance/release.json` SHA-256:
 
 ```text
-05758f7e10d7e58cb90f7ece4058e2597b1535b2937acf2a26567eb1b752ba05
+89859f966e8af06abe965dbe0cb2a966edd6b9b4488a10ada5d6b0e3831f8419
 ```
 
-Its validation script passed on a private copy: 8 configurations, 14 splits,
-10,000 bilingual questions, 3,600 cases and 307 inventoried files. The original
-package was not modified. That validator rewrites its validation report and
+Its validation script passes: 8 configurations, 14 splits, 10,000 bilingual
+questions, 3,600 cases and 312 inventoried files. The license update changed only
+declarations, documentation, release metadata and build/validation scripts; all
+171 frozen payload files are byte-identical. The pre-grant package was pinned by
+`05758f7e10d7e58cb90f7ece4058e2597b1535b2937acf2a26567eb1b752ba05`.
+That validator rewrites its validation report and
 release manifest, so preserve the original input manifest and its pin separately
 from any subsequently validated copy.
 
 From an installed kodoom checkout, import into a new directory:
 
 ```powershell
-kodoom import-package --profile dev D:/Coding/hf-data --manifest-sha256 05758f7e10d7e58cb90f7ece4058e2597b1535b2937acf2a26567eb1b752ba05 --out data/part1/import-v3
+kodoom import-package --profile dev D:/Coding/hf-data --manifest-sha256 89859f966e8af06abe965dbe0cb2a966edd6b9b4488a10ada5d6b0e3831f8419 --out data/part1/import-v5-license
 ```
 
-`import-v3/import-report.json` records all 10,000 paired decisions: 6,000
+The import records all 10,000 paired decisions: 6,000
 typed-decisions train, 2,000 typed-decisions test, and 2,000 Helmo train.
 Both languages are exported as Record JSONL and versioned Parquet. The import
 checks source fields against frozen Records, keeps original gold and split
@@ -40,7 +43,7 @@ than using the smaller development-profile generation cap.
 
 ```powershell
 kodoom release-skills --profile dev --seed 1234 --pairs-per-kind 150 --out data/part1/skills-candidate
-kodoom release-package --profile dev --source D:/Coding/hf-data --imported data/part1/import-v3 --out data/part1/bilingual-candidate
+kodoom release-package --profile dev --source D:/Coding/hf-data --imported data/part1/import-v5-license --out data/part1/bilingual-candidate-license
 ```
 
 The bilingual candidate keeps typed-decisions and optional Helmo separate.
@@ -48,7 +51,9 @@ Each resource has Record JSONL, Parquet, a card, source attribution, checksums,
 input provenance and a review status. Archived bilingual inputs preserve the
 pre-cleanup translations and frozen English Records. No AI suggestion is
 silently applied, and original targets remain unchanged. The supplied package's
-license limitations are copied, not replaced with a new translation grant.
+explicit translation grant and original component terms are copied together.
+The earlier `import-v3` and `bilingual-candidate` remain historical pre-grant
+artifacts; use the new manifest pin and licensed candidate for current work.
 
 The skills candidate records generator versions, seed, held-out templates and
 template hashes. Generation is repeated and compared before export. Pair
@@ -59,7 +64,7 @@ Run the static CPU loading and uniform-baseline scoring examples:
 
 ```powershell
 python data/part1/skills-candidate/examples/load_and_score.py data/part1/skills-candidate
-python data/part1/bilingual-candidate/typed_decisions/examples/load_and_score.py data/part1/bilingual-candidate/typed_decisions
+python data/part1/bilingual-candidate-license/typed_decisions/examples/load_and_score.py data/part1/bilingual-candidate-license/typed_decisions
 ```
 
 These are harness checks, not trained-model results or M2 measurements.
@@ -68,7 +73,7 @@ must be clean and committed for a reproducible handoff.
 
 ## Observed verification — Oct 16, 2026
 
-Final candidates were built from clean commit
+The initial pre-grant candidates were built from clean commit
 `94ccdf75cde0205fdad76c3c0d241fd997367560`. Fresh isolated Python processes
 verified all exported JSONL/Parquet records and every payload checksum:
 
@@ -130,9 +135,10 @@ Human translation review is waived by the owner on Oct 15, 2026. Keep
 The waiver does not waive automatic checks, semantic acceptance, source-label
 validity, distribution permissions, or the downstream training-license gate.
 
-The owner must supply/confirm the translation-specific license grant and decide
-the quality-check execution route before public release can proceed. Source
-Apache-2.0/MIT labels alone do not supply that grant. Preserve unknown historical
+The owner approved the translation-specific contribution grant on Oct 16; it is
+recorded in hf-data v1.0.1 and [mirrored here](../TRANSLATION-LICENSE.md). It covers
+only rights held by the grantor and preserves source Apache-2.0/MIT terms. The
+quality-check execution route and public release decision remain open. Preserve unknown historical
 model IDs and settings as unknown. Training eligibility needs its own documented
 source/teacher/translator decision and enforcement before Part 2 training.
 
