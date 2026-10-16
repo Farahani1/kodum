@@ -66,6 +66,30 @@ These are harness checks, not trained-model results or M2 measurements.
 Candidate manifests record the code revision used for the build; the revision
 must be clean and committed for a reproducible handoff.
 
+## Observed verification — Oct 16, 2026
+
+Final candidates were built from clean commit
+`94ccdf75cde0205fdad76c3c0d241fd997367560`. Fresh isolated Python processes
+verified all exported JSONL/Parquet records and every payload checksum:
+
+| Candidate | Decision rows across language views | Payload checksums |
+| --- | ---: | ---: |
+| `skills-candidate` | 4,200 Persian rows / 2,100 pairs | 17 |
+| `bilingual-candidate/typed_decisions` | 16,000 rows / 8,000 bilingual decisions | 160 |
+| `bilingual-candidate/helmo` | 4,000 rows / 2,000 bilingual decisions | 154 |
+
+All four skills split JSONL hashes exactly match the earlier independent local
+build. Static scoring examples loaded and scored all 1,036 skills test decisions
+and 2,000 Persian workflow test decisions. The bilingual checker queues contain
+1,600 workflow cases and 2,000 Helmo cases. These queues have not been executed.
+External reproduction by another person and Hub/Viewer checks remain unverified.
+
+Repository verification: Ruff lint/format checks passed; the full test suite
+passed 771 tests. Updated CLI/import/release checks passed 24 focused tests,
+including the 9 protected-text importer tests. An earlier restricted run failed
+in two pre-existing temporary-directory permission checks; the unrestricted
+full run passed. No dataset files, model outputs or credentials are committed.
+
 ## Quality status and remaining decisions
 
 The broader automatic import checks flagged 4,398 Persian decisions across
