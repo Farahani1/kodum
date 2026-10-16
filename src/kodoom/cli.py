@@ -120,6 +120,15 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"kodoom {__version__}")
     commands = parser.add_subparsers(dest="command", required=True)
 
+    import_package = commands.add_parser(
+        "import-package", help="verify and import the supplied bilingual package (plan 1.3)"
+    )
+    _add_profile_args(import_package)
+    import_package.add_argument("source", type=Path)
+    import_package.add_argument("--manifest-sha256", required=True)
+    import_package.add_argument("--out", type=Path, required=True)
+    import_package.set_defaults(func=_import_package, writes_data=True)
+
     info = commands.add_parser("info", help="show the resolved settings of a profile")
     _add_profile_args(info)
     info.set_defaults(func=_info)
@@ -874,6 +883,15 @@ def _tree(args: argparse.Namespace) -> int:
     for kind in ("new", "updated", "removed"):
         for path in getattr(changes, kind):
             print(f"  {kind:<8} {path}")
+    return 0
+
+
+def _import_package(args: argparse.Namespace) -> int:
+    from kodoom.package_import import import_package
+
+    _load(args)
+    report = import_package(args.source, args.out, args.manifest_sha256)
+    print(json.dumps(report, ensure_ascii=False, indent=2))
     return 0
 
 
