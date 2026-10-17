@@ -1,0 +1,9 @@
+# Paths are deployment settings: pass --source separately.
+dataset = "hf-data"
+release_version = "1.0.1"
+schema_version = "1.0.0"
+transport = "hf-data-bilingual-parquet-v1"
+manifest_sha256 = "89859f966e8af06abe965dbe0cb2a966edd6b9b4488a10ada5d6b0e3831f8419"
+configurations = ["typed_decisions"]
+languages = ["en", "fa"]
+splits = ["train", "test"]

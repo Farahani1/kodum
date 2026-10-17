@@ -120,6 +120,11 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"kodoom {__version__}")
     commands = parser.add_subparsers(dest="command", required=True)
 
+    lock = commands.add_parser("dataset-lock", help="verify an exact model input release (KD-01)")
+    lock.add_argument("--source", type=Path, required=True)
+    lock.add_argument("--selection", type=Path, required=True)
+    lock.set_defaults(func=_dataset_lock)
+
     import_package = commands.add_parser(
         "import-package", help="verify and import the supplied bilingual package (plan 1.3)"
     )
@@ -901,6 +906,14 @@ def _tree(args: argparse.Namespace) -> int:
     for kind in ("new", "updated", "removed"):
         for path in getattr(changes, kind):
             print(f"  {kind:<8} {path}")
+    return 0
+
+
+def _dataset_lock(args: argparse.Namespace) -> int:
+    from kodoom.dataset_lock import consume_release, read_selection
+
+    _, lock = consume_release(args.source, read_selection(args.selection))
+    print(json.dumps(lock, ensure_ascii=False, indent=2))
     return 0
 
 

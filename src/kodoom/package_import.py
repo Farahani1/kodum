@@ -92,7 +92,8 @@ def _clean_state(source, target):
     return target
 
 
-def row_records(row: dict) -> tuple[Record, Record]:
+def row_records(row: dict, *, preserve_text: bool = False) -> tuple[Record, Record]:
+    """Check bilingual structure; consumers can retain canonical released text."""
     original = Record.from_dict(json.loads(row["original_record_json"]))
     check_record(original)
     comparisons = {
@@ -159,6 +160,13 @@ def row_records(row: dict) -> tuple[Record, Record]:
             "training_eligibility": "unresolved-source-teacher-translator-license-gate",
         },
     )
+    if preserve_text:
+        persian = replace(
+            persian,
+            state=raw_state,
+            question_text=row["question_fa"],
+            options=tuple(Option(o["id"], o["text_fa"]) for o in options),
+        )
     return english, persian
 
 

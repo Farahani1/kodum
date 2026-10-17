@@ -17,6 +17,22 @@ dataset choices, newer Persian alternatives, community value and the separate
 draft-generation, release and training gates. Gemma 3 drafts remain outside the
 planned permissive reference-model training mix until a compatible license route
 is recorded. Helmo is optional augmentation and is never a benchmark source.
+Verify the pinned model input with:
+
+```powershell
+kodoom dataset-lock --source D:/Coding/hf-data --selection configs/dataset-baseline.toml
+```
+
+This read-only command prints a dataset lock after checking the manifest and
+inventory hashes, exact release/schema and selected bilingual tables. The
+baseline selects typed-decisions English/Persian train/test; Helmo is optional
+and requires a separate explicit selection (its release has train only).
+`kodoom.dataset_lock.consume_release` returns raw Records plus that lock for
+model pipelines. Its fingerprint includes selections and payload hashes and
+excludes the local source path. Unsupported configurations/schema/transport
+fail; release upgrades are explicit. Historical quality/license declarations
+remain visible alongside the project's recorded consumption acceptance.
+
 The [historical dataset specification](docs/dataset-release-spec.md) records
 file formats and the earlier review/provenance contract for migration to hf-data.
 The separate [workflow change plan](docs/workflow-change-plan.md) covers the

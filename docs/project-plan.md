@@ -1,6 +1,6 @@
 # Kodum: Persian typed-decision models and evaluation
 
-Version 31 · Oct 16, 2026 · @Shah
+Version 32 · Oct 17, 2026 · @Shah
 
 ## Current status and ownership decision
 
@@ -40,8 +40,11 @@ are delivery requests to hf-data; availability must be checked per release.
 
 **Next work, in order:**
 
-1. Implement/test exact release selection and a consumer adapter for the chosen
-   hf-data schema/transport; record the baseline version and checksum in config.
+1. KD-01 complete: `configs/dataset-baseline.toml` pins release 1.0.1/schema
+   1.0.0 and its manifest hash. `kodoom dataset-lock` verifies inventoried bytes
+   and selected bilingual tables, preserving raw text, IDs, gold and quality
+   metadata. Local verification loaded 16,000 language-specific Records from
+   8,000 typed-decisions bilingual rows. Helmo remains explicit opt-in.
 2. Build model-specific mixture and train/validation/calibration ID manifests
    from available released resources; enforce test isolation and declared roles.
 3. Complete the CPU-only model smoke path, baseline adapters and raw/recalibrated
@@ -186,7 +189,7 @@ attribution remain kodum responsibilities.
 
 | ID | Work | Acceptance |
 | --- | --- | --- |
-| KD-01 | Dataset lock and release loader | Pin baseline 1.0.1/schema 1.0.0 and manifest hash; select resources explicitly; verify checksums and stable bilingual keys through a supported adapter. Reuse existing import/schema/transport helpers without triggering dataset review. |
+| KD-01 | Dataset lock and release loader — complete Oct 17 | Baseline selection config and `dataset-lock` command verified against local 1.0.1; raw bilingual Records, source roles, payload hashes and portable selection fingerprint. Supports schema 1.0.0/bilingual Parquet v1 only; upgrades require explicit adapter support. |
 | KD-02 | Model mixture and split manifests | Only declared training resources; source_id/language/pair grouping; source test isolation; reproducible train-derived validation/calibration; one normalization function; unchanged canonical data. |
 | KD-03 | CPU model smoke and resume | Tiny/random encoder and decoder paths, fixture-sized input, prediction/calibration/report schemas and interrupted/resumed checkpoints; no real weights or GPU. |
 | KD-04 | Baseline adapters and M2 measurements | Freeze endpoints/thresholds first; score available released benchmarks raw and recalibrated; save predictions, coverage, exposure and latency/context details. Request missing native/skills resources from hf-data. |
@@ -531,6 +534,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
+| 32 | Oct 17, 2026 | Complete KD-01 with an exact baseline selection, read-only release consumer and portable dataset lock. Verify the local release's 8,000 typed-decisions rows as 16,000 raw language-specific Records, retaining quality/provenance and source roles. KD-02 mixture/split manifests are next; model measurements and training remain open. |
 | 31 | Oct 16, 2026 | Separate kodum model development from hf-data dataset development. Accept hf-data 1.0.1 as the baseline input; replace active Part 1 review/publication gates with versioned consumption and model milestones. Preserve v30 as an archive, move dataset follow-up ownership to the new hf-data plan, and require exact release/schema/hash pins without automatic upgrades. |
 | 30 | Oct 16, 2026 | Record the owner-approved Apache-2.0 translation contribution grant in hf-data v1.0.1 and mirror it in kodum. Preserve upstream Apache-2.0/MIT terms, full license text, attribution and source-license fields. Teach exporters to carry only explicit inventoried grants; retain separate training and publication gates. |
 | 29 | Oct 16, 2026 | Record the pinned package validation and full kodoom Record import, lossless JSONL/Parquet transport, and private bilingual/4,200-item skills candidate tooling. Preserve screening flags and AI-audit evidence without treating them as semantic acceptance. Keep meaning-check execution, translation permissions and publication open; document the local acceptance handoff. |
