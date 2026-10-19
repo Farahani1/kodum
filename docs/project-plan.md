@@ -1,6 +1,6 @@
 # Kodum: Persian typed-decision models and evaluation
 
-Version 34 · Oct 19, 2026 · @Shah
+Version 35 · Oct 19, 2026 · @Shah
 
 ## Current status and ownership decision
 
@@ -51,9 +51,11 @@ not a prerequisite to the first fine-tune or its portfolio release.
 1. KD-01 is complete: the baseline selection pins release 1.0.1/schema 1.0.0
    and its manifest hash. The verified selection contains 8,000 bilingual
    typed-decisions rows (16,000 language-specific Records). Helmo is opt-in.
-2. KD-02: keep the existing 400-case test split untouched; derive development
-   and calibration subsets from the 1,200 training cases. Keep related
-   questions, language variants, duplicates and minimal pairs together.
+2. KD-02 complete: deterministic preparation preserves the 400 released test
+   cases and divides the 1,200 training cases into 960 training, 120 development
+   and 120 calibration cases (9,600 / 1,200 / 1,200 language-specific Records).
+   IDs, translations and duplicate groups remain together. Verified local
+   fingerprint: `fb7b3ef929756ce9a30a2bdd2d23414efe64a161088a662ecf13ede997c02b5e`.
 3. KD-03/KD-05: implement the Laya training path, run a short CPU smoke and
    selected-provider preflight, then proceed directly to the main fine-tune.
    Baseline scores do not decide whether training is allowed.
@@ -233,7 +235,7 @@ attribution remain kodum responsibilities.
 | ID | Work | Acceptance |
 | --- | --- | --- |
 | KD-01 | Dataset lock and release loader — complete Oct 17 | Exact baseline selection, schema and payload hashes; raw bilingual Records and source roles preserved. |
-| KD-02 | Mixture and split manifests | Use accepted training resources; group whole cases and language variants; preserve source test membership; derive development/calibration from train; validate targets and option mappings. |
+| KD-02 | Mixture and split manifests — complete Oct 19 | Use accepted training resources; group whole cases and language variants; preserve source test membership; derive development/calibration from train; validate targets and option mappings. |
 | KD-03 | Laya CPU smoke | Tiny/random compatible model path checks request shapes, finite loss, prediction format and checkpoint save/restore. No decoder implementation required. |
 | KD-04 | Two baseline adapters and evaluation | Original Laya on all supported types, Diba X1 on choice; identical examples/options, raw and equally recalibrated probabilities, coverage and saved predictions. No broad baseline matrix or A/B/C decision. |
 | KD-05 | Short training preflight | Kaggle T4 x2, DDP and balanced replay, real checkpoint/dtype, one train/eval step, memory and distributed checkpoint restore. No research performance threshold before training. |
@@ -650,6 +652,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
+| 35 | Oct 19, 2026 | Complete KD-02 on codex/laya-training: immutable case-grouped train/development/calibration/test preparation, duplicate isolation, source roles, target preservation and deterministic balanced English replay. Verify the accepted local release as 960/120/120/400 cases; accelerator training remains pending. |
 | 34 | Oct 19, 2026 | Explicitly retain full encoder/head fine-tuning. Train the full-data model first, then an independently initialized partial-context model from original Laya. Specify frequent Kaggle-local logs and resumable snapshots with periodic private Hugging Face sync, durable revisions and restore checks. Stage 2 does not block the first release. |
 | 33 | Oct 19, 2026 | Prioritize one portfolio Laya-multilingual fine-tune. Retire the A/B/C research gate and defer partial-context training, fresh encoders, decoder challengers and broad benchmarks. Keep scenario-grouped train/dev/calibration/test isolation, original-Laya and Diba X1 choice comparisons, bounded claims, saved predictions and a small demo. Set Kaggle T4 x2/DDP as the target with per-update English replay, conservative learning rates, retention-aware checkpoint selection and private durable resume. No training or evaluation is marked complete. |
 | 32 | Oct 17, 2026 | Complete KD-01 with an exact baseline selection, read-only release consumer and portable dataset lock. Verify the local release's 8,000 typed-decisions rows as 16,000 raw language-specific Records, retaining quality/provenance and source roles. KD-02 mixture/split manifests are next; model measurements and training remain open. |
