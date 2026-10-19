@@ -1,6 +1,6 @@
 # Kodum: Persian typed-decision models and evaluation
 
-Version 32 · Oct 17, 2026 · @Shah
+Version 33 · Oct 19, 2026 · @Shah
 
 ## Current status and ownership decision
 
@@ -38,29 +38,37 @@ in this checkout. The data project owns their future migration and release.
 They are not silently added to package 1.0.1. Native-source candidates in 2.1
 are delivery requests to hf-data; availability must be checked per release.
 
+**Owner decision, Oct 19: prioritize a finished portfolio release.** Train one
+Laya-multilingual adaptation on the accepted data, compare it with original Laya
+and DibaOne X1, and deliver a reproducible report and small working demo. The
+former M2 A/B/C research gate is retired, not passed. Broad native-benchmark
+coverage, multiple architectures, causal ablations and whole-context holdouts
+are deferred; none is a prerequisite to this first fine-tune.
+
 **Next work, in order:**
 
-1. KD-01 complete: `configs/dataset-baseline.toml` pins release 1.0.1/schema
-   1.0.0 and its manifest hash. `kodoom dataset-lock` verifies inventoried bytes
-   and selected bilingual tables, preserving raw text, IDs, gold and quality
-   metadata. Local verification loaded 16,000 language-specific Records from
-   8,000 typed-decisions bilingual rows. Helmo remains explicit opt-in.
-2. Build model-specific mixture and train/validation/calibration ID manifests
-   from available released resources; enforce test isolation and declared roles.
-3. Complete the CPU-only model smoke path, baseline adapters and raw/recalibrated
-   evaluation on the selected resources. Native data absent from a release is
-   requested from hf-data and reported unavailable until delivered.
-4. Freeze the M2 endpoints and decision thresholds before real baseline runs;
-   measure the available baseline matrix, record the gate, then select M3 scope.
-5. Run an explicitly selected provider's training preflight, train the selected
-   reference models, and deliver reproducible evaluation and CPU artifacts.
+1. KD-01 is complete: the baseline selection pins release 1.0.1/schema 1.0.0
+   and its manifest hash. The verified selection contains 8,000 bilingual
+   typed-decisions rows (16,000 language-specific Records). Helmo is opt-in.
+2. KD-02: keep the existing 400-case test split untouched; derive development
+   and calibration subsets from the 1,200 training cases. Keep related
+   questions, language variants, duplicates and minimal pairs together.
+3. KD-03/KD-05: implement the Laya training path, run a short CPU smoke and
+   selected-provider preflight, then proceed directly to the main fine-tune.
+   Baseline scores do not decide whether training is allowed.
+4. KD-04/KD-06: evaluate original Laya and the fine-tuned model on identical
+   test examples, plus DibaOne X1 on supported choice questions. Baseline
+   adapters can be completed alongside training. Freeze the evaluation protocol
+   before final test scoring; use development results for recipe selection.
+5. Deliver one checkpoint, inference/calibration code, saved predictions, a
+   concise model card/report and a small demo. Report measured improvements
+   only; a competitor win or broad-generalization result is not a release gate.
 
-Real M2 baseline measurements and M3 training are not marked complete. Existing
-uniform-baseline CPU examples are loading/harness checks, not model evidence.
-The old dataset-first plan is preserved in
-[the v30 archive](project-plan-v30-archive.md). Dataset work is governed by
-`D:\Coding\hf-data\docs\project-plan.md`; historical data specifications and
-handoffs in this repository are migration/reference material.
+Training and real baseline measurements remain open. This plan update does not
+claim execution, change the pinned dataset, or repoint the legacy translation
+notebook. Missing native resources do not block this release. Dataset work
+remains governed by `D:\Coding\hf-data\docs\project-plan.md`; the earlier
+combined data plan remains in [the v30 archive](project-plan-v30-archive.md).
 
 ## Project scope and principles
 
@@ -106,24 +114,54 @@ dev smoke path is under five minutes: consume a small frozen fixture/release
 slice, build a model mix, train, calibrate, predict and report. Dataset
 translation/review is no longer part of this model smoke path.
 
-Real training targets a free Colab T4: fp16 rather than bf16, SDPA/eager
-attention, no FlashAttention 2. Validate real model loading, memory, numerical
-stability, one train/eval step and interrupted/resumed checkpoints in the
-selected preflight before a long run. CUDA dependencies stay in lazy GPU extras
-and use `constraints/gpu.txt` without replacing provider PyTorch. Kaggle model
-training remains unvalidated; TPU translation recipes are historical data work.
+**Planned training runtime: Kaggle GPU T4 x2.** Select that accelerator
+explicitly and verify two visible T4 devices and their actual free memory in
+preflight. This replaces Colab as the default model-training target. Kaggle
+model training and cross-session restore remain unvalidated until measured;
+historical TPU translation recipes are not this model run.
 
-Code must run on Windows and Linux. Use pathlib and explicit UTF-8, roughly
-four CPU threads and main-process data loading. Every training/long model run
-uses `kodoom.runs.Run` and `save_latest` / `save_best`. Notebooks bootstrap pinned
-code and invoke package commands; no model computation logic belongs in cells.
+Use PyTorch DistributedDataParallel (DDP), one process/model replica per GPU,
+launched by a package training entrypoint through `torchrun --standalone
+--nproc_per_node=2`. The notebook invokes the launcher; it does not implement
+the training loop. Two GPUs provide separate memory budgets, not one pooled
+32 GB allocation: model, optimizer and one microbatch must fit on each device.
+Use fp16 autocast with GradScaler, supported SDPA/eager attention, and no
+BF16/FlashAttention-2 assumption. Keep softmax/log-loss computations in float32.
+Use the installed compatible provider PyTorch and validated lazy GPU extras.
 
-Drive's free 15 GB includes mail/photos. Measure actual free space before a
-training run; keep at most latest and best for the active run, best weights in
-fp16, base-model caches on provider scratch, and small predictions/logs under
-the run directory. Archive model artifacts only to an explicitly approved
-destination. Kaggle output is temporary until privately saved and restored in
-a fresh session. Never commit datasets, weights, caches or run outputs.
+Start with microbatch 2 per GPU and 8 accumulation steps: effective batch
+2 GPUs x 2 examples x 8 = 32 language-specific questions per optimizer update.
+If memory requires microbatch 1, use 16 accumulation steps to retain that batch.
+Measure speed; do not promise a 2x speedup or double learning rate for two GPUs.
+DDP sampling must shard a deterministic language-balanced schedule, use equal
+step counts on both ranks, and advance its epoch seed. Avoid duplicate padded
+validation rows or deduplicate by ID before scoring. Freeze unused heads or
+configure unused-parameter handling so DDP does not hang on inactive outputs.
+
+Scale accumulated losses consistently; synchronize gradients on update steps.
+Unscale before gradient clipping, then update optimizer/scaler/scheduler with
+consistent skipped-step handling. Aggregate validation statistics across ranks
+and broadcast checkpoint/early-stop decisions. Rank 0 writes shared logs and
+checkpoints; preserve per-rank RNG and sampler state for resume. Checkpoint
+model, optimizer, scheduler, scaler, global step and run/split identities.
+
+Short preflight: verify both GPUs participate, finite loss/gradients, memory,
+one optimizer update, evaluation, and save/restore with both ranks. This is a
+bounded implementation check, not a research gate. A single-GPU fallback must
+be explicitly recorded with effective batch preserved, never silently used.
+See [PyTorch DDP](https://docs.pytorch.org/tutorials/intermediate/ddp_tutorial.html)
+and [AMP examples](https://docs.pytorch.org/docs/stable/notes/amp_examples.html).
+
+Code remains portable to Windows/Linux; laptop development remains CPU-only.
+Start with num_workers=0 per rank and limit CPU threads to avoid oversubscription.
+Use `kodoom.runs.Run`, `save_latest` and `save_best` with rank-aware writers.
+Keep model inputs/checkpoint staging under `/kaggle/working`, source attachments
+read-only under `/kaggle/input`, and base-model caches outside saved outputs.
+Retain latest full resume state plus best inference checkpoint within measured
+storage capacity. Save to configured private durable storage and verify restore
+in a fresh session; local Kaggle disk alone is not durable. Record the last
+verified durable step and potential lost work. Never commit datasets or weights,
+and never upload private artifacts publicly as part of automatic training.
 
 The existing execution notebook and `workflows/current.toml` still describe
 the frozen translation campaign. They are not a model-development launch path.
@@ -189,17 +227,16 @@ attribution remain kodum responsibilities.
 
 | ID | Work | Acceptance |
 | --- | --- | --- |
-| KD-01 | Dataset lock and release loader — complete Oct 17 | Baseline selection config and `dataset-lock` command verified against local 1.0.1; raw bilingual Records, source roles, payload hashes and portable selection fingerprint. Supports schema 1.0.0/bilingual Parquet v1 only; upgrades require explicit adapter support. |
-| KD-02 | Model mixture and split manifests | Only declared training resources; source_id/language/pair grouping; source test isolation; reproducible train-derived validation/calibration; one normalization function; unchanged canonical data. |
-| KD-03 | CPU model smoke and resume | Tiny/random encoder and decoder paths, fixture-sized input, prediction/calibration/report schemas and interrupted/resumed checkpoints; no real weights or GPU. |
-| KD-04 | Baseline adapters and M2 measurements | Freeze endpoints/thresholds first; score available released benchmarks raw and recalibrated; save predictions, coverage, exposure and latency/context details. Request missing native/skills resources from hf-data. |
-| KD-05 | Gate and selected training preflight | Record A/B/C decision, actual required benchmark coverage, chosen run scope, provider and measured runtime/numerical/resume readiness. No implicit use of the old translation notebook. |
-| KD-06 | Reference training and report | Execute chosen runs, preserve matched ablations and exact data locks, produce calibration/CPU artifacts and reproducible model report. |
-
+| KD-01 | Dataset lock and release loader — complete Oct 17 | Exact baseline selection, schema and payload hashes; raw bilingual Records and source roles preserved. |
+| KD-02 | Mixture and split manifests | Use accepted training resources; group whole cases and language variants; preserve source test membership; derive development/calibration from train; validate targets and option mappings. |
+| KD-03 | Laya CPU smoke | Tiny/random compatible model path checks request shapes, finite loss, prediction format and checkpoint save/restore. No decoder implementation required. |
+| KD-04 | Two baseline adapters and evaluation | Original Laya on all supported types, Diba X1 on choice; identical examples/options, raw and equally recalibrated probabilities, coverage and saved predictions. No broad baseline matrix or A/B/C decision. |
+| KD-05 | Short training preflight | Kaggle T4 x2, DDP and balanced replay, real checkpoint/dtype, one train/eval step, memory and distributed checkpoint restore. No research performance threshold before training. |
+| KD-06 | One fine-tune and portfolio release | Best checkpoint selected on Persian development loss subject to English retention, final test report, inference/calibration artifacts, model card and small demo. Optional research runs are deferred. |
 
 ## Part 2 — Implementation
 
-Part 2 builds model-specific mixtures from pinned hf-data releases, trains an encoder and a small decoder on free Colab, and keeps every log and prediction needed to judge them. Canonical data development and review are owned by hf-data.
+Part 2 fine-tunes one Laya-multilingual checkpoint on a pinned hf-data selection and records enough predictions and configuration to reproduce its evaluation. Canonical data development and review remain owned by hf-data.
 
 ### 2.1 Data preparation (training mix)
 
@@ -240,7 +277,7 @@ selection is an immutable run manifest, not a canonical dataset edit. Skills
 are consumed when an explicitly versioned skills resource is delivered; the
 old local candidate is not silently treated as part of package 1.0.1.
 
-**English slice:** the original English typed-decisions train split, plus some records with an English question over a Persian state. This keeps the model usable the way a foreign client would use it.
+**First-release mix:** use the selected Persian and English typed-decisions training rows across all four workflows. "Full data" means all selected training contexts, not the released test rows or train-derived development/calibration cases. Helmo remains optional train-only augmentation; new native sources and mixed-language request augmentation are deferred.
 
 **Model preparation steps**
 
@@ -253,10 +290,11 @@ old local candidate is not silently treated as part of package 1.0.1.
    that establishes the resulting targets.
 3. Apply the same full `kodoom.normalize.normalize` at training and inference.
    Write transformed inputs to run artifacts; keep the dataset release raw.
-4. Measure token lengths with each candidate tokenizer. Default model budgets
-   remain 256 tokens, or 384 for QA; disclose truncation and unsupported inputs.
-5. Balance the available training mix, targeting no source above about 30%.
-   Record weights, repetitions and source counts rather than changing releases.
+4. Measure lengths with the pinned Laya tokenizer and request formatter.
+   Start from checkpoint-compatible limits; record any T4-driven truncation,
+   head/context limits and unsupported inputs consistently across comparisons.
+5. Use the available selected training rows without waiting for more sources
+   or a source-balancing quota. Record language/source counts and any weights.
 6. Select early-stopping validation and temperature-only calibration from
    released train data by source_id. Respect any existing released validation
    or calibration roles. All questions, language variants and minimal-pair
@@ -264,70 +302,121 @@ old local candidate is not silently treated as part of package 1.0.1.
 7. Enforce model-side leakage protection across selected splits, including
    source cases, pairs and normalized/near-duplicate inputs. Report suspect
    source defects to hf-data; do not rewrite canonical splits or targets.
-8. Freeze mixture/selection manifests and hashes before training. An eventual
-   30–60k-decision mix is a target conditional on available data releases, not
-   a claim about the current package's size.
+8. Freeze mixture/selection manifests and hashes before training. No larger
+   dataset target is required for the first portfolio release.
 
-**Format per model family**
+**Request format**
 
-- **Encoder:** one input per state + question + one option, scored, then a softmax across that question's options. Questions with more than 8 options train on the correct one plus 5–8 sampled wrong ones.
-- **Decoder:** one prompt with lettered options; the answer is the next-token probabilities of the option letters. At most 20 options per prompt (sample subsets for MASSIVE's 60 intents). One question per prompt in v0.
+Retain Laya's checkpoint-compatible all-options-per-question input, typed
+question representation, option markers and scoring head. Preserve gold
+probabilities when mapping options. Do not replace it with the former
+per-option mmBERT architecture. Use the same formatter for original and
+fine-tuned Laya; record the adapter and option budget for Diba X1 separately.
 
 ### 2.2 Training
 
-**Base model candidates**
+**One main model:** initialize from
+[`convaiinnovations/laya-multilingual`](https://huggingface.co/convaiinnovations/laya-multilingual),
+pinning model, tokenizer and implementation revisions. Fine-tune its encoder
+and decision head with soft-target cross-entropy on the accepted bilingual
+training mix. Retaining the architecture does not require retaining the
+upstream policy-gradient objective; no reward model is required here.
 
-| Model | Size | Role | Why | Watch out for |
-| --- | --- | --- | --- | --- |
-| [mmBERT-small](https://huggingface.co/jhu-clsp/mmBERT-small) | 140M (42M non-embedding) | Pipeline debugging | Fast, same family and tokenizer as base, runs easily on the laptop CPU. | Lower ceiling. |
-| [mmBERT-base](https://huggingface.co/jhu-clsp/mmBERT-base) | 307M (110M non-embedding) | **Main model** | Modern multilingual encoder covering 1,800+ languages. Backbone of Laya's multilingual checkpoint. Trains fully on a T4 and answers fast on CPU, which suits an offline voice assistant. | Weaker at following free-form instructions. Many-option questions multiply compute. |
-| [Qwen3.5-0.8B](https://huggingface.co/Qwen/Qwen3.5-0.8B) | 0.8B | **Challenger** (LoRA) | Apache-2.0, 201 languages. Reads instructions and all options in one pass. [Dohnuts](https://huggingface.co/PsiACE/Dohnuts-0.1.0-0.8B), built on it, beat Laya-multilingual on 51-language MASSIVE intent, about 60% vs 37%. | Hybrid Gated DeltaNet layers may not train cleanly on a T4 in fp16. Slower on CPU. |
-| [Qwen3-0.6B](https://huggingface.co/Qwen/Qwen3-0.6B) | 0.6B | Fallback challenger | Standard transformer, safe on a T4; the base [Tiny-Jev](https://huggingface.co/lostargon/Tiny-Jev) used. | Older and less multilingual than Qwen3.5. |
-| [Persian-ModernBERT-base](https://huggingface.co/myrkur/Persian-ModernBert-base) | base size | Optional baseline | Custom Persian tokenizer, 2.5B Persian training tokens. Tests whether a Persian tokenizer beats a multilingual one. | Weak on English questions. |
+| Run | Scope | Purpose |
+| --- | --- | --- |
+| Smoke | Tiny compatible config, then short real-checkpoint preflight | Catch input, target, loss, memory and checkpoint failures cheaply |
+| Main | Laya-multilingual, all selected training workflows | Produce the first Persian workflow adaptation |
+| Deferred | Partial-context model; English-only or translation ablations; fresh mmBERT; decoder challenger; additional seeds | Optional follow-up after the portfolio release |
 
-Not chosen: ParsBERT and XLM-R (superseded by mmBERT), and anything 2B or larger (too tight on a free T4).
+**Evaluation baselines, not training gates:**
 
-**Baselines first**, with no training, so every gain is measured against something:
+- Original pinned Laya-multilingual: primary before/after comparison for choice,
+  noul and score. This measures the adaptation's effect on the selected workload.
+- [DibaOne X1](https://huggingface.co/Dibachain/DibaOne-X1): additional external
+  competitor on supported single-choice questions. Pin its revision and mode
+  before test scoring. Do not count unsupported noul/score calls as errors.
+- Uniform and train-derived prior baselines are inexpensive sanity checks.
+- DibaOne M3, other Laya variants, Decima, prompted Qwen and API models are
+  optional. M3 trained on ParsiNLU/PersianQA; label that exposure whenever these
+  resources are evaluated, rather than treating them as unseen tasks for M3.
 
-- Random and majority-class.
-- Untrained mmBERT-base with a fresh head (expected near chance).
-- [Laya](https://github.com/NandhaKishorM/laya)-multilingual (`convaiinnovations/laya-multilingual`, Apache-2.0), zero-shot: the open multilingual reference, and the **primary controlled comparison**, because it starts from the same mmBERT-base as the main model (see below). What its card says matters here: it ships uncalibrated (temperature 1.0; refitting moved its mean ECE from 0.314 to 0.106), it is near chance on typed-decisions zero-shot (0.342, against 0.318 random and 0.461 majority), it wants choice questions under about 20 options (256 tokens for a question and its options), it rarely picks the first level of a score question, and noul can under-report "true".
-- [laya-typed-decisions](https://huggingface.co/convaiinnovations/laya-typed-decisions) (ModernBERT-large, English), optional: an English specialist fitted on the typed-decisions workflows. On the Persian test it shows what an English-only specialist loses in Persian.
-- [Decima-base](https://huggingface.co/amyrmahdy/decima-base), a newer mmBERT decision baseline candidate: audit its exact checkpoint, context budget and training exposure before reporting held-out results. Its published results are author reports until independently reproduced here.
-- [DibaOne X1](https://huggingface.co/Dibachain/DibaOne-X1) (Apache-2.0), zero-shot: the Persian-first open reference. A 278M XLM-R-family cross-encoder behind a 118M retriever; **choice questions only** (no noul or score). Trained on its own synthetic data (CC0) and Wikipedia, so no overlap with this project's test sets is expected. Slow on CPU (0.7–1.8 s per decision at 2 threads in `best` mode), so it is evaluated on a T4.
-- [DibaOne M3](https://huggingface.co/Dibachain/DibaOne-M3) (CC BY-NC-SA 4.0), evaluation only: a Persian-first bi-encoder answering all three question types. **It was trained on ParsiNLU and PersianQA**, so its scores on those sets are in-domain and excluded from every held-out comparison; its full source list (`NOTICE`) is checked against the other test sets before its scores are reported.
-- Every baseline is reported **raw and recalibrated**: a temperature per question type is fitted on this project's calibration split for every model alike, so calibration differences are not just "one model shipped a temperature and another did not".
-- If neither reference runs on the laptop or a T4, prompted Qwen3.5-0.8B takes their place, including at the decision gate (2.4).
-- Qwen3.5-0.8B prompted, no training.
-- Jev through its API, only if access works. Otherwise cite published third-party numbers and label them so.
+Compare raw probabilities and give each evaluated model the same temperature
+fitting opportunity on the train-derived calibration subset. No baseline test
+score is required before training. A failed external adapter is disclosed as
+missing evidence and never replaced with a published score on another dataset.
 
-**Run plan**
+**Initial training recipe (starting defaults, not tuned results)**
 
-| Run | Model | Data | Purpose |
-| --- | --- | --- | --- |
-| 0 | mmBERT-small | 1k records | Smoke test: loss falls, and it can overfit a tiny batch |
-| 1 | mmBERT-small | Full mix | First full result, cheap |
-| 2 | mmBERT-base | Full mix | Main model |
-| 3 | mmBERT-base | Mix without translated data | Ablation: did translation help or hurt? |
-| 4 | Qwen3.5-0.8B with LoRA (or Qwen3-0.6B) | Full mix | Challenger, head-to-head with run 2 |
-| 5 (optional) | Best of runs 2 and 4 | Mix without the English slice | Does English data help Persian? |
-| 6 | Laya-multilingual as the starting point (warm start) | Full mix | Does starting from a decision model beat starting from plain mmBERT-base? Compare with run 2. |
-| 7 | Laya-multilingual as the starting point | English slice only (no Persian data) | With run 6, the cleanest measure of what the Persian data adds: same start, same procedure, only the Persian data differs. |
+- AdamW full fine-tune: encoder LR 5e-6, existing decision-head LR 2e-5,
+  weight decay 0.01 (exclude bias/norm parameters), 10% linear warmup followed
+  by linear decay, max gradient norm 1.0. Keep pretrained weights/head intact
+  at initialization. Use soft-target cross-entropy; no reward-model stage.
+- Start with 2 epochs over the bilingual training schedule; extend to at most
+  4 only if development results justify it. Effective batch 32 on Kaggle T4 x2
+  as above. Keep the global batch and learning rate fixed when changing ranks.
+- Freeze a seed and record all settings/IDs. One seed is sufficient for this
+  release, but it does not establish stability across seeds.
+- Evaluate every 50 optimizer updates and at each epoch end; use the English
+  retention policy below when selecting best weights. Stop after 3 evaluations
+  without an improvement in eligible Persian development log loss.
+- Fit temperature only after checkpoint selection, on the separate calibration
+  subset. All retention monitoring uses raw probabilities; calibration cannot
+  conceal loss of answer-selection performance.
+- Target a 1–2 hour training session as a planning budget, not a measured runtime.
+  Preserve resumability and adjust memory settings using preflight/development
+  evidence, never final test performance.
 
-Which runs actually happen depends on the decision gate (2.4).
+**English replay and forgetting prevention — required in the main run**
 
-**Controlled and uncontrolled comparisons.** A shared backbone controls architecture only: comparing the main model with Laya does not isolate training data, objective or recipe. Runs 6 and 7 isolate the Persian-data intervention only when starting checkpoint, update budget, seeds and calibration policy match. Other model comparisons are empirical scores, not causal claims about backbone suitability. Add a separate with/without-helmo comparison if helmo is eligible; do not blend its effect with typed-decisions-fa. One seed is exploratory; repeat promising matched comparisons with at least three seeds when affordable.
+1. Split cases before creating language examples. English replay comes only
+   from accepted training cases; their Persian counterparts share the same
+   partition. Never replay development, calibration or test examples.
+2. Use an explicit 50% Persian / 50% English schedule throughout training,
+   including the last epoch. Every effective optimizer batch contains 16
+   Persian and 16 English questions. Shard the balanced schedule across ranks;
+   with microbatch 2, aim for one example of each language per rank per
+   microstep. With microbatch 1, alternate languages through accumulation.
+   Do not run long Persian-only blocks followed by occasional English epochs.
+3. Shuffle within language each epoch and cover all selected workflows and
+   question types in both languages. Keep source proportions comparable across
+   languages. If Helmo is selected, include its eligible English counterparts
+   within the same replay ratio. Log actual language/type/workflow counts per
+   update and epoch so a sampler bug cannot silently remove English replay.
+4. Average losses within each language and combine as
+   `L = 0.5 * mean(CE_fa) + 0.5 * mean(CE_en)` over the effective batch.
+   Preserve soft targets; do not sharpen labels or add entropy maximization
+   as a supposed retention fix. Use correct weighting when batches are uneven.
+5. Before the first update, evaluate original Laya on the fixed Persian and
+   English development subsets. This small retention reference is not the
+   retired broad baseline gate. Track language-specific raw log loss, top-1
+   accuracy, and question-type breakdowns at every validation interval.
+6. Initial checkpoint guard: English overall development accuracy may decline
+   at most 2 percentage points, and English mean soft-target log loss may rise
+   at most 5% relative to the starting checkpoint (numerical floor 1e-8).
+   Among checkpoints satisfying both, choose lowest Persian development log
+   loss. Freeze these operational tolerances before training; they are not
+   statistical guarantees or universal definitions of forgetting. Inspect
+   per-type regressions even when the overall guard passes.
+7. If both consecutive validation checks fail the guard, stop and retain the
+   last eligible checkpoint. If no trained checkpoint qualifies, report that
+   explicitly. For a bounded retry, restart from an eligible/original checkpoint,
+   halve learning rates and increase English replay to 75% (24 English / 8
+   Persian per effective batch, loss weights 0.75/0.25). Record a new run and
+   select using development only; do not launch an open-ended ablation grid.
+8. Report final English as well as Persian test performance versus original
+   Laya, overall and by type/workflow. English replay reduces forgetting risk;
+   it cannot guarantee retention of other languages, unrelated tasks or the
+   base model's entire capability set. Claims are limited to measured tasks.
 
-**Settings on the Colab T4**
+Distillation from the frozen original model, partial encoder freezing or LoRA
+are optional remedies if the bounded replay/LR adjustment is insufficient.
+They are not additional mandatory runs or a requirement to acquire new data.
 
-- fp16 mixed precision; SDPA or eager attention (a T4 has no FlashAttention 2).
-- Max length 256 (384 for QA); gradient accumulation for a larger effective batch.
-- Encoder: full fine-tune, small learning rate with warmup, 2–4 epochs. Decoder: LoRA, rank 16–32.
-- Loss: cross-entropy against the gold distribution. It is a proper scoring rule, so it rewards honest confidence.
-- Early stopping on validation log-loss, not accuracy.
-- After training: temperature scaling on the calibration split, one value per model (optionally per question type).
-- Fixed seeds. Checkpoint to Drive every few hundred steps, within the storage budget (Environments): the latest checkpoint overwritten in place, the best one as fp16 weights only. Every run must resume after a dropped session.
-- Budget: one run fits one Colab session (1–2 hours). If it doesn't, shrink the data or model rather than stretch the session.
+A workflow may be selected for specialization using training/development
+evidence. Freeze its scope before final testing and report all tested workflow
+results. Do not select winning test examples or claim generalization to unseen
+contexts from a within-workflow split. The initial default remains all four
+typed-decisions workflows.
 
 ### 2.3 Collecting logs and training data
 
@@ -336,129 +425,124 @@ Keep enough that any number in the final report can be recomputed without retrai
 - **Run registry:** one row per run with run ID, date, model and revision, dataset version, key settings, headline metrics, and a one-line decision (keep, or drop and why).
 - **Per-run config:** model revision hash, dataset version hash, seeds, hyperparameters, max length, option-sampling settings, library versions, GPU type.
 - **Curves:** train loss, validation loss, validation accuracy and ECE per step or epoch; runtime and peak GPU memory.
-- **Where:** plain files on Google Drive (CSV or JSON, or TensorBoard / MLflow file logs). Avoid depending on a hosted tracker that may not be reachable.
+- **Where:** plain files in the Kaggle run directory (CSV/JSON or local TensorBoard), periodically persisted to configured private durable storage. Rank 0 owns shared writes; no hosted tracker is required.
 - **Predictions, not just metrics:** for every evaluation, save per item the ID, gold distribution, predicted distribution, temperature used and latency. Every later metric, chart and error analysis comes from these files, and they can be published as raw results.
-- **Error log:** after each main run, read 50 wrong answers and tag them: translation artifact, ambiguous options, truncated context, number or date reasoning, colloquial text, label noise.
-- **Artifacts kept:** the best weights in fp16, its tokenizer, its temperature value, the exact training-mix version, and a draft model card; pushed to Hugging Face, then removed from Drive.
+- **Error log:** inspect a small development-error sample for input and modeling issues. Final test error analysis is descriptive; do not tune on it and reuse that test as untouched evidence.
+- **Artifacts kept:** best checkpoint, tokenizer, calibration, exact mix/split manifests and model card. Prepare a reviewable release; external publication follows the owner's publication decision. Do not delete the only checkpoint copy.
 
-### 2.4 Decision gate: does Persian need a new model?
+### 2.4 Direct-to-training scope decision
 
-After the M2 baselines and before M3's training runs, one planned decision: does Persian need a new decision model, or does it mostly need data and a benchmark? Every outcome still publishes something; the gate only decides where the time goes and what the release leads with.
+The owner retired the former A/B/C research gate on Oct 19 to reduce completion
+risk. Do not wait for language-gap thresholds, native benchmarks, Persian skills
+scores or evidence that a new general-purpose model is needed. Proceed after
+the existing input-contract checks, grouped splits and short training smoke.
+These implementation checks are not a replacement research campaign.
 
-**Reference model.** The stronger on held-out Persian tasks of Laya-multilingual (same mmBERT-base as the main model) and DibaOne X1 (Persian-first; choice questions only, so noul and score signals come from Laya). DibaOne M3 cannot be the reference: it was trained on ParsiNLU and PersianQA, two of the held-out sets. Their weaknesses in Persian are the model's reason to exist; if a Persian-first model is already strong, the gate should find that out. If neither can be run, prompted Qwen3.5-0.8B is the reference.
-
-**Three signals**, all measured with no training:
-
-1. **Language gap.** The reference's accuracy on parallel native sets, English minus Persian on the same items: MASSIVE (`en-US` vs `fa-IR`, same utterance IDs, 20-option questions as in Laya's own MASSIVE evaluation) and Belebele (`eng_Latn` vs `pes_Arab`). Not on typed-decisions: Laya-multilingual is near chance there zero-shot even in English (0.342 against 0.318 random), so any gap would be noise at the floor. A reference's gap on a set counts only if its English score there is clearly above chance. The typed-decisions gap remains a metric for trained models (3.2).
-2. **Held-out native tasks.** The reference on ParsiNLU and Belebele-fa, against the random and majority baselines.
-3. **Persian skills.** The reference on the code-labeled test templates (Jalali dates, digit forms, Toman vs Rial, Iranian formats).
-
-Calibration in Persian and the STT transcripts are measured and reported too, but they do not decide the outcome.
-
-**Thresholds, written down before any baseline runs.** Freeze primary endpoints, weights across suites and the owner's thresholds before M2 starts. The values below are placeholders until recorded in that decision. Baseline results can set practical M3 targets, but must not select a favorable primary metric after seeing the scores.
-
-| Signal | Large gap (counts toward A) | Small gap (counts toward C) |
-| --- | --- | --- |
-| Language gap (MASSIVE, Belebele) | ≥ _8_ points | < _3_ points |
-| Held-out native tasks | Within _5_ points of majority-class on most tasks | Clearly above chance on every task |
-| Persian skills | Below _60_% accuracy | At or above _80_% accuracy |
-
-**Rules**
-
-- A signal counts only if its 95% confidence interval clears the threshold, using the paired bootstrap from 3.3. With 2,000 decisions, a 2-point gap can be noise.
-- The skills signal counts on its own: a large skills gap alone means outcome B at least, because the skills data alone justifies a small model or a Laya fine-tune.
-- A result on a threshold: spend one session on run 1 (mmBERT-small, full mix) as a probe. Its gain over its own untrained baseline shows whether training pays off.
-
-**Outcomes**
-
-| Outcome | What the baselines show | What M3 does | What the release leads with |
-| --- | --- | --- | --- |
-| **A. Large gap** | Large language gap, weak held-out scores, skills near chance | The full run plan (runs 0–6) | The model and report, referencing the consumed data release |
-| **B. Middle** | A moderate gap, or a large gap in only some signals (often the skills) | Runs 0–3 and 6; drop the challenger (4) and run 5 | The model comparison and measured areas of gain |
-| **C. Small gap** | The reference loses little in Persian and does reasonably on held-out tasks | At most a light Persian fine-tune of Laya-multilingual (run 6), mostly on the skills data | A report comparing open decision models on pinned Persian data, with at most a light reference-model adaptation |
-
-Outcome C is not a failure: a report on how well open decision models handle Persian is useful to every model author in this space, and it still ships a model.
+The deliverable is a Persian workflow specialization, not a proof of universal
+Persian reasoning superiority. Whole-context holdouts and the second
+partial-context model are deferred. No performance win is guaranteed or required
+to document and release the completed engineering work.
 
 ## Part 3 — Testing and evaluation
 
-The model is judged on Persian it never trained on, on how honest its confidence is, and on how much it loses against English, always against baselines on the same items.
+### 3.1 First-release test set
 
-### 3.1 Test sets
+Use the released typed-decisions test split: 400 cases / 2,000 bilingual
+questions, with Persian as the primary endpoint. These are new cases from
+workflows represented in training, not unseen contexts. Preserve the original
+test membership and keep all associated questions/translations together.
+English results are a required retention check on the same cases; they are not used for checkpoint selection.
+Helmo is train-only and never supplies this benchmark.
 
-| Test set | Question it answers | Source |
+Before scoring final test predictions, freeze checkpoint-selection rules,
+metrics, adapter revisions, Diba mode, input budgets and common-item coverage.
+Development data can guide specialization and debugging; final test results
+cannot guide model selection while retaining an untouched-test claim.
+
+ParsiNLU, PersianQA and Belebele remain test-only optional later evaluations.
+MASSIVE/FarsTail, skills, STT, held-out templates and whole-context evaluation
+are follow-ups when released resources exist; missing resources do not block
+training or the first portfolio release. Do not make broad transfer claims
+without those experiments. Diba's custom benchmark examples are not assumed
+available, and public source datasets do not reproduce its custom test sets.
+
+### 3.2 Minimum metrics
+
+- Top-1 accuracy with the gold/tie rule stated, overall and by workflow and
+  question type; Diba X1 comparisons use the same supported choice subset.
+- Soft-target cross-entropy/log loss and Brier score for distribution quality;
+  optional ECE with fixed bins. Report raw and recalibrated probabilities.
+- For score questions, report error of the predicted expected ordinal score
+  against the gold expected score, with the scale defined.
+- Paired 95% confidence intervals for model differences, resampling whole
+  cases and keeping language/model predictions paired. If the difference's
+  interval includes zero, call it inconclusive, not statistically established.
+- Save IDs, gold/predicted distributions, calibration, failures and coverage.
+  Report machine-translated Persian as such: source-label agreement is not an
+  independent measurement of human judgment or real-world uncertainty.
+- Record inference hardware, precision, input lengths and option counts with
+  a small latency measurement. No voice-assistant latency threshold blocks release.
+
+### 3.3 Required comparisons and claim boundaries
+
+| Comparison | Same evaluation items | Supported interpretation |
 | --- | --- | --- |
-| In-task native | Did it learn the trained tasks? | MASSIVE-fa test (20-option questions, fixed seed), FarsTail test |
-| Held-out native tasks | Is it a decision model, or a classifier of the tasks it saw? | ParsiNLU (4 tasks), Belebele-fa, PersianQA (in-domain for DibaOne M3, which trained on ParsiNLU and PersianQA) |
-| Parallel language gap | How much does the same native item lose in Persian? | MASSIVE `en-US`/`fa-IR` and Belebele `eng_Latn`/`pes_Arab` test items |
-| Held-out templates | Did it learn the task, or memorize the phrasing? | Held-out template IDs from the selected data release and frozen model protocols |
-| typed-decisions-fa test + English original | How much does the same case lose in Persian? | 400 cases, 2,000 decisions, in both languages |
-| Persian skills | Dates, digits, currency, Iranian formats | Code-labeled data, test templates only, raw forms, with minimal pairs |
-| Real use | Does it hold up on noisy speech transcripts? | Own STT→intent data |
+| Original Laya vs fine-tuned Laya | Persian test questions across supported types | Adaptation improvement on held-out cases of represented workflows |
+| Diba X1 vs fine-tuned Laya | Identical supported choice questions/options | Competitive performance on this target workload, with task-specific training disclosed |
+| Raw vs calibrated | Same predictions/test cases; calibration fitted outside test | Probability calibration improvement, separately from answer selection |
 
-### 3.2 Metrics
+Record model training exposure as known, suspected or unknown. Our model is a
+typed-decisions specialist; external baselines receive no task fine-tuning here.
+This is a practical workload comparison, not an equal-data/equal-budget trial or
+proof that our architecture is superior. Sharing a backbone alone does not
+control the complete architecture. The before/after comparison does not isolate
+Persian data from task adaptation; an English-only control is deferred.
 
-- **Accuracy** (top-1), plus macro-F1 where classes are imbalanced.
-- **Calibration:** ECE with fixed bins, Brier score, log-loss, and a reliability diagram.
-- **Accuracy vs coverage:** if only answers above a confidence threshold are auto-accepted, what share is automated and how accurate is it? This is the number that matters for Jev-style gating.
-- **Distance from the gold distribution** on typed-decisions: KL divergence from gold, the typed-decisions leaderboard's headline next to accuracy and Brier, so results can be compared with it (Jensen–Shannon as a bounded companion). ECE alone is not read as quality: on that leaderboard the prior, which ignores the input, has the best ECE.
-- **Score questions:** within-one accuracy and mean absolute error.
-- **Language gap:** English minus Persian accuracy on the same typed-decisions cases, and on the parallel MASSIVE and Belebele items.
-- **By question language:** every metric reported separately for Persian and English questions over the same Persian state (`question_lang`). laya-persian-benchmark found English instructions scored higher than Persian ones on identical Persian content (41 vs 36 of 64 for Laya-multilingual), so instruction language is a variable, not noise.
-- **Seen vs unseen task families:** every metric reported separately for task families in training and those held out, so "decision model, not classifier" is a number rather than a claim.
-- **Minimal-pair consistency:** share of skill pairs where both halves are right.
-- **Cost:** CPU latency per question (p50 and p95) and peak memory (RSS) on the laptop, no GPU. Every latency figure is published with its context, so it can be compared elsewhere: CPU model, threads, RAM, model, precision (and export format), sequence length and options per question.
+Use the same semantic requests and complete option sets where supported. Keep
+truncation, option remapping, unsupported inputs and failures visible. Report
+common-item counts rather than silently dropping difficult examples. Preserve
+test isolation when inspecting duplicates or suspected source defects.
 
-### 3.3 Comparisons
+### 3.4 Optional follow-ups
 
-- Every fine-tuned run against every baseline from 2.2, on the same items.
-- **Matched intervention comparison:** run 6 against run 7, same start with and without the selected eligible Persian data and matched training budget. Run 2 against Laya-multilingual is an architecture-matched external baseline, not an isolated data intervention.
-- **Mode is stated with every typed-decisions result**, as the leaderboard asks: *specialist* (trained on typed-decisions `train`, as this project's models are) or *general* (zero-shot, as Laya, DibaOne and prompted Qwen are). The gap between the modes is the price of generality, not a quality ranking; held-out tasks measure generality.
-- **Request shape is recorded:** whole case in one request (the leaderboard's shape) or one question per request. It changes results (Jev's yes/no accuracy was 0.843 per question and 0.788 alongside the others), so compared rows use the same shape.
-- Run 2 vs run 3 (with vs without translated data) and run 2 vs run 4 (encoder vs decoder).
-- Before vs after temperature scaling.
-- 95% confidence intervals by bootstrap, with paired comparisons on the same items. A difference inside the interval is reported as a tie.
-- Resample whole source cases (all five questions together) or minimal pairs; language/model comparisons retain paired IDs. Report missing/failed coverage and common-item comparisons. Log loss and Brier complement teacher agreement; ECE alone is insufficient. Known, suspected and unknown baseline exposure are separate statuses.
-- Report originally authored Persian, human-localized parallel data, machine translations and procedural skills separately. Audit tokenizer/context limits for every adapter; unsupported inputs remain visible rather than silently truncated or dropped. Option subsampling and full-option evaluation are distinct protocols, and removal of an option requires explicit remapping of soft target mass.
+After the first release, consider a partial-context model, held-out native
+tasks, English-only control, extra seeds, option-order/wording checks, numerical
+skills, and alternative architectures. None is on the critical path. Select
+held-out contexts by relevance, sufficient case count and a clear boundary;
+use development evidence for favorable specialization, not test-score selection.
 
-### 3.4 Robustness checks
+### 3.5 Portfolio completion and performance claims
 
-- Shuffle option order: the answer should not change.
-- Rename options, or add a plausible wrong option.
-- Rewrite a formal state colloquially, and the reverse.
-- Swap Persian and Latin digits.
-- Ask in English about a Persian state.
-- Code-mixing: English technical terms inside a Persian state ("اکانتم لاک شده", "invoice رو ریجکت کردن"), as Persian users write them. The answer should not change against the all-Persian wording.
-- Position bias on score questions: how often each level position is chosen, since Laya reports rarely picking the first level.
-- noul against the same question as a two-option choice (neutral keys, yes/no descriptions): the probabilities should agree.
+- [ ] One fine-tuned Laya checkpoint with reproducible data/code/model pins,
+  grouped splits, calibration and working inference.
+- [ ] Original-Laya comparison and Diba X1 choice comparison, with saved
+  predictions, counts, workflow/type breakdowns and paired uncertainty.
+- [ ] A concise model card/report and a small local demo with sample decisions.
+- [ ] Actual quality/provenance, exposure, limitations and attribution disclosed.
 
-### 3.5 Success criteria
+Completion is distinct from winning. Publish measured improvements only and
+report regressions or inconclusive differences. Do not require superiority to
+every baseline, a new architecture, or an unseen-context result for release.
 
-**Harness and consumption criteria:**
+Claim template, only when measured: "Fine-tuned Laya-multilingual for Persian
+[workflows], achieving X% accuracy on held-out workflow cases, a Y percentage-
+point improvement over the original checkpoint." If supported, add: "On the
+choice subset, it exceeded DibaOne X1 by Z percentage points." Include sample
+counts, uncertainty and specialist-vs-external-baseline disclosure in the report.
+Avoid claims of general Persian superiority or isolated dataset generalization.
 
-- [ ] Every experiment pins an exact dataset release, schema/transport version, manifest checksum, selected configurations and model-derived split IDs. Reports cite the release's actual quality status and waiver without repeating dataset review.
-- [ ] The harness has scored at least three models this project did not train (for example Laya-multilingual, DibaOne X1 and prompted Qwen3.5-0.8B), with their raw predictions published.
-- [ ] Skills evaluation consumes the released raw forms, held-out template IDs and minimal-pair grouping; regeneration acceptance is owned by hf-data.
-- [ ] The model pipeline enforces released training/test-only roles and permitted-use decisions, and the model card attributes every consumed component.
+### 3.6 Release artifacts
 
-**Model criteria.** Set exact thresholds after the baselines and before runs 1–4, so results can't move the goalposts. (The decision gate's thresholds in 2.4 are different: they are fixed before the baselines.)
+Keep the best checkpoint, tokenizer/request adapter, calibration, split manifests,
+run config and per-item predictions sufficient to reproduce the headline table.
+Provide a small demo and documented inference command, plus the exact consumed
+dataset release and its actual machine-translation/review status. Prepare public
+artifacts under applicable terms; publication remains a separate owner action.
 
-- [ ] Fine-tuned mmBERT-base beats Laya-multilingual on held-out native Persian tasks, outside the confidence interval.
-- [ ] ECE after temperature scaling is lower than every baseline's, each baseline also recalibrated on the same calibration split.
-- [ ] The Persian–English gap on the parallel MASSIVE and Belebele items is smaller than Laya-multilingual's. (Not on typed-decisions, where Laya is near chance zero-shot in both languages, so its gap there says nothing.)
-- [ ] CPU latency is low enough for a voice assistant (threshold set after measuring baselines).
-
-### 3.6 Reporting
-
-- One headline table, a reliability diagram, an accuracy-vs-coverage curve and a language-gap chart.
-- Raw prediction files published with the report.
-- A model-agnostic evaluation harness (for example `kodoom evaluate --model <adapter> --benchmark typed-decisions-fa --out results/<model>/`) whose input is the System One request (a state plus typed questions, as in typed-decisions and Laya), with adapters for per-question models such as DibaOne, and that reads the same request and response format as the community benchmarks ([typed-decision-bench](https://github.com/kyr0/typed-decision-bench), [open-system-one](https://github.com/zhlei07/open-system-one)), so others can run their models on the Persian sets. Its outputs are raw predictions (ID, gold, predicted distribution, temperature, latency), from which every metric is recomputed.
-- Model card: exact consumed data releases and hashes, component licenses, intended use, known limits and the dataset project's actual quality statement. No human translation-error rate is invented; the human-review waiver remains disclosed.
-
-**Making adoption easy.** For downloads, easy use matters more than a few accuracy points.
-
-- **Recalibration recipe.** A documented step, with a script, that fits a new temperature on 100–300 of a user's own labels, and writes it as a `calibration.json` in typed-decision-bench's format (one temperature per question type, a global fallback), so engines that read that format pick it up. Temperature scaling already exists from 2.2; this makes it usable on someone else's data, where the shipped calibration will not hold. The model card says plainly that the top answer transfers better than the probability.
-- **CPU-friendly export.** An exported model (for example ONNX, optionally int8) with the latency measured on it, so the CPU latency in 3.2 is reproducible by users.
-- **Community request/response format.** The evaluation harness above already reads it; a small adapter lets the model answer in the same format.
+ONNX/int8 export, an extensive model-agnostic harness, community leaderboard
+integration, reliability/coverage dashboards and a standalone recalibration
+tutorial are optional follow-ups. A working standard checkpoint and inference
+path suffice for the first release; do not block it on export optimization.
 
 ## Failure modes and responsibility
 
@@ -467,36 +551,28 @@ The model is judged on Persian it never trained on, on how honest its confidence
 | Floating data changes an experiment | Require exact release and manifest/payload hashes; keep an immutable local cache or snapshot. |
 | A compatible loader is mistaken for an unchanged benchmark | Record content fingerprints, IDs and exact releases; rerun comparisons or use common-item protocols after upgrades. |
 | Test data or its language variant leaks into training/calibration | Group cases/pairs and enforce source roles and immutable subset manifests in the model pipeline. |
-| The model memorizes task labels/options | Use held-out released task families/templates, option perturbations and matched intervention comparisons. |
+| Within-workflow results are mistaken for broad transfer | Label the test as unseen cases from represented workflows; defer unseen-context claims until separately evaluated. |
 | Small language gaps or calibration claims are noise | Use paired case/pair bootstrap, common coverage and fixed endpoints; publish raw and recalibrated baselines. |
 | Dataset defects appear during model error analysis | Record release/record IDs and report them to hf-data. Use explicit run-specific subset manifests; do not silently correct the source or require a new full review campaign. |
 | A baseline was trained on a nominally held-out task | Record known/suspected/unknown model training exposure and keep in-domain scores out of held-out claims. |
 | Code works on CPU but fails on the real provider | Run the selected model preflight with real dtype, memory, context limits and checkpoint restore before long execution. |
-| A calibrated model is too slow or a full fine-tune adds little | Measure CPU cost and follow the A/B/C gate rather than expanding model scope automatically. |
+| A fine-tune adds little or loses to Diba | Report the measured result and development lessons; keep one-model scope rather than reopening the retired research gate. |
 
 ## Milestones
 
 | Milestone | Current status / exit condition |
 | --- | --- |
-| M1: accepted external dataset input | Closed for kodum by the Oct 16 owner decision. Baseline hf-data 1.0.1 is available. Dataset review, future improvement and public release are owned by hf-data; they are not marked complete by this transfer. Operational lock/loader work is KD-01. |
-| M2: model baseline evidence and decision | Open. KD-01 through KD-04, actual benchmark availability, frozen endpoints/thresholds and measured raw/recalibrated baselines. Record the gate before choosing substantial training. |
-| M3: selected reference-model development | Open. KD-05/KD-06 at the gate's chosen scope, provider preflight, checkpoints, calibration and controlled comparisons. |
-| M4: model evaluation and release | Open. Reproducible report/predictions and model card, CPU export, stated limits/attribution and a separate model-publication decision. |
+| M1: accepted dataset input | Closed by owner acceptance; KD-01 complete. Dataset follow-up remains in hf-data. |
+| M2: minimal implementation readiness | Open: grouped split manifests, valid model inputs/targets and short CPU/provider smoke. Former broad baseline A/B/C gate retired; baseline scoring may follow training. |
+| M3: one Laya adaptation | Open: train on selected training cases, select on Persian development loss subject to English retention, save resumable/best checkpoint and fit calibration outside test. No challenger or context-holdout model required. |
+| M4: portfolio report and release | Open: original Laya and Diba choice comparisons, reproducible artifacts, model card and small demo; publish after owner decision. No mandatory winning threshold. |
 
-Stopping at a model gate can produce a useful evaluation report without a new
-large training campaign. Dataset publication is managed separately and does not
-need to coincide with a model release. Existing embedded diagrams and historical
-documents reflect the old combined project unless explicitly updated; this
-table and the active ownership/consumer contract above govern current work.
-
-Remaining data work is tracked only in `D:\Coding\hf-data\docs\project-plan.md`.
-Keep [the v30 archive](project-plan-v30-archive.md) for evidence and past decisions.
-The following reference table/version history retains earlier source context;
-old Part 1 references point to that archive rather than assigning data tasks to
-kodum again. Published model specifications/numbers in the retained recipe are
-historical candidate evidence; verify exact revisions/context/runtime before
-using them in a new experiment.
-
+This active plan supersedes historical broad model gates and multi-model run
+requirements. The separate WF-* tooling plan and frozen translation handoff are
+not advanced by this edit. Dataset work remains in
+`D:\Coding\hf-data\docs\project-plan.md`; keep the v30 archive and Git history
+for previous decisions. References and earlier version-history entries below
+are historical context, not additional first-release requirements.
 
 ## References
 
@@ -534,6 +610,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
+| 33 | Oct 19, 2026 | Prioritize one portfolio Laya-multilingual fine-tune. Retire the A/B/C research gate and defer partial-context training, fresh encoders, decoder challengers and broad benchmarks. Keep scenario-grouped train/dev/calibration/test isolation, original-Laya and Diba X1 choice comparisons, bounded claims, saved predictions and a small demo. Set Kaggle T4 x2/DDP as the target with per-update English replay, conservative learning rates, retention-aware checkpoint selection and private durable resume. No training or evaluation is marked complete. |
 | 32 | Oct 17, 2026 | Complete KD-01 with an exact baseline selection, read-only release consumer and portable dataset lock. Verify the local release's 8,000 typed-decisions rows as 16,000 raw language-specific Records, retaining quality/provenance and source roles. KD-02 mixture/split manifests are next; model measurements and training remain open. |
 | 31 | Oct 16, 2026 | Separate kodum model development from hf-data dataset development. Accept hf-data 1.0.1 as the baseline input; replace active Part 1 review/publication gates with versioned consumption and model milestones. Preserve v30 as an archive, move dataset follow-up ownership to the new hf-data plan, and require exact release/schema/hash pins without automatic upgrades. |
 | 30 | Oct 16, 2026 | Record the owner-approved Apache-2.0 translation contribution grant in hf-data v1.0.1 and mirror it in kodum. Preserve upstream Apache-2.0/MIT terms, full license text, attribution and source-license fields. Teach exporters to carry only explicit inventoried grants; retain separate training and publication gates. |
