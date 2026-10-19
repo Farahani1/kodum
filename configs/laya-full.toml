@@ -1,0 +1,23 @@
+# Model/code revisions live in kodoom.training.laya and are recorded per run.
+# Paths and private Hub repo are explicit launch arguments, never secrets here.
+seed = 1234
+epochs = 2
+world_size = 2
+microbatch = 2
+accumulation = 8
+english_fraction = 0.5
+encoder_lr = 0.000005
+head_lr = 0.00002
+weight_decay = 0.01
+warmup_fraction = 0.1
+max_grad_norm = 1.0
+max_len = 1024
+head_max_len = 256
+validate_every = 50
+save_every = 50
+snapshot_seconds = 900
+log_sync_seconds = 300
+patience = 3
+english_accuracy_drop = 0.02
+english_loss_rise = 0.05
+threads = 2

@@ -1,3 +1,4 @@
+import subprocess
 import sys
 
 import pytest
@@ -95,8 +96,14 @@ def test_a_short_reply_list_is_refused():
 
 
 def test_model_translators_load_lazily_and_say_what_is_missing(monkeypatch):
-    factory = translator_factory("qwen3-8b-4bit")  # importing hf loaded no torch
-    assert callable(factory) and "torch" not in sys.modules
+    code = (
+        "import sys; from kodoom.translate.pipeline import translator_factory; "
+        "assert callable(translator_factory('qwen3-8b-4bit')); "
+        "assert 'torch' not in sys.modules"
+    )
+    subprocess.run([sys.executable, "-c", code], check=True)
+    factory = translator_factory("qwen3-8b-4bit")
+    assert callable(factory)
     monkeypatch.setitem(sys.modules, "torch", None)  # simulate a machine without torch
     with pytest.raises(RuntimeError, match="torch and transformers are needed"):
         load_generator("any/model")

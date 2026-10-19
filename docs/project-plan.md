@@ -1,6 +1,6 @@
 # Kodum: Persian typed-decision models and evaluation
 
-Version 35 · Oct 19, 2026 · @Shah
+Version 36 · Oct 20, 2026 · @Shah
 
 ## Current status and ownership decision
 
@@ -56,17 +56,21 @@ not a prerequisite to the first fine-tune or its portfolio release.
    and 120 calibration cases (9,600 / 1,200 / 1,200 language-specific Records).
    IDs, translations and duplicate groups remain together. Verified local
    fingerprint: `fb7b3ef929756ce9a30a2bdd2d23414efe64a161088a662ecf13ede997c02b5e`.
-3. KD-03/KD-05: implement the Laya training path, run a short CPU smoke and
-   selected-provider preflight, then proceed directly to the main fine-tune.
+3. KD-03 complete Oct 20: the tiny Laya-compatible CPU path passed four
+   optimizer updates across an initial run and a resumed run, including
+   validation, checkpoint save/restore, and split/token-truncation manifests.
+   This does not validate real Laya weights or a GPU.
+4. KD-05: run the bounded Kaggle T4 x2 preflight and restore its private
+   checkpoint from a fresh session. Then proceed directly to the main fine-tune.
    Baseline scores do not decide whether training is allowed.
-4. KD-04/KD-06: evaluate original Laya and the fine-tuned model on identical
+5. KD-04/KD-06: evaluate original Laya and the fine-tuned model on identical
    test examples, plus DibaOne X1 on supported choice questions. Baseline
    adapters can be completed alongside training. Freeze the evaluation protocol
    before final test scoring; use development results for recipe selection.
-5. Deliver one checkpoint, inference/calibration code, saved predictions, a
+6. Deliver one checkpoint, inference/calibration code, saved predictions, a
    concise model card/report and a small demo. Report measured improvements
    only; a competitor win or broad-generalization result is not a release gate.
-6. Next train the partial-context model from the same original Laya revision,
+7. Next train the partial-context model from the same original Laya revision,
    independently of the full-data checkpoint, using the protocol in 3.4.
 
 Training and real baseline measurements remain open. This plan update does not
@@ -236,9 +240,9 @@ attribution remain kodum responsibilities.
 | --- | --- | --- |
 | KD-01 | Dataset lock and release loader — complete Oct 17 | Exact baseline selection, schema and payload hashes; raw bilingual Records and source roles preserved. |
 | KD-02 | Mixture and split manifests — complete Oct 19 | Use accepted training resources; group whole cases and language variants; preserve source test membership; derive development/calibration from train; validate targets and option mappings. |
-| KD-03 | Laya CPU smoke | Tiny/random compatible model path checks request shapes, finite loss, prediction format and checkpoint save/restore. No decoder implementation required. |
+| KD-03 | Laya CPU smoke — complete Oct 20 | Tiny compatible model with pinned tokenizer completed four updates across save/resume; finite losses/gradients, validation and manifests recorded. Real checkpoint/GPU remain untested. |
 | KD-04 | Two baseline adapters and evaluation | Original Laya on all supported types, Diba X1 on choice; identical examples/options, raw and equally recalibrated probabilities, coverage and saved predictions. No broad baseline matrix or A/B/C decision. |
-| KD-05 | Short training preflight | Kaggle T4 x2, DDP and balanced replay, real checkpoint/dtype, one train/eval step, memory and distributed checkpoint restore. No research performance threshold before training. |
+| KD-05 | Short training preflight — next operator action | Kaggle T4 x2, DDP and balanced replay, real checkpoint/dtype, one train/eval step, memory and distributed checkpoint restore across fresh sessions. No research performance threshold before training. |
 | KD-06 | Stage 1 full-data fine-tune and portfolio release | Best checkpoint selected on Persian development loss subject to English retention, final test report, inference/calibration artifacts, model card and small demo. Stage 2 does not block this release. |
 | KD-07 | Stage 2 independent partial-context fine-tune | Original Laya initialization; frozen context exclusions across languages and training/development/calibration; same evaluation cases for original/full/partial models, with exposure disclosed. |
 
@@ -652,6 +656,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
+| 36 | Oct 20, 2026 | Complete the tiny Laya-compatible CPU smoke, including optimizer resume and tokenization/truncation accounting. Add the Kaggle T4 x2 training handoff; real-model preflight and cross-session private restore are the next operator action. |
 | 35 | Oct 19, 2026 | Complete KD-02 on codex/laya-training: immutable case-grouped train/development/calibration/test preparation, duplicate isolation, source roles, target preservation and deterministic balanced English replay. Verify the accepted local release as 960/120/120/400 cases; accelerator training remains pending. |
 | 34 | Oct 19, 2026 | Explicitly retain full encoder/head fine-tuning. Train the full-data model first, then an independently initialized partial-context model from original Laya. Specify frequent Kaggle-local logs and resumable snapshots with periodic private Hugging Face sync, durable revisions and restore checks. Stage 2 does not block the first release. |
 | 33 | Oct 19, 2026 | Prioritize one portfolio Laya-multilingual fine-tune. Retire the A/B/C research gate and defer partial-context training, fresh encoders, decoder challengers and broad benchmarks. Keep scenario-grouped train/dev/calibration/test isolation, original-Laya and Diba X1 choice comparisons, bounded claims, saved predictions and a small demo. Set Kaggle T4 x2/DDP as the target with per-update English replay, conservative learning rates, retention-aware checkpoint selection and private durable resume. No training or evaluation is marked complete. |
