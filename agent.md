@@ -5,6 +5,17 @@ workflow; `docs/workflow-change-plan.md` tracks remaining migration work. The
 retained Kaggle runner covers the historical bulk draft campaign; a live Kaggle
 run and fresh-session restore remain unverified.
 
+**Active model training handoff (project-plan v36, Oct 20):** use
+`notebooks/training.ipynb`, `workflows/model-training.toml` and
+`docs/training-handoff.md` for full-data Laya training on Kaggle T4 x2. KD-02
+and the tiny CPU save/resume smoke (KD-03) are complete. The real-model two-GPU
+preflight and fresh-session private restore (KD-05) are pending. The laptop has
+no usable CUDA GPU. `notebooks/execution.ipynb` and `workflows/current.toml`
+remain the historical TPU translation request; they do not launch model
+training. Keep English examples at 50% in every effective batch, follow the
+retention checks, and save logs/checkpoints to Kaggle with periodic private Hub
+sync as documented in the training handoff.
+
 **Historical translation execution context:** these provider requirements
 record project-plan v26 and [the precompute audit](docs/precompute-project-review.md).
 Current model scope follows project-plan v31 and the ownership update below.
@@ -40,9 +51,10 @@ not modify `workflows/current.toml` or the notebook's frozen runtime pin.
   prerequisites and a review stop. It is configuration, not another research plan.
 
 Do not infer the active research stage from the last notebook cell or an output
-file. The stored request still selects the historical v21 bulk draft campaign,
-using Gemma 3 27B BF16/JAX on Kaggle TPU v5e-8. It is not the v31 model
-development stage. Historical gate requirements describe those recipes; the
+file. `workflows/current.toml` still selects the historical v21 bulk draft campaign,
+using Gemma 3 27B BF16/JAX on Kaggle TPU v5e-8. It is not the active model
+training stage; that stage is recorded separately in
+`workflows/model-training.toml`. Historical gate requirements describe those recipes; the
 current dataset acceptance and human-review decisions are governed by hf-data.
 
 ## Two notebooks, one package

@@ -69,6 +69,16 @@ kodoom check --profile dev                # is this machine ready for the profil
 kodoom runs --profile dev                 # runs on disk and what can be resumed
 ```
 
+## Laya model training
+
+The active full-data fine-tune uses the dedicated [Kaggle training notebook](notebooks/training.ipynb)
+on T4 x2. It continues full encoder and decision-head fine-tuning from pinned
+Laya-multilingual with balanced English/Persian replay. The tiny CPU training
+and resume smoke has passed; the real two-GPU preflight and fresh-session
+private checkpoint restore are still required before the main run. Follow
+[the operator handoff](docs/training-handoff.md); the historical TPU execution
+notebook is a separate translation workflow.
+
 ## Colab
 
 The existing [`notebooks/colab.ipynb`](notebooks/colab.ipynb) mixes historical trials
