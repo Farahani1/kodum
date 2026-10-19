@@ -1,6 +1,6 @@
 # Kodum: Persian typed-decision models and evaluation
 
-Version 33 · Oct 19, 2026 · @Shah
+Version 34 · Oct 19, 2026 · @Shah
 
 ## Current status and ownership decision
 
@@ -42,8 +42,9 @@ are delivery requests to hf-data; availability must be checked per release.
 Laya-multilingual adaptation on the accepted data, compare it with original Laya
 and DibaOne X1, and deliver a reproducible report and small working demo. The
 former M2 A/B/C research gate is retired, not passed. Broad native-benchmark
-coverage, multiple architectures, causal ablations and whole-context holdouts
-are deferred; none is a prerequisite to this first fine-tune.
+coverage, multiple architectures and causal ablations are deferred. The full-data
+model is stage 1; a partial-context model is the planned second training stage,
+not a prerequisite to the first fine-tune or its portfolio release.
 
 **Next work, in order:**
 
@@ -63,6 +64,8 @@ are deferred; none is a prerequisite to this first fine-tune.
 5. Deliver one checkpoint, inference/calibration code, saved predictions, a
    concise model card/report and a small demo. Report measured improvements
    only; a competitor win or broad-generalization result is not a release gate.
+6. Next train the partial-context model from the same original Laya revision,
+   independently of the full-data checkpoint, using the protocol in 3.4.
 
 Training and real baseline measurements remain open. This plan update does not
 claim execution, change the pinned dataset, or repoint the legacy translation
@@ -158,8 +161,10 @@ Use `kodoom.runs.Run`, `save_latest` and `save_best` with rank-aware writers.
 Keep model inputs/checkpoint staging under `/kaggle/working`, source attachments
 read-only under `/kaggle/input`, and base-model caches outside saved outputs.
 Retain latest full resume state plus best inference checkpoint within measured
-storage capacity. Save to configured private durable storage and verify restore
-in a fresh session; local Kaggle disk alone is not durable. Record the last
+storage capacity. Use a private Hugging Face repository as the planned durable
+backup, with Kaggle as the local write/cache layer. Record its exact repo ID
+and verify private visibility before syncing; use Kaggle Secrets for the token.
+Verify restore in a fresh session; local Kaggle disk alone is not durable. Record the last
 verified durable step and potential lost work. Never commit datasets or weights,
 and never upload private artifacts publicly as part of automatic training.
 
@@ -232,11 +237,12 @@ attribution remain kodum responsibilities.
 | KD-03 | Laya CPU smoke | Tiny/random compatible model path checks request shapes, finite loss, prediction format and checkpoint save/restore. No decoder implementation required. |
 | KD-04 | Two baseline adapters and evaluation | Original Laya on all supported types, Diba X1 on choice; identical examples/options, raw and equally recalibrated probabilities, coverage and saved predictions. No broad baseline matrix or A/B/C decision. |
 | KD-05 | Short training preflight | Kaggle T4 x2, DDP and balanced replay, real checkpoint/dtype, one train/eval step, memory and distributed checkpoint restore. No research performance threshold before training. |
-| KD-06 | One fine-tune and portfolio release | Best checkpoint selected on Persian development loss subject to English retention, final test report, inference/calibration artifacts, model card and small demo. Optional research runs are deferred. |
+| KD-06 | Stage 1 full-data fine-tune and portfolio release | Best checkpoint selected on Persian development loss subject to English retention, final test report, inference/calibration artifacts, model card and small demo. Stage 2 does not block this release. |
+| KD-07 | Stage 2 independent partial-context fine-tune | Original Laya initialization; frozen context exclusions across languages and training/development/calibration; same evaluation cases for original/full/partial models, with exposure disclosed. |
 
 ## Part 2 — Implementation
 
-Part 2 fine-tunes one Laya-multilingual checkpoint on a pinned hf-data selection and records enough predictions and configuration to reproduce its evaluation. Canonical data development and review remain owned by hf-data.
+Part 2 first fine-tunes a full-data Laya-multilingual checkpoint on a pinned hf-data selection and records enough predictions and configuration to reproduce its evaluation. Canonical data development and review remain owned by hf-data.
 
 ### 2.1 Data preparation (training mix)
 
@@ -318,15 +324,16 @@ fine-tuned Laya; record the adapter and option budget for Diba X1 separately.
 **One main model:** initialize from
 [`convaiinnovations/laya-multilingual`](https://huggingface.co/convaiinnovations/laya-multilingual),
 pinning model, tokenizer and implementation revisions. Fine-tune its encoder
-and decision head with soft-target cross-entropy on the accepted bilingual
+and decision head (full fine-tuning, not head-only) with soft-target cross-entropy on the accepted bilingual
 training mix. Retaining the architecture does not require retaining the
 upstream policy-gradient objective; no reward model is required here.
 
 | Run | Scope | Purpose |
 | --- | --- | --- |
 | Smoke | Tiny compatible config, then short real-checkpoint preflight | Catch input, target, loss, memory and checkpoint failures cheaply |
-| Main | Laya-multilingual, all selected training workflows | Produce the first Persian workflow adaptation |
-| Deferred | Partial-context model; English-only or translation ablations; fresh mmBERT; decoder challenger; additional seeds | Optional follow-up after the portfolio release |
+| Stage 1: full-data | Original Laya-multilingual, all selected training workflows | First trained model and portfolio deliverable |
+| Stage 2: partial-context | Same original Laya revision, selected contexts excluded | Measure transfer to excluded contexts after stage 1 |
+| Deferred | English-only or translation ablations; fresh mmBERT; decoder challenger; additional seeds | Optional follow-up after the portfolio release |
 
 **Evaluation baselines, not training gates:**
 
@@ -344,6 +351,12 @@ Compare raw probabilities and give each evaluated model the same temperature
 fitting opportunity on the train-derived calibration subset. No baseline test
 score is required before training. A failed external adapter is disclosed as
 missing evidence and never replaced with a published score on another dataset.
+
+Both stages initialize independently from the identical original Laya-multilingual
+encoder and head. Do not initialize the full-data model from a partial-data
+checkpoint, or the partial-context model from the full-data checkpoint: the
+latter would carry prior fine-tuning exposure to its nominally held-out contexts.
+Resume only a checkpoint from the same stage/run with matching split manifests.
 
 **Initial training recipe (starting defaults, not tuned results)**
 
@@ -425,7 +438,10 @@ Keep enough that any number in the final report can be recomputed without retrai
 - **Run registry:** one row per run with run ID, date, model and revision, dataset version, key settings, headline metrics, and a one-line decision (keep, or drop and why).
 - **Per-run config:** model revision hash, dataset version hash, seeds, hyperparameters, max length, option-sampling settings, library versions, GPU type.
 - **Curves:** train loss, validation loss, validation accuracy and ECE per step or epoch; runtime and peak GPU memory.
-- **Where:** plain files in the Kaggle run directory (CSV/JSON or local TensorBoard), periodically persisted to configured private durable storage. Rank 0 owns shared writes; no hosted tracker is required.
+- **Where:** write locally in the Kaggle run directory (CSV/JSON or local TensorBoard); periodically sync to the configured private Hugging Face repository. Rank 0 owns shared writes; public publication is a separate action.
+- **Logging cadence:** log every optimizer update: step, epoch, per-language loss and counts, learning rates, gradient norm, scaler/skipped steps, throughput and memory. Save per-language/type validation results at each evaluation. Sync compact logs/config/manifests about every 5 minutes.
+- **Snapshot cadence:** save a resumable latest checkpoint every 50 optimizer updates or 15 minutes, whichever comes first, plus epoch end and graceful shutdown; save best weights when the retention-aware validation criterion improves. Sync completed latest/best snapshots to private Hugging Face after saving. Use complete manifests/checksums, atomic local writes and a remote commit before marking a snapshot durable; never upload partially written files.
+- **Storage and restart:** retain latest full resume state and best inference weights locally; avoid duplicate base caches in uploads. Track remote revision, durable step and sync failures. Ordinary Hub commits can retain old blobs despite overwriting a path: monitor remote storage/history rather than assuming only two snapshots consume space. Resume from a verified complete private snapshot; failed uploads leave the last durable copy intact. No exact private repo name is selected by this plan update.
 - **Predictions, not just metrics:** for every evaluation, save per item the ID, gold distribution, predicted distribution, temperature used and latency. Every later metric, chart and error analysis comes from these files, and they can be published as raw results.
 - **Error log:** inspect a small development-error sample for input and modeling issues. Final test error analysis is descriptive; do not tune on it and reuse that test as untouched evidence.
 - **Artifacts kept:** best checkpoint, tokenizer, calibration, exact mix/split manifests and model card. Prepare a reviewable release; external publication follows the owner's publication decision. Do not delete the only checkpoint copy.
@@ -439,8 +455,8 @@ the existing input-contract checks, grouped splits and short training smoke.
 These implementation checks are not a replacement research campaign.
 
 The deliverable is a Persian workflow specialization, not a proof of universal
-Persian reasoning superiority. Whole-context holdouts and the second
-partial-context model are deferred. No performance win is guaranteed or required
+Persian reasoning superiority. Whole-context holdouts belong to the planned
+second partial-context training stage and do not block stage 1. No performance win is guaranteed or required
 to document and release the completed engineering work.
 
 ## Part 3 — Testing and evaluation
@@ -503,13 +519,36 @@ truncation, option remapping, unsupported inputs and failures visible. Report
 common-item counts rather than silently dropping difficult examples. Preserve
 test isolation when inspecting duplicates or suspected source defects.
 
-### 3.4 Optional follow-ups
+### 3.4 Stage 2: partial-context model, after full-data training
 
-After the first release, consider a partial-context model, held-out native
-tasks, English-only control, extra seeds, option-order/wording checks, numerical
-skills, and alternative architectures. None is on the critical path. Select
-held-out contexts by relevance, sufficient case count and a clear boundary;
-use development evidence for favorable specialization, not test-score selection.
+Train the full-data model first and preserve its checkpoint/report. Then run
+one partial-context fine-tune from the same original Laya revision, using the
+same full encoder/head adaptation, Kaggle T4 x2 and English replay policy.
+Stage 1 can be released before stage 2 finishes.
+
+Freeze one or two context exclusions and their case IDs before stage-2 training.
+Prefer metadata and training/development evidence to choose feasible contexts
+with adequate independent test cases and manageable training loss. Preferably
+record the intended exclusions before stage-1 test scoring; if prior test
+results informed selection, label stage 2 exploratory rather than an untouched
+confirmatory test. Do not select individual test items for favorable outcomes.
+
+Remove excluded-context cases from stage-2 training, development and calibration
+in both languages, including duplicate/related cases and optional augmentation
+that reintroduces the context. Select checkpoints using retained-context
+development only. Preserve original released test membership; evaluate the
+excluded-context test cases without moving released training rows into test.
+Typed-decisions workflows have test coverage; Helmo topics alone cannot supply
+this experiment because Helmo remains train-only. Record overlapping contexts
+and limit transfer claims to the actual exclusion boundary.
+
+Compare original Laya, partial-context and full-data predictions on the same
+excluded-context test cases. The full-data model is a context-exposed reference,
+not a context-held-out model. Also report retained-context performance. Record
+both training-set sizes and update counts; do not call this a causal data-only
+comparison if budgets differ. Claims concern the measured excluded contexts,
+not general dataset superiority. Other ablations, architectures, extra seeds
+and native benchmarks remain optional follow-ups.
 
 ### 3.5 Portfolio completion and performance claims
 
@@ -564,8 +603,9 @@ path suffice for the first release; do not block it on export optimization.
 | --- | --- |
 | M1: accepted dataset input | Closed by owner acceptance; KD-01 complete. Dataset follow-up remains in hf-data. |
 | M2: minimal implementation readiness | Open: grouped split manifests, valid model inputs/targets and short CPU/provider smoke. Former broad baseline A/B/C gate retired; baseline scoring may follow training. |
-| M3: one Laya adaptation | Open: train on selected training cases, select on Persian development loss subject to English retention, save resumable/best checkpoint and fit calibration outside test. No challenger or context-holdout model required. |
+| M3: stage 1 full-data Laya adaptation | Open: train on selected training cases, select on Persian development loss subject to English retention, save resumable/best checkpoint and fit calibration outside test. Stage 2 is not a prerequisite. |
 | M4: portfolio report and release | Open: original Laya and Diba choice comparisons, reproducible artifacts, model card and small demo; publish after owner decision. No mandatory winning threshold. |
+| M5: stage 2 partial-context adaptation | Planned after stage 1: independent original-Laya initialization, frozen exclusions and matched-case transfer report. Does not delay the first portfolio release. |
 
 This active plan supersedes historical broad model gates and multi-model run
 requirements. The separate WF-* tooling plan and frozen translation handoff are
@@ -610,6 +650,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
+| 34 | Oct 19, 2026 | Explicitly retain full encoder/head fine-tuning. Train the full-data model first, then an independently initialized partial-context model from original Laya. Specify frequent Kaggle-local logs and resumable snapshots with periodic private Hugging Face sync, durable revisions and restore checks. Stage 2 does not block the first release. |
 | 33 | Oct 19, 2026 | Prioritize one portfolio Laya-multilingual fine-tune. Retire the A/B/C research gate and defer partial-context training, fresh encoders, decoder challengers and broad benchmarks. Keep scenario-grouped train/dev/calibration/test isolation, original-Laya and Diba X1 choice comparisons, bounded claims, saved predictions and a small demo. Set Kaggle T4 x2/DDP as the target with per-update English replay, conservative learning rates, retention-aware checkpoint selection and private durable resume. No training or evaluation is marked complete. |
 | 32 | Oct 17, 2026 | Complete KD-01 with an exact baseline selection, read-only release consumer and portable dataset lock. Verify the local release's 8,000 typed-decisions rows as 16,000 raw language-specific Records, retaining quality/provenance and source roles. KD-02 mixture/split manifests are next; model measurements and training remain open. |
 | 31 | Oct 16, 2026 | Separate kodum model development from hf-data dataset development. Accept hf-data 1.0.1 as the baseline input; replace active Part 1 review/publication gates with versioned consumption and model milestones. Preserve v30 as an archive, move dataset follow-up ownership to the new hf-data plan, and require exact release/schema/hash pins without automatic upgrades. |
