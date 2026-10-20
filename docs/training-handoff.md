@@ -33,6 +33,14 @@ materializes regular local files and retains the same pinned hashes and path
 containment checks. Use the updated notebook code pin and rerun `preflight`;
 keep GPU T4 x2 selected.
 
+The second attempt with code `4ebfac9` passed dataset loading and reached both
+GPU workers, then stopped on nonfinite gradients before the first optimizer
+update. The updated trainer starts with AMP scale 1024 and retries the same
+batch at lower scales (up to 12 times), advancing weights/scheduler/data only
+when gradients are finite. Persistent failures remain fatal. Use the latest
+notebook code pin in a fresh **Save & Run All** session; do not restore or start
+main training from either failed attempt.
+
 The local dataset revision is pinned at
 `1b98bbba48043c62c6ae2c821a55b6f8a5e7a927`, release 1.0.1. The handoff verifies
 its accepted manifest hash before consumption. Remote availability must pass
