@@ -21,6 +21,8 @@ class Settings:
     weight_decay: float = 0.01
     warmup_fraction: float = 0.1
     max_grad_norm: float = 1.0
+    amp_init_scale: float = 1024.0
+    amp_max_retries: int = 12
     max_len: int = 1024
     head_max_len: int = 256
     validate_every: int = 50
@@ -47,11 +49,12 @@ class Settings:
             "log_sync_seconds",
             "patience",
             "threads",
+            "amp_max_retries",
         ):
             value = getattr(self, key)
             if type(value) is not int or value < (0 if key == "seed" else 1):
                 raise ValueError(f"{key} must be a positive integer (seed may be zero)")
-        for key in ("encoder_lr", "head_lr", "max_grad_norm"):
+        for key in ("encoder_lr", "head_lr", "max_grad_norm", "amp_init_scale"):
             if not math.isfinite(getattr(self, key)) or getattr(self, key) <= 0:
                 raise ValueError(f"{key} must be finite and positive")
         for key in (
@@ -65,6 +68,8 @@ class Settings:
                 raise ValueError(f"invalid {key}")
         if not 0 < self.english_fraction < 1 or self.head_max_len + 8 >= self.max_len:
             raise ValueError("invalid replay ratio or head/context budgets")
+        if self.amp_max_retries > 16:
+            raise ValueError("AMP retry budget must be <=16")
         if self.epochs > 4 or self.world_size not in (1, 2):
             raise ValueError("bounded recipe requires <=4 epochs and 1 or 2 ranks")
         ne = self.global_batch * self.english_fraction

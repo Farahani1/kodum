@@ -191,6 +191,61 @@ def encoding_summary(rows, items):
     return summary
 
 
+def finite_on_all_ranks(value, device, world):
+    import torch
+    import torch.distributed as dist
+
+    flag = torch.isfinite(value).all().to(device=device, dtype=torch.int32)
+    if world > 1:
+        dist.all_reduce(flag, op=dist.ReduceOp.MIN)
+    return bool(flag.item())
+
+
+def optimizer_update(
+    model,
+    optimizer,
+    scaler,
+    backward,
+    *,
+    device,
+    world,
+    max_grad_norm,
+    max_retries,
+    on_overflow=None,
+):
+    """Apply one finite update; back off AMP and replay the same batch on overflow.
+
+    All ranks make the same retry decision. Failed attempts change neither
+    weights nor the caller's scheduler/sampler step, and replay identical RNG.
+    Persistent failures remain fatal, including nonfinite unscaled gradients.
+    """
+    import torch
+
+    initial_rng = rng_state()
+    for retry in range(max_retries + 1):
+        if retry:
+            restore_rng(initial_rng)
+        optimizer.zero_grad(set_to_none=True)
+        result = backward()
+        scaler.unscale_(optimizer)
+        norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
+        if finite_on_all_ranks(norm, device, world):
+            scaler.step(optimizer)
+            scaler.update()
+            return result, norm, retry
+        if not scaler.is_enabled():
+            raise RecordError("nonfinite gradients with gradient scaling disabled")
+        scale = scaler.get_scale()
+        # Skip the optimizer entirely; reset GradScaler's per-optimizer state
+        # before replaying the whole effective batch with a lower scale.
+        scaler.update(new_scale=scale * scaler.get_backoff_factor())
+        if on_overflow:
+            on_overflow(retry + 1, scale, scaler.get_scale())
+        if retry == max_retries:
+            raise RecordError("nonfinite gradients persist after bounded AMP scale backoff")
+    raise AssertionError("unreachable AMP retry state")
+
+
 def _optimizer(model, settings):
     import torch
 
@@ -252,7 +307,9 @@ def train(
         if any("T4" not in torch.cuda.get_device_name(i) for i in range(2)):
             raise RecordError("selected recipe requires Kaggle T4 x2")
         torch.cuda.set_device(local_rank)
-        dist.init_process_group("nccl", timeout=timedelta(minutes=60))
+        dist.init_process_group(
+            "nccl", timeout=timedelta(minutes=60), device_id=torch.device("cuda", local_rank)
+        )
     device = torch.device("cpu" if smoke else f"cuda:{local_rank}")
     try:
         return _train(
@@ -370,7 +427,9 @@ def _train(
         )
 
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, schedule)
-    scaler = torch.amp.GradScaler("cuda", enabled=device.type == "cuda")
+    scaler = torch.amp.GradScaler(
+        "cuda", enabled=device.type == "cuda", init_scale=settings.amp_init_scale
+    )
     start_epoch, offset, step, bad, stale, best = 0, 0, 0, 0, 0, math.inf
     original = None
     # All ranks inspect only the shared complete checkpoint after rank-0 recovery.
@@ -484,39 +543,64 @@ def _train(
             # Allocate bilingual pairs together even with microbatch=1.
             local = rank_indices(full, rank=rank, world=world)
             wrapped.train()
-            optimizer.zero_grad(set_to_none=True)
-            sums = torch.zeros(4, device=device)
             started = time.monotonic()
-            for micro in range(settings.accumulation):
-                indexes = local[micro * settings.microbatch : (micro + 1) * settings.microbatch]
-                b = laya.collate([train_items[i] for i in indexes], tok, common, device)
-                sync_context = (
-                    wrapped.no_sync()
-                    if world > 1 and micro < settings.accumulation - 1
-                    else contextlib.nullcontext()
-                )
-                with sync_context:
-                    with torch.autocast(device.type, dtype=torch.float16, enabled=not smoke):
-                        logits, _ = wrapped(**{k: b[k] for k in laya.FORWARD_KEYS})
-                        losses = soft_ce(logits, b["target"])
-                        loss = losses.sum() * world / settings.global_batch
-                    if not torch.isfinite(loss):
-                        raise RecordError("nonfinite training loss")
-                    scaler.scale(loss).backward()
-                for j, i in enumerate(indexes):
-                    n = 0 if train_rows[i].question_lang == "fa" else 2
-                    sums[n] += losses[j].detach()
-                    sums[n + 1] += 1
-            scaler.unscale_(optimizer)
-            grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), settings.max_grad_norm)
-            if (smoke or preflight) and not torch.isfinite(grad_norm):
-                raise RecordError("preflight/smoke gradients are nonfinite")
-            previous_scale = scaler.get_scale()
-            scaler.step(optimizer)
-            scaler.update()
-            skipped = scaler.get_scale() < previous_scale
-            if not skipped:
-                scheduler.step()
+
+            def backward_batch(local=local):
+                sums = torch.zeros(4, device=device)
+                for micro in range(settings.accumulation):
+                    indexes = local[micro * settings.microbatch : (micro + 1) * settings.microbatch]
+                    b = laya.collate([train_items[i] for i in indexes], tok, common, device)
+                    sync_context = (
+                        wrapped.no_sync()
+                        if world > 1 and micro < settings.accumulation - 1
+                        else contextlib.nullcontext()
+                    )
+                    with sync_context:
+                        with torch.autocast(device.type, dtype=torch.float16, enabled=not smoke):
+                            logits, _ = wrapped(**{k: b[k] for k in laya.FORWARD_KEYS})
+                            losses = soft_ce(logits, b["target"])
+                            loss = losses.sum() * world / settings.global_batch
+                        if not finite_on_all_ranks(loss, device, world):
+                            raise RecordError("nonfinite training loss")
+                        scaler.scale(loss).backward()
+                    for j, i in enumerate(indexes):
+                        n = 0 if train_rows[i].question_lang == "fa" else 2
+                        sums[n] += losses[j].detach()
+                        sums[n + 1] += 1
+                return sums
+
+            def log_overflow(
+                attempt,
+                previous_scale,
+                next_scale,
+                update_step=step + 1,
+                update_epoch=epoch,
+                update_batch=batch_index,
+            ):
+                if run:
+                    run.log(
+                        "amp-overflow",
+                        step=update_step,
+                        epoch=update_epoch,
+                        batch_index=update_batch,
+                        attempt=attempt,
+                        previous_scale=previous_scale,
+                        next_scale=next_scale,
+                        optimizer_step_applied=False,
+                    )
+
+            sums, grad_norm, amp_retries = optimizer_update(
+                model,
+                optimizer,
+                scaler,
+                backward_batch,
+                device=device,
+                world=world,
+                max_grad_norm=settings.max_grad_norm,
+                max_retries=settings.amp_max_retries,
+                on_overflow=log_overflow,
+            )
+            scheduler.step()
             step += 1
             if world > 1:
                 dist.all_reduce(sums)
@@ -533,7 +617,8 @@ def _train(
                     lr=[g["lr"] for g in optimizer.param_groups],
                     grad_norm=float(grad_norm),
                     scale=scaler.get_scale(),
-                    skipped=skipped,
+                    skipped=False,
+                    amp_retries=amp_retries,
                     examples_per_second=settings.global_batch
                     / max(time.monotonic() - started, 1e-9),
                     peak_memory=(torch.cuda.max_memory_allocated(device) if not smoke else 0),

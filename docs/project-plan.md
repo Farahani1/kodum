@@ -1,6 +1,6 @@
 # Kodum: Persian typed-decision models and evaluation
 
-Version 37 · Oct 20, 2026 · @Shah
+Version 38 · Oct 20, 2026 · @Shah
 
 ## Current status and ownership decision
 
@@ -60,13 +60,13 @@ not a prerequisite to the first fine-tune or its portfolio release.
    optimizer updates across an initial run and a resumed run, including
    validation, checkpoint save/restore, and split/token-truncation manifests.
    This does not validate real Laya weights or a GPU.
-4. KD-05: the first Kaggle attempt stopped during dataset inventory checking
-   because Hub cache symlinks resolve outside the snapshot tree. It did not
-   reach GPU/model checks or training. Materialize the pinned dataset and
-   restored checkpoints as regular local files; rerun preflight with the fix.
-   Then run the bounded Kaggle T4 x2 preflight and restore its private
-   checkpoint from a fresh session. Then proceed directly to the main fine-tune.
-   Baseline scores do not decide whether training is allowed.
+4. KD-05: the second Kaggle attempt passed dataset loading and reached both
+   GPU workers, then stopped on nonfinite gradients before the first optimizer
+   update. The first attempt's Hub cache-link issue is resolved. Use the fixed
+   AMP backoff/replay path and rerun preflight in a fresh saved session. Require
+   two finite optimizer updates and a private checkpoint, then verify restore
+   in another fresh session before the main fine-tune. Baseline scores do not
+   decide whether training is allowed.
 5. KD-04/KD-06: evaluate original Laya and the fine-tuned model on identical
    test examples, plus DibaOne X1 on supported choice questions. Baseline
    adapters can be completed alongside training. Freeze the evaluation protocol
@@ -152,8 +152,12 @@ validation rows or deduplicate by ID before scoring. Freeze unused heads or
 configure unused-parameter handling so DDP does not hang on inactive outputs.
 
 Scale accumulated losses consistently; synchronize gradients on update steps.
-Unscale before gradient clipping, then update optimizer/scaler/scheduler with
-consistent skipped-step handling. Aggregate validation statistics across ranks
+Unscale before gradient clipping. Start AMP loss scaling at 1024 and allow at
+most 12 backoff retries of the same effective batch when gradients overflow.
+Synchronize the retry decision across ranks and replay each rank's RNG; failed
+attempts update neither weights nor scheduler/sampler progress. Persistent
+nonfinite gradients or nonfinite forward losses remain fatal. Count only
+successful finite optimizer updates toward the preflight's two-update target. Aggregate validation statistics across ranks
 and broadcast checkpoint/early-stop decisions. Rank 0 writes shared logs and
 checkpoints; preserve per-rank RNG and sampler state for resume. Checkpoint
 model, optimizer, scheduler, scaler, global step and run/split identities.
@@ -660,6 +664,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
+| 38 | Oct 20, 2026 | Record the second Kaggle attempt reaching both GPUs and stopping on nonfinite gradients before its first optimizer update. Add a conservative initial AMP scale and bounded synchronized batch replay on overflow, requiring actual finite updates and retaining fatal persistent-failure checks. GPU preflight/restore remain pending rerun. |
 | 37 | Oct 20, 2026 | Record the first Kaggle preflight failure during dataset loading, before GPU checks or training. Materialize Hub downloads for strict inventory/restore path checks; preserve pins and checksum checks. Real-model preflight and fresh-session restore remain pending rerun. |
 | 36 | Oct 20, 2026 | Complete the tiny Laya-compatible CPU smoke, including optimizer resume and tokenization/truncation accounting. Add the Kaggle T4 x2 training handoff; real-model preflight and cross-session private restore are the next operator action. |
 | 35 | Oct 19, 2026 | Complete KD-02 on codex/laya-training: immutable case-grouped train/development/calibration/test preparation, duplicate isolation, source roles, target preservation and deterministic balanced English replay. Verify the accepted local release as 960/120/120/400 cases; accelerator training remains pending. |

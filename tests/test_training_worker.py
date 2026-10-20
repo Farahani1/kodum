@@ -56,3 +56,71 @@ def test_noul_semantic_order_and_score_order_are_explicit():
     assert ids == ["false", "true"] and q["crit"]["true"] == "Yes"
     with pytest.raises(RecordError, match="zero-based"):
         question(replace(r, question_type="score"))
+
+
+def test_amp_overflow_replays_batch_before_one_finite_optimizer_update():
+    torch = pytest.importorskip("torch")
+    from kodoom.training.worker import optimizer_update
+
+    model = torch.nn.Linear(1, 1, bias=False)
+    model.weight.data.fill_(1.0)
+    opt = torch.optim.SGD(model.parameters(), lr=0.1)
+    scaler = torch.amp.GradScaler("cpu", init_scale=1024.0)
+    draws, overflows = [], []
+
+    def backward():
+        draws.append(float(torch.rand(())))
+        # Finite forward and true gradient, but the initial scaled fp16
+        # backward signal (1024 * 100) overflows. Half that scale is finite.
+        loss = model.weight.to(torch.float16).float().sum() * 100
+        scaler.scale(loss).backward()
+        return "same-batch"
+
+    result, norm, retries = optimizer_update(
+        model,
+        opt,
+        scaler,
+        backward,
+        device=torch.device("cpu"),
+        world=1,
+        max_grad_norm=1.0,
+        max_retries=3,
+        on_overflow=lambda *args: overflows.append(args),
+    )
+    assert result == "same-batch" and retries == 1
+    assert draws[0] == draws[1] and len(draws) == 2
+    assert overflows == [(1, 1024.0, 512.0)]
+    assert torch.isfinite(norm) and float(norm) == pytest.approx(100.0)
+    # Applying an optimizer update on the overflow would corrupt this weight.
+    assert float(model.weight.detach()) == pytest.approx(0.9)
+
+
+def test_amp_persistent_nonfinite_gradients_fail_without_changing_weights():
+    torch = pytest.importorskip("torch")
+    from kodoom.schema import RecordError
+    from kodoom.training.worker import optimizer_update
+
+    model = torch.nn.Linear(1, 1, bias=False)
+    model.weight.data.zero_()
+    opt = torch.optim.SGD(model.parameters(), lr=0.1)
+    scaler = torch.amp.GradScaler("cpu", init_scale=16.0)
+    attempts = []
+
+    def backward():
+        attempts.append(1)
+        scaler.scale(model.weight.sqrt().sum()).backward()
+
+    with pytest.raises(RecordError, match="persist after bounded"):
+        optimizer_update(
+            model,
+            opt,
+            scaler,
+            backward,
+            device=torch.device("cpu"),
+            world=1,
+            max_grad_norm=1.0,
+            max_retries=2,
+        )
+    assert len(attempts) == 3
+    assert float(model.weight.detach()) == 0.0
+    assert scaler.get_scale() == 2.0
