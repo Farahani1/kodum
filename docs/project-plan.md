@@ -1,6 +1,6 @@
 # Kodum: Persian typed-decision models and evaluation
 
-Version 38 · Oct 20, 2026 · @Shah
+Version 39 · Oct 20, 2026 · @Shah
 
 ## Current status and ownership decision
 
@@ -60,13 +60,12 @@ not a prerequisite to the first fine-tune or its portfolio release.
    optimizer updates across an initial run and a resumed run, including
    validation, checkpoint save/restore, and split/token-truncation manifests.
    This does not validate real Laya weights or a GPU.
-4. KD-05: the second Kaggle attempt passed dataset loading and reached both
-   GPU workers, then stopped on nonfinite gradients before the first optimizer
-   update. The first attempt's Hub cache-link issue is resolved. Use the fixed
-   AMP backoff/replay path and rerun preflight in a fresh saved session. Require
-   two finite optimizer updates and a private checkpoint, then verify restore
-   in another fresh session before the main fine-tune. Baseline scores do not
-   decide whether training is allowed.
+4. KD-05 GPU preflight passed Oct 20: the owner-supplied saved notebook
+   reports `preflight_complete`, two optimizer updates, a best checkpoint and
+   private durable revision `de6c6cc0fd75f51b404c93aebfddad632e74a177` in
+   `Farahani/kodoom`. Code pin: `0fa1a580758da9e020075b0537ace4166a03b328`.
+   Next verify restore in a fresh saved session with that exact code/revision;
+   KD-05 remains open until this succeeds. Final test was not evaluated.
 5. KD-04/KD-06: evaluate original Laya and the fine-tuned model on identical
    test examples, plus DibaOne X1 on supported choice questions. Baseline
    adapters can be completed alongside training. Freeze the evaluation protocol
@@ -250,7 +249,7 @@ attribution remain kodum responsibilities.
 | KD-02 | Mixture and split manifests — complete Oct 19 | Use accepted training resources; group whole cases and language variants; preserve source test membership; derive development/calibration from train; validate targets and option mappings. |
 | KD-03 | Laya CPU smoke — complete Oct 20 | Tiny compatible model with pinned tokenizer completed four updates across save/resume; finite losses/gradients, validation and manifests recorded. Real checkpoint/GPU remain untested. |
 | KD-04 | Two baseline adapters and evaluation | Original Laya on all supported types, Diba X1 on choice; identical examples/options, raw and equally recalibrated probabilities, coverage and saved predictions. No broad baseline matrix or A/B/C decision. |
-| KD-05 | Short training preflight — next operator action | Kaggle T4 x2, DDP and balanced replay, real checkpoint/dtype, one train/eval step, memory and distributed checkpoint restore across fresh sessions. No research performance threshold before training. |
+| KD-05 | GPU preflight passed Oct 20; fresh-session restore pending | Kaggle T4 x2, DDP and balanced replay, real checkpoint/dtype, one train/eval step, memory and distributed checkpoint restore across fresh sessions. No research performance threshold before training. |
 | KD-06 | Stage 1 full-data fine-tune and portfolio release | Best checkpoint selected on Persian development loss subject to English retention, final test report, inference/calibration artifacts, model card and small demo. Stage 2 does not block this release. |
 | KD-07 | Stage 2 independent partial-context fine-tune | Original Laya initialization; frozen context exclusions across languages and training/development/calibration; same evaluation cases for original/full/partial models, with exposure disclosed. |
 
@@ -664,6 +663,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
+| 39 | Oct 20, 2026 | Record successful two-update Kaggle T4 x2 preflight and private checkpoint commit from the owner's saved notebook. Preserve code pin 0fa1a58 for the next fresh-session restore; KD-05 and main training remain open. |
 | 38 | Oct 20, 2026 | Record the second Kaggle attempt reaching both GPUs and stopping on nonfinite gradients before its first optimizer update. Add a conservative initial AMP scale and bounded synchronized batch replay on overflow, requiring actual finite updates and retaining fatal persistent-failure checks. GPU preflight/restore remain pending rerun. |
 | 37 | Oct 20, 2026 | Record the first Kaggle preflight failure during dataset loading, before GPU checks or training. Materialize Hub downloads for strict inventory/restore path checks; preserve pins and checksum checks. Real-model preflight and fresh-session restore remain pending rerun. |
 | 36 | Oct 20, 2026 | Complete the tiny Laya-compatible CPU smoke, including optimizer resume and tokenization/truncation accounting. Add the Kaggle T4 x2 training handoff; real-model preflight and cross-session private restore are the next operator action. |

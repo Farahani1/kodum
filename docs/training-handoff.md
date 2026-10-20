@@ -50,6 +50,22 @@ the floating dataset main branch or weaken the release pin.
 
 ## Restore, then train
 
+**Current result (Oct 20):** the third saved run passed preflight at step 2
+using code `0fa1a580758da9e020075b0537ace4166a03b328`. Its complete private
+checkpoint commit is `de6c6cc0fd75f51b404c93aebfddad632e74a177` in
+`Farahani/kodoom`. Keep that code pin unchanged and run a new saved version with:
+
+```python
+ACTION = "restore-preflight"
+RESTORE_REVISION = "de6c6cc0fd75f51b404c93aebfddad632e74a177"
+RESTORE_RUN_ID = "laya-full-v1-preflight"
+```
+
+The expected successful restore summary is `preflight_complete`, step 4 and a
+new nonempty `durable_revision`. Use the final notebook result dictionary;
+the other GPU worker may print a summary with a null durable revision.
+
+
 Read `durable_revision` from the preflight summary or the
 `durable-checkpoint` log event. It is the commit for a **complete snapshot**;
 a later logs-only commit is not interchangeable with it.

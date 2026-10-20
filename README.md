@@ -74,8 +74,8 @@ kodoom runs --profile dev                 # runs on disk and what can be resumed
 The active full-data fine-tune uses the dedicated [Kaggle training notebook](notebooks/training.ipynb)
 on T4 x2. It continues full encoder and decision-head fine-tuning from pinned
 Laya-multilingual with balanced English/Persian replay. The tiny CPU training
-and resume smoke has passed; the real two-GPU preflight and fresh-session
-private checkpoint restore are still required before the main run. Follow
+and resume smoke and the real two-GPU preflight have passed; fresh-session
+private checkpoint restore is still required before the main run. Follow
 [the operator handoff](docs/training-handoff.md); the historical TPU execution
 notebook is a separate translation workflow.
 
