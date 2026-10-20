@@ -9,14 +9,15 @@ retired research gate or republishing the dataset.
 ## First operator action
 
 1. Upload/open `notebooks/training.ipynb` as a **private** Kaggle notebook.
-2. Enable Internet, choose **GPU T4 x2**, and attach the `HF_TOKEN` secret.
-   Its permissions need read access to `Farahani/kodoom-en-fa` and write access
-   to the chosen private model backup repository. Never paste the token into
-   a notebook cell. The code branch must be pushed before its pinned revision
-   can be fetched from GitHub.
-3. Create/select a private Hugging Face **model** repository and set
-   `BACKUP_REPO = "owner/repository"`. This destination stores private training
-   checkpoints and logs; it is separate from the dataset repository.
+2. Enable Internet, choose **GPU T4 x2**, and add a Hugging Face access token
+   as a Kaggle Secret named exactly `HF_TOKEN`. Give it read access to
+   `Farahani/kodoom-en-fa` and write access to the private model repository
+   `Farahani/kodoom`. Never paste the token into a notebook cell or commit it.
+   The code branch must be pushed before its pinned revision can be fetched
+   from GitHub.
+3. The notebook is configured with `BACKUP_REPO = "Farahani/kodoom"`. This
+   existing private model repository stores checkpoints and logs; it is
+   separate from the dataset repository.
 4. Leave `ACTION = "preflight"`, then Run all. The preflight uses real Laya on
    both GPUs for two updates, validates losses/gradients and checkpoint writes,
    and must successfully save a complete private Hub snapshot.
@@ -53,14 +54,14 @@ same `train` command with `--runs-dir` pointing to its parent. Keep identical
 code, data and settings; changed recipes require a new run ID. Example:
 
 ```bash
-python -m kodoom.training restore --hub-repo owner/private-model \
+python -m kodoom.training restore --hub-repo Farahani/kodoom \
   --revision COMPLETE_SNAPSHOT_COMMIT --run-id laya-full-v1 \
   --out /kaggle/working/kodoom/runs/laya-full-v1
 python -m torch.distributed.run --standalone --nproc_per_node=2 \
   -m kodoom.training train --profile kaggle \
   --prepared /kaggle/working/kodoom/data/training/full-v1 \
   --settings configs/laya-full.toml --run-id laya-full-v1 \
-  --hub-repo owner/private-model
+  --hub-repo Farahani/kodoom
 ```
 
 ## Persistence and evidence

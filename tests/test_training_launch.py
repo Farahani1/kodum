@@ -51,7 +51,7 @@ def test_training_notebook_is_thin_and_has_no_credentials_or_outputs():
     text = "".join("".join(c["source"]) for c in notebook["cells"])
     assert 'ACTION = "preflight"' in text
     assert 'CUDA_VISIBLE_DEVICES"] = "0,1"' in text
-    assert 'BACKUP_REPO = ""' in text
+    assert 'BACKUP_REPO = "Farahani/kodoom"' in text
 
 
 def test_remote_input_prepares_from_the_full_snapshot(tmp_path, monkeypatch):
