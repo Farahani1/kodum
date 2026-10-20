@@ -18,9 +18,20 @@ retired research gate or republishing the dataset.
 3. The notebook is configured with `BACKUP_REPO = "Farahani/kodoom"`. This
    existing private model repository stores checkpoints and logs; it is
    separate from the dataset repository.
-4. Leave `ACTION = "preflight"`, then Run all. The preflight uses real Laya on
-   both GPUs for two updates, validates losses/gradients and checkpoint writes,
-   and must successfully save a complete private Hub snapshot.
+4. Leave `ACTION = "preflight"`, then choose **Save Version -> Save & Run All
+   (Commit)**. The preflight uses real Laya on both GPUs for two updates,
+   validates losses/gradients and checkpoint writes, and must successfully save
+   a complete private Hub snapshot. Success means the final summary contains
+   `status: preflight_complete`, `step: 2`, and a nonempty `durable_revision`.
+   Reaching a final cell that prints "Done" does not establish success if an
+   earlier cell contains a Python error.
+
+The first Kaggle attempt with code revision `e728b4e` failed during dataset
+inventory checking because Hub cache symlinks resolve outside their snapshot
+root. No GPU training or resumable checkpoint was produced. The fixed downloader
+materializes regular local files and retains the same pinned hashes and path
+containment checks. Use the updated notebook code pin and rerun `preflight`;
+keep GPU T4 x2 selected.
 
 The local dataset revision is pinned at
 `1b98bbba48043c62c6ae2c821a55b6f8a5e7a927`, release 1.0.1. The handoff verifies
@@ -37,7 +48,8 @@ a later logs-only commit is not interchangeable with it.
 
 In a fresh Kaggle session, keep the same pinned code/settings, set
 `ACTION = "restore-preflight"`, `RESTORE_RUN_ID` to the preflight run ID, and
-`RESTORE_REVISION` to that complete snapshot commit. Run all to verify hashes,
+`RESTORE_REVISION` to that complete snapshot commit. Use **Save & Run All**
+again to verify hashes,
 restore optimizer/scheduler/scaler/RNG/sampler progress and continue the short
 preflight. It restores into a separate run root so no existing run is overwritten.
 

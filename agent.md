@@ -5,11 +5,13 @@ workflow; `docs/workflow-change-plan.md` tracks remaining migration work. The
 retained Kaggle runner covers the historical bulk draft campaign; a live Kaggle
 run and fresh-session restore remain unverified.
 
-**Active model training handoff (project-plan v36, Oct 20):** use
+**Active model training handoff (project-plan v37, Oct 20):** use
 `notebooks/training.ipynb`, `workflows/model-training.toml` and
 `docs/training-handoff.md` for full-data Laya training on Kaggle T4 x2. KD-02
 and the tiny CPU save/resume smoke (KD-03) are complete. The real-model two-GPU
-preflight and fresh-session private restore (KD-05) are pending. The laptop has
+preflight and fresh-session private restore (KD-05) are pending. The first Kaggle
+attempt failed on Hub cache symlinks during dataset loading, before GPU checks;
+rerun preflight with the fixed code pin in `notebooks/training.ipynb`. The laptop has
 no usable CUDA GPU. `notebooks/execution.ipynb` and `workflows/current.toml`
 remain the historical TPU translation request; they do not launch model
 training. Keep English examples at 50% in every effective batch, follow the
