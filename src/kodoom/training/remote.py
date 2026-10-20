@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 import shutil
+import tempfile
 from pathlib import Path
 
 from kodoom.package_import import file_sha
@@ -70,22 +71,29 @@ def restore(repo_id: str, revision: str, run_id: str, target: Path) -> Path:
         raise RecordError("restore requires an immutable complete snapshot commit")
     if not RUN_ID.fullmatch(run_id) or target.exists():
         raise RecordError("restore requires a valid run ID and a new output directory")
-    root = (
-        Path(
-            snapshot_download(
-                repo_id, revision=revision, repo_type="model", allow_patterns=[f"{run_id}/**"]
-            )
-        )
-        / run_id
-    )
-    manifest = json.loads((root / "durable-manifest.json").read_text("utf-8"))
-    # Log-only commits may follow the snapshot. Require the exact snapshot revision.
-    for rel, entry in manifest["files"].items():
-        path = (root / rel).resolve()
-        if not path.is_relative_to(root.resolve()) or file_sha(path) != entry["sha256"]:
-            raise RecordError("remote snapshot mismatch; restore the complete snapshot commit")
-    if "latest/state.pt" not in manifest["files"]:
-        raise RecordError("snapshot has no resumable training state")
     target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(root, target)
+    # Materialize downloads: cache snapshot symlinks point outside the run
+    # tree and would correctly fail the resolved-path containment check.
+    with tempfile.TemporaryDirectory(prefix=".kodoom-restore-", dir=target.parent) as staging:
+        root = (
+            Path(
+                snapshot_download(
+                    repo_id,
+                    revision=revision,
+                    repo_type="model",
+                    allow_patterns=[f"{run_id}/**"],
+                    local_dir=staging,
+                )
+            )
+            / run_id
+        )
+        manifest = json.loads((root / "durable-manifest.json").read_text("utf-8"))
+        # Log-only commits may follow the snapshot. Require the exact snapshot revision.
+        for rel, entry in manifest["files"].items():
+            path = (root / rel).resolve()
+            if not path.is_relative_to(root.resolve()) or file_sha(path) != entry["sha256"]:
+                raise RecordError("remote snapshot mismatch; restore the complete snapshot commit")
+        if "latest/state.pt" not in manifest["files"]:
+            raise RecordError("snapshot has no resumable training state")
+        shutil.copytree(root, target)
     return target

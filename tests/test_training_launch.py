@@ -78,6 +78,7 @@ def test_remote_input_prepares_from_the_full_snapshot(tmp_path, monkeypatch):
         "splits": ["train", "test"],
     }
     monkeypatch.setattr(launch, "read_selection", lambda _: selection)
+    monkeypatch.setenv("HF_HOME", str(tmp_path / "hub-cache"))
     returned = iter((manifest_root, payload_root))
     calls = []
 
@@ -97,3 +98,6 @@ def test_remote_input_prepares_from_the_full_snapshot(tmp_path, monkeypatch):
         "provenance/release.json",
         "data/selected.parquet",
     ]
+    # Both stages must materialize files rather than return cache blob links.
+    local_dir = str(tmp_path / "hub-cache" / "kodoom-releases" / launch.DATASET_REVISION)
+    assert [c["local_dir"] for c in calls] == [local_dir, local_dir]

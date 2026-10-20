@@ -1,5 +1,6 @@
 import hashlib
 import json
+import shutil
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -84,7 +85,17 @@ def test_restore_creates_a_new_nested_destination(tmp_path, monkeypatch):
         encoding="utf-8",
     )
     monkeypatch.setattr(remote, "private_api", lambda _: object())
-    monkeypatch.setattr(hub, "snapshot_download", lambda *_a, **_k: str(root.parent))
+    stages = []
+
+    def download(*_args, **kwargs):
+        staging = Path(kwargs["local_dir"])
+        assert staging.is_dir()
+        shutil.copytree(root, staging / "run")
+        stages.append(staging)
+        return str(staging)
+
+    monkeypatch.setattr(hub, "snapshot_download", download)
     target = tmp_path / "new-parent" / "restored"
     assert remote.restore("owner/private", "a" * 40, "run", target) == target
     assert (target / "latest/state.pt").read_bytes() == b"complete"
+    assert stages and not stages[0].exists()

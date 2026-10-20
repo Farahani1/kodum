@@ -25,11 +25,19 @@ def remote_input(selection_path: Path, out: Path) -> Path:
     from huggingface_hub import snapshot_download
 
     selection = read_selection(selection_path)
+    # Hub cache snapshots link to blobs outside their tree. Materialize files
+    # so the consumer can retain its strict resolved-path containment checks.
+    local_dir = (
+        Path(os.environ.get("HF_HOME", Path.home() / ".cache" / "huggingface"))
+        / "kodoom-releases"
+        / DATASET_REVISION
+    )
     root = Path(
         snapshot_download(
             DATASET_REPO,
             repo_type="dataset",
             revision=DATASET_REVISION,
+            local_dir=str(local_dir),
             allow_patterns=["provenance/release.json"],
         )
     )
@@ -42,6 +50,7 @@ def remote_input(selection_path: Path, out: Path) -> Path:
             DATASET_REPO,
             repo_type="dataset",
             revision=DATASET_REVISION,
+            local_dir=str(local_dir),
             allow_patterns=["provenance/release.json"] + [e["path"] for e in release["files"]],
         )
     )
