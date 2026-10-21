@@ -9,17 +9,33 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import io
 import json
 import math
 import re
 import subprocess
 import time
 from collections.abc import Mapping, Sequence
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
+from urllib.request import urlopen
 
 from kodoom.schema import Option, Record, one_hot
 from kodoom.sources import check_record, get_source
+
+# Official source commit: data files are read directly, never executed as scripts.
+PARSINLU_REVISION = "a3b08d0b93ca84e0017e2f490a2aa3ab36c79885"
+PARSINLU_REPOSITORY = "persiannlp/parsinlu"
+PARSINLU_FILES = {
+    "entailment": ("entailment/test.csv",),
+    "paraphrase": ("qqp/test.jsonl",),
+    "sentiment": (
+        "sentiment-analysis/food_test.jsonl",
+        "sentiment-analysis/movie_test.jsonl",
+    ),
+    "multiple-choice-qa": ("multiple-choice/test.jsonl",),
+}
 
 PARSINLU_SOURCE = "persiannlp/parsinlu"
 PERSIANQA_SOURCE = "sajjjadayobi/PersianQA"
@@ -41,7 +57,7 @@ def _text(row: Mapping[str, Any], keys: Sequence[str], *, where: str) -> str:
 
 def _stable_id(source: str, revision: str, task: str, raw_id: Any, row: Mapping[str, Any]) -> str:
     raw = str(raw_id) if raw_id is not None else json.dumps(row, sort_keys=True, ensure_ascii=False)
-    digest = hashlib.sha256(f"{source}:{revision}:{task}:{raw}".encode("utf-8")).hexdigest()[:20]
+    digest = hashlib.sha256(f"{source}:{revision}:{task}:{raw}".encode()).hexdigest()[:20]
     return f"{task}-{digest}"
 
 
@@ -62,15 +78,15 @@ def _label_name(label: Any, label_names: Sequence[str] | None, *, where: str) ->
 def _display_label(name: str) -> str:
     key = re.sub(r"[\s-]+", "_", name.strip().lower())
     return {
-        "entailment": "نتیجه می‌شود",
-        "entails": "نتیجه می‌شود",
+        "entailment": "نتیجه می\u200cشود",
+        "entails": "نتیجه می\u200cشود",
         "contradiction": "تناقض دارد",
         "contradicts": "تناقض دارد",
         "neutral": "نامشخص",
-        "paraphrase": "هم‌معنی",
-        "paraphrases": "هم‌معنی",
-        "not_paraphrase": "ناهم‌معنی",
-        "non_paraphrase": "ناهم‌معنی",
+        "paraphrase": "هم\u200cمعنی",
+        "paraphrases": "هم\u200cمعنی",
+        "not_paraphrase": "ناهم\u200cمعنی",
+        "non_paraphrase": "ناهم\u200cمعنی",
         "positive": "مثبت",
         "negative": "منفی",
     }.get(key, name.strip())
@@ -105,7 +121,7 @@ def _classification_record(
         if isinstance(label, str):
             label_names = sorted({label})
         else:
-            raise ExternalEvalError(f"{where}: missing verified class names")
+            raise ExternalEvalError(f"{where}: missing verified ClassLabel names")
     names = list(label_names)
     gold_name = _label_name(label, names if isinstance(label, int) else None, where=where)
     if gold_name not in names:
@@ -204,10 +220,18 @@ def convert_parsinlu_row(
             id=record_id,
             source_id=f"parsinlu:{task_key}:{split}:{source_case_id}",
             source=PARSINLU_SOURCE,
-            source_revision=revision, license=PARSINLU_LICENSE, split="test", origin="native",
-            task_family=f"parsinlu-{task_key}", state_lang="fa", question_lang="fa",
-            state=state.strip() or question, question_type="choice", question_text=question,
-            options=options, gold=one_hot(ids, correct_id),
+            source_revision=revision,
+            license=PARSINLU_LICENSE,
+            split="test",
+            origin="native",
+            task_family=f"parsinlu-{task_key}",
+            state_lang="fa",
+            question_lang="fa",
+            state=state.strip() or question,
+            question_type="choice",
+            question_text=question,
+            options=options,
+            gold=one_hot(ids, correct_id),
             extra={
                 "benchmark_split": split,
                 "source_row_id": str(row_id),
@@ -220,23 +244,32 @@ def convert_parsinlu_row(
     if isinstance(label, Sequence) and not isinstance(label, str):
         raise ExternalEvalError(f"{where}: label field is not a scalar class label")
     if task_key in {"entailment", "textual-entailment", "parsinlu-entailment"}:
-        premise = _text(row, ("premise", "sentence1", "text1", "text_a"), where=where)
-        hypothesis = _text(row, ("hypothesis", "sentence2", "text2", "text_b"), where=where)
-        state, question = premise, f"آیا این فرضیه از متن نتیجه می‌شود؟\nفرضیه: {hypothesis}"
+        premise = _text(row, ("premise", "sentence1", "text1", "text_a", "sent1"), where=where)
+        hypothesis = _text(
+            row, ("hypothesis", "sentence2", "text2", "text_b", "sent2"), where=where
+        )
+        state, question = premise, f"آیا این فرضیه از متن نتیجه می\u200cشود؟\nفرضیه: {hypothesis}"
     elif task_key in {"paraphrase", "paraphrase-detection", "parsinlu-paraphrase"}:
-        first = _text(row, ("sentence1", "text1", "text_a", "question1"), where=where)
-        second = _text(row, ("sentence2", "text2", "text_b", "question2"), where=where)
-        state, question = first, f"آیا دو عبارت هم‌معنی هستند؟\nعبارت دوم: {second}"
+        first = _text(row, ("sentence1", "text1", "text_a", "question1", "q1"), where=where)
+        second = _text(row, ("sentence2", "text2", "text_b", "question2", "q2"), where=where)
+        state, question = first, f"آیا دو عبارت هم\u200cمعنی هستند؟\nعبارت دوم: {second}"
     elif task_key in {"sentiment", "sentiment-analysis", "parsinlu-sentiment"}:
         state = _text(row, ("text", "sentence", "review", "content"), where=where)
-        question = "احساس بیان‌شده در متن چیست؟"
+        question = row.get("question") or "احساس بیان\u200cشده در متن چیست؟"
     else:
         raise ExternalEvalError(
             f"{where}: unsupported ParsiNLU task; configure an explicit adapter"
         )
     return _classification_record(
-        row, task=task_key, revision=revision, row_id=row_id, split=split,
-        label=label, label_names=label_names, state=state, question=question,
+        row,
+        task=task_key,
+        revision=revision,
+        row_id=row_id,
+        split=split,
+        label=label,
+        label_names=label_names,
+        state=state,
+        question=question,
     )
 
 
@@ -283,13 +316,20 @@ def convert_persianqa_row(row: Mapping[str, Any], *, revision: str, split: str) 
     source_case_id = str(row_id) if row_id is not None else record_id
     record = Record(
         id=record_id,
-        source_id=f"persianqa:{split}:{source_case_id}", source=PERSIANQA_SOURCE,
-        source_revision=revision, license=PERSIANQA_LICENSE, split="test", origin="native",
-        task_family="persianqa-answerability", state_lang="fa", question_lang="fa",
+        source_id=f"persianqa:{split}:{source_case_id}",
+        source=PERSIANQA_SOURCE,
+        source_revision=revision,
+        license=PERSIANQA_LICENSE,
+        split="test",
+        origin="native",
+        task_family="persianqa-answerability",
+        state_lang="fa",
+        question_lang="fa",
         state=passage,
         question_type="choice",
-        question_text=f"آیا متن به پرسش پاسخ می‌دهد؟\nپرسش: {question}",
-        options=options, gold=one_hot((option.id for option in options), correct),
+        question_text=f"آیا متن به پرسش پاسخ می\u200cدهد؟\nپرسش: {question}",
+        options=options,
+        gold=one_hot((option.id for option in options), correct),
         extra={
             "benchmark_split": split,
             "source_row_id": str(row_id),
@@ -370,9 +410,7 @@ def predict_laya(records, model, tokenizer, common, cfg, *, device: str, microba
                     )
                 continue
             elapsed_ms = (time.perf_counter() - started) * 1000 / len(batch_records)
-            for index, (record, item) in enumerate(
-                zip(batch_records, batch_items, strict=True)
-            ):
+            for index, (record, item) in enumerate(zip(batch_records, batch_items, strict=True)):
                 count = len(item["option_ids"])
                 values = probs[index, :count].tolist()
                 predictions_by_id[record.id] = Prediction(
@@ -459,7 +497,10 @@ def predict_diba_x1(records, model, *, mode: str = "best"):
             latency_ms = (time.perf_counter() - started) * 1000
             predictions.append(
                 Prediction(
-                    record.id, probs, gold=dict(record.gold), latency_ms=latency_ms,
+                    record.id,
+                    probs,
+                    gold=dict(record.gold),
+                    latency_ms=latency_ms,
                     extra={
                         "adapter": "dibaone-x1",
                         "mode": mode,
@@ -470,7 +511,9 @@ def predict_diba_x1(records, model, *, mode: str = "best"):
         except Exception as exc:
             predictions.append(
                 Prediction(
-                    record.id, {}, gold=dict(record.gold),
+                    record.id,
+                    {},
+                    gold=dict(record.gold),
                     latency_ms=(time.perf_counter() - started) * 1000,
                     error=f"{type(exc).__name__}: {exc}",
                     extra={"adapter": "dibaone-x1", "mode": mode},
@@ -488,37 +531,110 @@ def _eval_split(dataset_dict):
     )
 
 
-def load_parsinlu_task(repo_id: str, task: str):
-    """Load a held-out ParsiNLU split and return (records, resolved revision, split)."""
-    from datasets import load_dataset
-    from huggingface_hub import HfApi
+def _read_parsinlu_file(relative: str, revision: str) -> list[dict[str, Any]]:
+    url = f"https://raw.githubusercontent.com/{PARSINLU_REPOSITORY}/{revision}/data/{relative}"
+    with urlopen(url, timeout=60) as response:
+        text = response.read().decode("utf-8-sig")
+    if relative.endswith(".csv"):
+        return list(csv.DictReader(io.StringIO(text)))
+    return [json.loads(line) for line in text.splitlines() if line.strip()]
 
-    revision = HfApi().dataset_info(repo_id).sha
-    loaded = load_dataset(repo_id, revision=revision)
-    split, rows = _eval_split(loaded)
-    label_column = next(
-        (
-            key
-            for key in ("label", "labels", "gold", "answer_idx", "answer")
-            if key in rows.column_names
-        ),
-        None,
-    )
-    names = None
-    if label_column:
-        feature = rows.features.get(label_column)
-        names = getattr(feature, "names", None)
-    converted = [
-        convert_parsinlu_row(
-            row,
-            task=task,
-            revision=revision,
-            split=split,
-            label_names=names,
-        )
-        for row in rows
-    ]
-    return converted, revision, split
+
+def load_parsinlu_task(repo_id: str, task: str, *, revision: str = PARSINLU_REVISION):
+    """Read official held-out files without the removed datasets script API.
+
+    Return (records, upstream Git commit, source split). Legacy Hub identifiers
+    are accepted for existing callers, but provenance always names the actual
+    upstream repository and file. Only the explicit unlabelled entailment
+    marker ``-`` is excluded; all other unknown labels fail closed.
+    """
+    repositories = {
+        "entailment": {PARSINLU_REPOSITORY, "persiannlp/parsinlu_entailment"},
+        "paraphrase": {
+            PARSINLU_REPOSITORY,
+            "persiannlp/parsinlu_query_paraphrasing",
+            "persiannlp/parsinlu_paraphrase",
+        },
+        "sentiment": {PARSINLU_REPOSITORY, "persiannlp/parsinlu_sentiment"},
+        "multiple-choice-qa": {PARSINLU_REPOSITORY, "persiannlp/parsinlu_mcq"},
+    }
+    if task not in repositories or repo_id not in repositories[task]:
+        raise ExternalEvalError(f"unsupported ParsiNLU repository/task: {repo_id}/{task}")
+    if not re.fullmatch(r"[0-9a-f]{40}", revision):
+        raise ExternalEvalError("ParsiNLU revision must be an immutable 40-character Git SHA")
+    label_maps = {
+        "entailment": {"e": "entailment", "c": "contradiction", "n": "neutral"},
+        "paraphrase": {"0": "not_paraphrase", "1": "paraphrase"},
+        "sentiment": {
+            "-3": "اشاره نشده",
+            "-2": "خیلی منفی",
+            "-1": "منفی",
+            "0": "خنثی",
+            "1": "مثبت",
+            "2": "خیلی مثبت",
+            "3": "مختلط",
+        },
+    }
+    converted = []
+    excluded = 0
+    for relative in PARSINLU_FILES[task]:
+        rows = _read_parsinlu_file(relative, revision)
+        if not rows:
+            raise ExternalEvalError(f"ParsiNLU held-out file is empty: {relative}")
+        for index, raw in enumerate(rows):
+            row = dict(raw)
+            row["id"] = f"{relative}:{index}"
+            names = None
+            if task == "multiple-choice-qa":
+                # The official JSONL uses string answers 1..N, not zero-based indices.
+                answer = str(row.get("answer", ""))
+                candidates = row.get("candidates")
+                if (
+                    not isinstance(candidates, list)
+                    or not re.fullmatch(r"[1-9][0-9]*", answer)
+                    or not 1 <= int(answer) <= len(candidates)
+                ):
+                    raise ExternalEvalError(f"{relative}/{index}: invalid one-based answer")
+                # Some official questions pad two/three choices to four with
+                # empty trailing strings. Trim padding without shifting indices.
+                candidates = list(candidates)
+                while candidates and isinstance(candidates[-1], str) and not candidates[-1].strip():
+                    candidates.pop()
+                if int(answer) > len(candidates):
+                    raise ExternalEvalError(f"{relative}/{index}: gold answer points to padding")
+                row["candidates"] = candidates
+                row["answer"] = int(answer) - 1
+            else:
+                label = str(row.get("label", ""))
+                if task == "entailment" and label == "-":
+                    excluded += 1
+                    continue
+                mapping = label_maps[task]
+                if label not in mapping:
+                    raise ExternalEvalError(f"{relative}/{index}: unknown label {label!r}")
+                row["label"] = mapping[label]
+                names = list(mapping.values())
+            record = convert_parsinlu_row(
+                row, task=task, revision=revision, split="test", label_names=names
+            )
+            record.extra.update(
+                {
+                    "source_repository": f"https://github.com/{PARSINLU_REPOSITORY}",
+                    "source_file": relative,
+                    "source_label": raw.get("label", raw.get("answer")),
+                }
+            )
+            if task == "sentiment":
+                # All aspect questions from a review form one bootstrap source case.
+                record = replace(
+                    record, source_id=f"parsinlu:sentiment:{relative}:{raw['review_id']}"
+                )
+            converted.append(record)
+    if not converted:
+        raise ExternalEvalError(f"ParsiNLU {task} contains no labelled held-out rows")
+    for record in converted:
+        record.extra["excluded_unlabelled_rows"] = excluded
+    return converted, revision, "test"
 
 
 def _flatten_persianqa(value: Any) -> list[dict[str, Any]]:
@@ -569,7 +685,8 @@ def load_persianqa_repository(repo_url: str, checkout: str | Path):
         ["git", "-C", str(checkout), "rev-parse", "HEAD"], text=True
     ).strip()
     files = [
-        path for path in checkout.rglob("*")
+        path
+        for path in checkout.rglob("*")
         if path.is_file()
         and path.suffix.lower() in {".json", ".jsonl", ".csv"}
         and re.search(r"(^|[-_.])(test|dev|valid|validation)([-_.]|$)", path.stem.lower())
@@ -595,7 +712,6 @@ def load_persianqa_repository(repo_url: str, checkout: str | Path):
     if not raw_rows:
         raise ExternalEvalError("PersianQA held-out files contain no rows")
     converted = [
-        convert_persianqa_row(row, revision=revision, split=split)
-        for row, split in raw_rows
+        convert_persianqa_row(row, revision=revision, split=split) for row, split in raw_rows
     ]
     return converted, revision, sorted({split for _, split in raw_rows})

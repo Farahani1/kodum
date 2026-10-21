@@ -17,7 +17,9 @@ on held-out ParsiNLU and PersianQA data. The operational notebook is
   `dibaone` PyPI distribution. The adapter uses `mode="best"` and preserves
   request errors.
 - ParsiNLU tasks: entailment, paraphrase, sentiment and multiple-choice QA.
-  Each dataset revision is resolved once and used to load its held-out split.
+  The loader reads only explicit test CSV/JSONL files from the official
+  `persiannlp/parsinlu` Git commit
+  `a3b08d0b93ca84e0017e2f490a2aa3ab36c79885`, bypassing legacy Hub scripts.
 - PersianQA: the notebook records the cloned Git commit and reads only files
   explicitly named test/dev/validation. Train files are never selected.
 - No source is added to model training, no final-test tuning is done, and no
@@ -76,3 +78,28 @@ Re-upload the corrected notebook and run from bootstrap in a fresh session.
 Laya still loads `laya-full-v1/best/model.safetensors`, its tokenizer and
 configuration from the frozen model revision above; this failure did not
 reach or invalidate those artifacts.
+
+The third supplied run stopped in dataset loading with `RuntimeError: Dataset
+scripts are no longer supported`. The official entailment Hub dataset uses a
+legacy Python loader rejected by datasets 4.x. Downgrading alone would still
+leave invalid paraphrase/MCQ repository IDs and incompatible schemas.
+
+The corrected loader reads the official immutable upstream files directly:
+entailment `sent1`/`sent2` with e/c/n labels; query paraphrasing `q1`/`q2` with
+0/1 labels; food and movie sentiment with the original aspect question and all
+seven labels (including absent aspect and mixed sentiment); and MCQ candidates
+with one-based answers. Empty trailing MCQ padding is trimmed without
+changing answer indices; an empty interior or gold option remains an error. Entailment's explicit unlabelled `-` rows are excluded
+and counted in the manifest. Unexpected labels still stop evaluation. Source
+repository, file, original label and Git revision remain auditable; sentiment
+aspect questions from a review share a source-case bootstrap group.
+
+Push the corrected code branch before uploading the notebook. Use a fresh
+Kaggle session because bootstrap reuses an existing checkout without fetching
+updates. CPU validation covers the real held-out file conversion; GPU inference
+and a complete Kaggle rerun still need validation.
+
+Real-source CPU validation at the pinned commit converted 1,673 entailment
+records (two unlabelled rows excluded), 1,916 paraphrase, 2,160 sentiment
+(1,344 food and 816 movie), and 1,050 MCQ records. All converted IDs were unique
+within each benchmark and all records retained the test-only source role.
