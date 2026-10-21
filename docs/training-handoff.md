@@ -84,6 +84,27 @@ with lower encoder learning rate, and development-only English retention checks.
 It does not evaluate the final test set automatically. The partial-context
 model is the next stage and starts independently from original Laya too.
 
+## Full-data training result
+
+**Training completed (Oct 21, 2026):** the owner's attached Kaggle notebook
+`laya-training.ipynb` ran `ACTION = "train"` on T4 x2 with code
+`0fa1a580758da9e020075b0537ace4166a03b328`. Run `laya-full-v1` finished at
+step 600 with `status: training_complete` and best Persian development loss
+`0.9534161526337266`. The final result reports `test_evaluated: false`; this is
+training completion, not completion of KD-06 evaluation or portfolio release.
+
+The notebook records complete private checkpoint revision
+`f315b5da129e2b1df55d971ddf2053c3cbfe5282` in `Farahani/kodoom`, under
+`laya-full-v1/`. Use `best/` for the selected inference weights and `latest/`
+for resumable optimizer/training state. Pin this full commit hash when fetching
+the snapshot; later logs-only commits are not model checkpoint revisions.
+The notebook does not record a fresh-session restore of this full-run checkpoint
+or the final held-out evaluation. Those remain follow-up checks.
+
+Intended Hub tag for the complete training stage (not yet applied):
+`laya-full-v1-training-complete-awaiting-evaluation`. The tag must point to the
+complete snapshot revision above, not to a later logs-only commit.
+
 To resume an interrupted main run, use the restore CLI with the main run ID,
 exact complete snapshot commit, and an empty output directory, then invoke the
 same `train` command with `--runs-dir` pointing to its parent. Keep identical
