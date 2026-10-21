@@ -66,3 +66,13 @@ does not fit a temperature or guide checkpoint selection.
 The notebook deliberately does not upload benchmark rows, predictions or
 reports to Hugging Face. Make any later sharing decision separately after
 checking the source terms and removing any restricted derived content.
+
+The second supplied Kaggle run reached code revision `1cd8a38` but stopped
+before model download with `ModuleNotFoundError: No module named 'kodoom'`.
+An editable install in a subprocess does not activate its new `.pth` file in
+the running notebook kernel. Bootstrap now adds the checkout's `src` directory
+to the kernel import path and checks that `kodoom` comes from that checkout.
+Re-upload the corrected notebook and run from bootstrap in a fresh session.
+Laya still loads `laya-full-v1/best/model.safetensors`, its tokenizer and
+configuration from the frozen model revision above; this failure did not
+reach or invalidate those artifacts.

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import ast
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -158,4 +160,31 @@ def test_kaggle_notebook_code_is_valid_and_has_no_saved_outputs():
     assert "from dibaone_x1 import DibaOneX1" in source
     assert "backend='torch', device=device" in source
     assert "revision=diba_revision" in source
+
+
+def test_bootstrap_imports_checkout_in_kernel_without_site_packages():
+    root = Path(__file__).resolve().parents[1]
+    notebook = json.loads((root / "notebooks/external-evaluation.ipynb").read_text("utf-8"))
+    bootstrap = "".join(notebook["cells"][3]["source"])
+    # Model an existing kernel that has not processed the editable install's
+    # .pth file. Stub installation and Git only; exercise real package imports.
+    script = """
+import json, subprocess, sys
+from pathlib import Path
+settings = json.loads(sys.stdin.read())
+CHECKOUT = Path(settings['checkout'])
+subprocess.run = lambda *args, **kwargs: None
+subprocess.check_output = lambda *args, **kwargs: 'fake-code-revision'
+exec(settings['bootstrap'])
+from kodoom.package_import import file_sha
+assert callable(file_sha)
+assert Path(kodoom.__file__).resolve().parent == CHECKOUT / 'src' / 'kodoom'
+"""
+    result = subprocess.run(
+        [sys.executable, "-I", "-S", "-c", script],
+        input=json.dumps({"checkout": str(root), "bootstrap": bootstrap}),
+        text=True,
+        capture_output=True,
+    )
+    assert result.returncode == 0, result.stderr
 
