@@ -1,105 +1,113 @@
-# Kaggle external benchmark evaluation
+# Kaggle three-model sample comparison
 
-This handoff compares the selected full-data Laya checkpoint with DibaOne X1
-on held-out ParsiNLU and PersianQA data. The operational notebook is
-`notebooks/external-evaluation.ipynb`; the selected request is recorded in
-`workflows/model-evaluation.toml`.
+Run `notebooks/external-evaluation.ipynb` to compare **Laya multilingual**,
+**Kodoom** (our full-data Laya best checkpoint), and **DibaOne X1** on identical
+selected Persian samples. The request is `workflows/model-evaluation.toml`.
+Sampling, consumption, inference and reporting live in `kodoom.model_comparison`;
+the notebook configures and calls the package.
 
-## Frozen inputs and scope
+## Frozen inputs
 
-- Laya checkpoint: private `Farahani/kodoom`, complete snapshot revision
-  `f315b5da129e2b1df55d971ddf2053c3cbfe5282`, inference files under
-  `laya-full-v1/best/`. The notebook verifies downloaded files against the
-  snapshot manifest before loading.
-- Diba baseline: `Dibachain/DibaOne-X1`; its resolved Hub revision is saved
-  before downloading both the model assets and `dibaone_x1.py` from that same
-  revision. The notebook uses the model card's PyTorch backend; there is no
-  `dibaone` PyPI distribution. The adapter uses `mode="best"` and preserves
-  request errors.
-- ParsiNLU tasks: entailment, paraphrase, sentiment and multiple-choice QA.
-  The loader reads only explicit test CSV/JSONL files from the official
-  `persiannlp/parsinlu` Git commit
-  `a3b08d0b93ca84e0017e2f490a2aa3ab36c79885`, bypassing legacy Hub scripts.
-- PersianQA: the notebook records the cloned Git commit and reads only files
-  explicitly named test/dev/validation. Train files are never selected.
-- No source is added to model training, no final-test tuning is done, and no
-  raw source text is saved in prediction outputs.
+| Input | Revision / selection |
+| --- | --- |
+| Multilingual Laya | `convaiinnovations/laya-multilingual`, `1720e3e3357cfe1e281542e223f8273b0890ca34` |
+| Kodoom | private `Farahani/kodoom`, `f315b5da129e2b1df55d971ddf2053c3cbfe5282`, `laya-full-v1/best/` |
+| DibaOne X1 | `Dibachain/DibaOne-X1`; resolve once before inference, record exact SHA for code and assets |
+| ParsiNLU | official `persiannlp/parsinlu` Git commit `a3b08d0b93ca84e0017e2f490a2aa3ab36c79885`; explicit test files |
+| PersianQA | official `sajjjadayobi/PersianQA`; record resolved Git commit; explicit test/dev/validation files |
+| Translations | private `Farahani/kodoom-en-fa`, `1b98bbba48043c62c6ae2c821a55b6f8a5e7a927`; accepted release 1.0.1 and manifest hash from `configs/dataset-baseline.toml` |
 
-The converters mark each row as project split `test`, retain the source and
-revision, and enforce the source registry's test-only role. Unknown schemas or
-integer labels without their dataset's ClassLabel names stop the conversion.
-Converted benchmark records remain private because their source licenses do not
-authorize publishing derived data.
+Kodoom inference files must match the durable checkpoint manifest. The bilingual
+release uses existing inventory, schema, source-role and hash checks. No new
+translations, dataset corrections or training occur here.
 
-## Comparison protocol
+## Sample selection
 
-ParsiNLU classification tasks are represented as labelled choices; its MCQ task
-retains its original options. PersianQA is an answerability task: answerable
-examples map to `بله`, unanswerable examples to `خیر`. This is converted to a
-two-choice request for Diba X1 and is explicitly tagged in records and reports.
-It is not evidence of native X1 yes/no support. Do not compare metrics across
-different protocols as if they were the same task.
+Settings expose `SEED=17`, `NATIVE_CASES_PER_GROUP=100`,
+`TRANSLATED_CASES_PER_GROUP=3`, `INCLUDE_HELMO=True` and `MICROBATCH=4`.
+Limits count **source cases**, so question counts can exceed the limit.
+A stable seeded hash selects cases independent of row order before model loading.
+All questions in each case are retained; every model receives identical records
+and option order. Small groups use all available cases.
 
-Both models receive the same converted records and option order. The report
-contains per-model accuracy, soft accuracy, NLL, Brier, KL, ECE, latency,
-coverage, failures, and the same-item model comparison with a paired
-source-case bootstrap interval. Diba errors remain visible in the prediction
-file and are excluded only from the scored count; the coverage denominator is
-the complete benchmark. Probabilities are reported raw; the evaluation test set
-does not fit a temperature or guide checkpoint selection.
+- ParsiNLU: entailment, paraphrase, sentiment and MCQ; food/movie sentiment
+  domains are sampled separately, retaining every selected review's aspect
+  questions. Official unlabelled entailment rows are excluded and counted.
+- PersianQA: held-out answerability decisions, preserving source split.
+- Translated typed-decisions: **test only**, sampled per workflow, retaining
+  choice, noul and score questions. These are represented-workflow held-out
+  cases for Kodoom, which trained on typed-decisions train data.
+- Translated Helmo: sampled per topic from **source train**. This is a separate
+  train-only-source diagnostic, never a held-out score. The recorded full-data
+  recipe selected typed-decisions only, but the source split must still not be
+  renamed test. Set `INCLUDE_HELMO=False` to omit it.
 
-## Run and restart
+`samples.json` records selected IDs, group counts, locks, seeds and content hashes.
+`selected-samples.json` is also saved before inference. Outputs omit passages.
+Preserve exact input revisions, settings and manifests to reproduce a comparison.
 
-1. Push branch `codex/evaluate-parsinlu-persianqa`; upload the notebook to Kaggle
-   as private, enable Internet and a T4, and add `HF_TOKEN` as a Kaggle Secret
-   with read access to the private model repository.
-2. Run all cells. The code checkout, model revision and all dataset commits are
-   resolved and recorded in `/kaggle/working/kodoom-eval/results/manifest.json`.
-3. Save a private Kaggle notebook version/output to persist results. The
-   initial run failed in bootstrap because it attempted to install a nonexistent
-   `dibaone` PyPI package. The notebook now loads `dibaone_x1.py` and model files
-   from the pinned public Hub revision using the documented PyTorch backend. A
-   complete live rerun is still needed to validate Kaggle model loading and the
-   external dataset layouts; converters fail closed if a source layout differs.
-4. Preserve `results/report.json`, `results/<benchmark>/*.jsonl` and
-   `results/manifest.json` together. A fresh run should use the same manifest
-   revisions to reproduce the comparison.
+## Shared inference protocol
 
-The notebook deliberately does not upload benchmark rows, predictions or
-reports to Hugging Face. Make any later sharing decision separately after
-checking the source terms and removing any restricted derived content.
+X1 is choice-only. All three models receive the **same choice conversion**,
+preserving gold distributions, option IDs/order/text and source split. Original
+types and `noul-to-choice-for-all-models` / `score-to-choice-for-all-models`
+protocols are retained in reports. These results do not measure native noul/score
+heads or ordinal score metrics. ParsiNLU classification uses labelled choices;
+MCQ retains native choices; PersianQA is `answerability-to-two-choice`.
 
-The second supplied Kaggle run reached code revision `1cd8a38` but stopped
-before model download with `ModuleNotFoundError: No module named 'kodoom'`.
-An editable install in a subprocess does not activate its new `.pth` file in
-the running notebook kernel. Bootstrap now adds the checkout's `src` directory
-to the kernel import path and checks that `kodoom` comes from that checkout.
-Re-upload the corrected notebook and run from bootstrap in a fresh session.
-Laya still loads `laya-full-v1/best/model.safetensors`, its tokenizer and
-configuration from the frozen model revision above; this failure did not
-reach or invalidate those artifacts.
+All three use `kodoom.normalize.normalize` at model input; released text remains
+unchanged. Laya/Kodoom use temperature 1; X1 uses its shipped calibration.
+Nothing is fitted on benchmark samples. Laya prediction metadata retains token
+budgets/truncation. GPU inference timing excludes download/load; Laya batch time
+is amortized per question and X1 timing covers its decision API. These are not
+matched end-to-end application latency measurements. Models load sequentially.
 
-The third supplied run stopped in dataset loading with `RuntimeError: Dataset
-scripts are no longer supported`. The official entailment Hub dataset uses a
-legacy Python loader rejected by datasets 4.x. Downgrading alone would still
-leave invalid paraphrase/MCQ repository IDs and incompatible schemas.
+Reports separate benchmarks, workflow/topic and original question type. Each
+model reports accuracy, soft accuracy, NLL, Brier, KL, ECE, latency, coverage,
+missing requests and failures. Each pair has a common-item accuracy difference
+with source-case bootstrap intervals; three-way common-item metrics are included.
+There is no pooled native/translated/Helmo ranking.
 
-The corrected loader reads the official immutable upstream files directly:
-entailment `sent1`/`sent2` with e/c/n labels; query paraphrasing `q1`/`q2` with
-0/1 labels; food and movie sentiment with the original aspect question and all
-seven labels (including absent aspect and mixed sentiment); and MCQ candidates
-with one-based answers. Empty trailing MCQ padding is trimmed without
-changing answer indices; an empty interior or gold option remains an error. Entailment's explicit unlabelled `-` rows are excluded
-and counted in the manifest. Unexpected labels still stop evaluation. Source
-repository, file, original label and Git revision remain auditable; sentiment
-aspect questions from a review share a source-case bootstrap group.
+## Kaggle run and restart
 
-Push the corrected code branch before uploading the notebook. Use a fresh
-Kaggle session because bootstrap reuses an existing checkout without fetching
-updates. CPU validation covers the real held-out file conversion; GPU inference
-and a complete Kaggle rerun still need validation.
+1. Push `codex/evaluate-parsinlu-persianqa` before uploading the updated notebook.
+   Open it as **private**, enable **Internet** and a **GPU T4**. One GPU suffices.
+2. Enable the `HF_TOKEN` Kaggle Secret with read access to both private inputs.
+   Tokens are never saved in notebook source.
+3. Choose sample limits and Run all in a fresh session. The notebook records
+   the exact code SHA and resolved model/data revisions.
+4. Inspect `/kaggle/working/kodoom-three-model-eval/results/`:
+   `comparison.csv` puts all three answers/probabilities/errors beside gold;
+   `summary.csv` contains aggregate metrics; `report.json` contains breakdowns
+   and paired results. Each benchmark has `laya-multilingual.jsonl`,
+   `kodoom.jsonl` and `dibaone-x1.jsonl`.
+5. Preserve `samples.json` and `manifest.json` with the outputs. Model-load
+   errors become failed predictions, allow other models to finish, and produce
+   a failed manifest plus final exception. Item errors reduce coverage.
+6. Save a **private Kaggle version with outputs**; local disk is temporary.
+   For another run use a fresh session and new `WORK` path; existing results
+   are refused. Set `DIBA_REVISION` from the prior manifest and
+   `PERSIANQA_REVISION` from samples.json to retain those pins.
+   There is no automatic partial inference resume.
 
-Real-source CPU validation at the pinned commit converted 1,673 entailment
-records (two unlabelled rows excluded), 1,916 paraphrase, 2,160 sentiment
-(1,344 food and 816 movie), and 1,050 MCQ records. All converted IDs were unique
-within each benchmark and all records retained the test-only source role.
+The notebook does not upload datasets, predictions, weights or reports.
+ParsiNLU/PersianQA retain their test-only/private source policy. Historical TPU
+and training notebooks keep their recipes. Rebuild this notebook with
+`python scripts/build_comparison_notebook.py`.
+
+## Validation boundary and retained fixes
+
+CPU tests cover case sampling, conversion, split preservation, three-model
+dispatch, empty/common coverage, model-load failures, hashes and bootstrap.
+The accepted local release verified 2,000 typed-decisions test questions and
+2,000 Helmo source-train questions. Default sampling selects 60 questions from
+four typed-decisions workflows and 621 questions from 207 Helmo topics.
+A live Kaggle GPU rerun is still required; fixtures do not validate real-model
+loading or throughput.
+
+Earlier fixes remain: there is no `dibaone` PyPI package (use the pinned Hub
+module); an editable install's `.pth` does not activate in a running kernel
+(add checkout/src); datasets 4.x rejects ParsiNLU loader scripts (read pinned
+official test files). Real-source conversion previously yielded 1,673 entailment
+rows after excluding two unlabelled rows, 1,916 paraphrase, 2,160 sentiment and
+1,050 MCQ rows. Those totals describe full pools, not selected sample sizes.

@@ -418,7 +418,14 @@ def predict_laya(records, model, tokenizer, common, cfg, *, device: str, microba
                     dict(zip(item["option_ids"], values, strict=True)),
                     gold=dict(record.gold),
                     latency_ms=elapsed_ms,
-                    extra={"adapter": "kodoom-laya", "max_len": int(cfg["max_len"])},
+                    extra={
+                        "adapter": "kodoom-laya",
+                        "max_len": int(cfg["max_len"]),
+                        "head_max_len": int(cfg["head_max_len"]),
+                        "truncation": item["truncation"],
+                        "option_stats": item["option_stats"],
+                        "protocol": record.extra.get("protocol", "native-choice"),
+                    },
                 )
     return [predictions_by_id[record.id] for record in records]
 
@@ -495,16 +502,36 @@ def predict_diba_x1(records, model, *, mode: str = "best"):
             )
             probs = _decision_probabilities(result, record)
             latency_ms = (time.perf_counter() - started) * 1000
+            details = {}
+            temperature = 1.0
+            if isinstance(result, Mapping):
+                considered = result.get("considered")
+                if isinstance(considered, list) and all(
+                    isinstance(index, int) and 0 <= index < len(record.options)
+                    for index in considered
+                ):
+                    ids = [record.options[index].id for index in considered]
+                    details["considered_option_ids"] = ids
+                    details["shortlist_gold_mass"] = sum(record.gold.get(key, 0) for key in ids)
+                    if result.get("tier") == "x1" and callable(getattr(model, "temperature", None)):
+                        temperature = float(model.temperature(None, len(considered)))
+                details.update(
+                    {key: result[key] for key in ("tier", "abstain", "ms") if key in result}
+                )
             predictions.append(
                 Prediction(
                     record.id,
                     probs,
                     gold=dict(record.gold),
                     latency_ms=latency_ms,
+                    temperature=temperature,
                     extra={
                         "adapter": "dibaone-x1",
                         "mode": mode,
                         "protocol": record.extra.get("protocol", "native-choice"),
+                        "calibration_policy": "as-shipped; no evaluation-set fit",
+                        "max_length": getattr(model, "max_length", None),
+                        **details,
                     },
                 )
             )
@@ -674,13 +701,20 @@ def _flatten_persianqa(value: Any) -> list[dict[str, Any]]:
     return rows
 
 
-def load_persianqa_repository(repo_url: str, checkout: str | Path):
+def load_persianqa_repository(repo_url: str, checkout: str | Path, *, revision: str | None = None):
     """Clone the read-only PersianQA source and use only files named test/dev/valid."""
     checkout = Path(checkout)
+    if revision is not None and not re.fullmatch(r"[0-9a-f]{40}", revision):
+        raise ExternalEvalError("PersianQA revision must be an immutable 40-character Git SHA")
     if checkout.exists():
         raise ExternalEvalError(f"PersianQA checkout path already exists: {checkout}")
     checkout.parent.mkdir(parents=True, exist_ok=True)
     subprocess.run(["git", "clone", "--depth", "1", repo_url, str(checkout)], check=True)
+    if revision is not None:
+        subprocess.run(
+            ["git", "-C", str(checkout), "fetch", "--depth", "1", "origin", revision], check=True
+        )
+        subprocess.run(["git", "-C", str(checkout), "checkout", "--detach", revision], check=True)
     revision = subprocess.check_output(
         ["git", "-C", str(checkout), "rev-parse", "HEAD"], text=True
     ).strip()

@@ -172,9 +172,10 @@ def test_kaggle_notebook_code_is_valid_and_has_no_saved_outputs():
     source = source.replace('"', "'")
     assert "f315b5da129e2b1df55d971ddf2053c3cbfe5282" in source
     assert "pip', 'install', '-q', 'dibaone'" not in source
-    assert "from dibaone_x1 import DibaOneX1" in source
-    assert "backend='torch', device=device" in source
-    assert "revision=diba_revision" in source
+    assert "run_comparison" in source
+    adapter = (path.parents[1] / "src/kodoom/model_comparison.py").read_text("utf-8")
+    assert 'backend="torch", device=device' in adapter
+    assert "revision=revision" in adapter
 
 
 def test_bootstrap_imports_checkout_in_kernel_without_site_packages():

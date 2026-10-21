@@ -5,11 +5,15 @@ workflow; `docs/workflow-change-plan.md` tracks remaining migration work. The
 retained Kaggle runner covers the historical bulk draft campaign; a live Kaggle
 run and fresh-session restore remain unverified.
 
-**Active model evaluation handoff (project-plan v41, Oct 21):** use
+**Active model evaluation handoff (project-plan v42, Oct 22):** use
 `notebooks/external-evaluation.ipynb`, `workflows/model-evaluation.toml` and
-`docs/external-evaluation-handoff.md` to compare the full-data best Laya
-checkpoint with DibaOne X1 on held-out ParsiNLU and PersianQA. Training completed
-at step 600; the exact model snapshot is recorded in the handoff. Dataset rows
+`docs/external-evaluation-handoff.md` to compare multilingual Laya, Kodoom
+(the full-data best Laya checkpoint) and DibaOne X1 on the same selected
+ParsiNLU, PersianQA and translated typed-decisions test samples. Include Helmo
+topic samples only as a separate source-train diagnostic. Selection uses complete
+cases and one seed; all models receive the same explicitly declared choice
+conversion, retaining original types. Training completed
+at step 600; the exact model snapshot is recorded in the handoff. Native benchmark rows
 remain test-only/private, and the PersianQA-to-choice conversion must be named
 in reports. `notebooks/training.ipynb`, `workflows/model-training.toml` and
 `docs/training-handoff.md` retain the training recipe; fresh-session restore

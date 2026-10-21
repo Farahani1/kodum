@@ -1,6 +1,6 @@
 # Kodum: Persian typed-decision models and evaluation
 
-Version 41 · Oct 21, 2026 · @Shah
+Version 42 · Oct 22, 2026 · @Shah
 
 ## Current status and ownership decision
 
@@ -68,8 +68,14 @@ not a prerequisite to the first fine-tune or its portfolio release.
    KD-05 remains open until this succeeds. Final test was not evaluated.
 5. KD-04/KD-06: evaluate original Laya and the fine-tuned model on identical
    test examples, plus DibaOne X1 on supported choice questions. The owner also
-   requested a Kaggle comparison of the best checkpoint and DibaOne X1 on
-   held-out ParsiNLU and PersianQA. Keep the exact dataset revisions, split,
+   requested a Kaggle comparison of multilingual Laya, Kodoom (the full-data
+   best checkpoint) and DibaOne X1 on selected held-out ParsiNLU, PersianQA
+   and translated typed-decisions test cases. Sample complete cases per
+   native task/domain and translated workflow using one fixed seed for every
+   model. Include Helmo source-train topic samples only as a separate diagnostic.
+   Use a declared shared choice conversion for noul/score when comparing all
+   three; preserve original types and do not claim native X1 head support.
+   Keep the exact dataset revisions, split,
    conversion protocol, predictions and common-item coverage in the report.
    Baseline adapters can be completed alongside training. Freeze the evaluation
    protocol before final test scoring; use development results for recipe selection.
@@ -530,6 +536,13 @@ available, and public source datasets do not reproduce its custom test sets.
 | Diba X1 vs fine-tuned Laya | Identical supported choice questions/options | Competitive performance on this target workload, with task-specific training disclosed |
 | Raw vs calibrated | Same predictions/test cases; calibration fitted outside test | Probability calibration improvement, separately from answer selection |
 
+The active three-model sample notebook uses a shared choice protocol, including
+explicit noul/score-to-choice conversion for all models. Native-head evaluation
+remains separate. Laya and Kodoom run at temperature 1; X1 uses its shipped
+calibration with no benchmark fitting. Keep native Persian, translated test and
+Helmo source-train diagnostics separate, and report workflow/topic coverage,
+per-model failures, all pairwise intervals and three-way common-item results.
+
 Record model training exposure as known, suspected or unknown. Our model is a
 typed-decisions specialist; external baselines receive no task fine-tuning here.
 This is a practical workload comparison, not an equal-data/equal-budget trial or
@@ -673,6 +686,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
+| 42 | Oct 22, 2026 | Extend the Kaggle evaluation to multilingual Laya, Kodoom and DibaOne X1 on one reproducible selected sample set: ParsiNLU, PersianQA, translated typed-decisions test workflows and separate Helmo source-train topic diagnostics. Declare shared choice conversion, preserve source splits/types, and save side-by-side answers, coverage and all paired comparisons. Live three-model GPU validation remains pending. |
 | 41 | Oct 21, 2026 | Add the owner-requested Kaggle evaluation of the exact best Laya checkpoint against DibaOne X1 on held-out ParsiNLU and PersianQA. Pin source revisions and split, enforce test-only conversion, label PersianQA answerability-to-choice conversion, and save per-item predictions plus common-item metrics. |
 | 40 | Oct 21, 2026 | Record the owner's saved Kaggle full-data Laya training result: 600 updates, best Persian development loss 0.953416 and durable private checkpoint revision. Keep KD-06 open for held-out evaluation and portfolio artifacts; document the intended Hub tag in the training handoff. |
 | 39 | Oct 20, 2026 | Record successful two-update Kaggle T4 x2 preflight and private checkpoint commit from the owner's saved notebook. Preserve code pin 0fa1a58 for the next fresh-session restore; KD-05 and main training remain open. |

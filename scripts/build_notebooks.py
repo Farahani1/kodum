@@ -36,6 +36,21 @@ def document(cells: list[dict]) -> dict:
     }
 
 
+def comparison_reference_cell() -> dict:
+    return cell(
+        "markdown",
+        "## Active model comparison (project-plan v42)\n\n"
+        "Use external-evaluation.ipynb for multilingual Laya, Kodoom (full-data "
+        "best Laya) and DibaOne X1 on identical selected ParsiNLU, PersianQA and "
+        "translated typed-decisions test cases. Helmo source-train topic samples "
+        "are separate diagnostics. The notebook calls kodoom.model_comparison; "
+        "workflows/model-evaluation.toml records pins, seeded whole-case sampling, "
+        "shared choice conversion and outputs. See docs/external-evaluation-handoff.md. "
+        "No test calibration or publication occurs. Live three-model GPU validation "
+        "remains pending. execution.ipynb below is the historical translation recipe.\n",
+    )
+
+
 def build(revision: str) -> dict[str, dict]:
     request = tomllib.loads((ROOT / "workflows/current.toml").read_text("utf-8"))
     settings = f"""PROVIDER = "kaggle"  # kaggle, colab, generic
@@ -138,6 +153,7 @@ See `docs/execution-workflow.md` for saving/restoring and provider settings.
             "describe outputs and decisions, not a Run all workload. Main-plan future "
             "steps are marked blocked or unimplemented. No data or model outputs are committed.\n",
         ),
+        comparison_reference_cell(),
         cell(
             "markdown",
             "## Shared recipe catalog\n\n"
