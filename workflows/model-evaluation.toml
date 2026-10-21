@@ -1,0 +1,19 @@
+# Separate Kaggle handoff for the owner-requested held-out model comparison.
+stage = "laya-full-best-vs-dibaone-x1-parsinlu-persianqa"
+plan = "project-plan.md v41; KD-04/KD-06; external held-out evaluation"
+provider = "kaggle"
+accelerator = "T4"
+backend = "torch-and-dibaone-onnx"
+notebook = "notebooks/external-evaluation.ipynb"
+code_branch = "codex/evaluate-parsinlu-persianqa"
+model_repo = "Farahani/kodoom"
+model_run_id = "laya-full-v1"
+model_revision = "f315b5da129e2b1df55d971ddf2053c3cbfe5282"
+model_path = "laya-full-v1/best"
+diba_model = "Dibachain/DibaOne-X1"
+parsinlu_tasks = ["entailment", "paraphrase", "sentiment", "multiple-choice-qa"]
+persianqa_protocol = "answerability-to-two-choice-for-x1"
+evaluation_split_policy = "test-then-validation-or-dev; never-train"
+outputs = ["predictions/<benchmark>/laya-best.jsonl", "predictions/<benchmark>/dibaone-x1.jsonl", "report.json", "manifest.json"]
+storage = "private-kaggle-output; do-not-commit-source-rows-or-model-weights"
+stop = "all benchmark predictions saved and report includes revisions, protocols, coverage, and paired common-item results"

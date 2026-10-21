@@ -5,15 +5,19 @@ workflow; `docs/workflow-change-plan.md` tracks remaining migration work. The
 retained Kaggle runner covers the historical bulk draft campaign; a live Kaggle
 run and fresh-session restore remain unverified.
 
-**Active model training handoff (project-plan v39, Oct 20):** use
-`notebooks/training.ipynb`, `workflows/model-training.toml` and
-`docs/training-handoff.md` for full-data Laya training on Kaggle T4 x2. KD-02
-and the tiny CPU save/resume smoke (KD-03) are complete. The real-model two-GPU
-preflight passed at step 2 with code `0fa1a580758da9e020075b0537ace4166a03b328`
-and private checkpoint `de6c6cc0fd75f51b404c93aebfddad632e74a177`. KD-05 is
-pending fresh-session restore: keep the same code pin and use the handoff's
-restore settings. The two earlier failed attempts are documented there. The laptop has
-no usable CUDA GPU. `notebooks/execution.ipynb` and `workflows/current.toml`
+**Active model evaluation handoff (project-plan v41, Oct 21):** use
+`notebooks/external-evaluation.ipynb`, `workflows/model-evaluation.toml` and
+`docs/external-evaluation-handoff.md` to compare the full-data best Laya
+checkpoint with DibaOne X1 on held-out ParsiNLU and PersianQA. Training completed
+at step 600; the exact model snapshot is recorded in the handoff. Dataset rows
+remain test-only/private, and the PersianQA-to-choice conversion must be named
+in reports. `notebooks/training.ipynb`, `workflows/model-training.toml` and
+`docs/training-handoff.md` retain the training recipe; fresh-session restore
+remains unverified. The real-model two-GPU preflight passed at step 2 with code
+`0fa1a580758da9e020075b0537ace4166a03b328` and private checkpoint
+`de6c6cc0fd75f51b404c93aebfddad632e74a177`. The two earlier failed attempts
+are documented there. The laptop has no usable CUDA GPU.
+`notebooks/execution.ipynb` and `workflows/current.toml`
 remain the historical TPU translation request; they do not launch model
 training. Keep English examples at 50% in every effective batch, follow the
 retention checks, and save logs/checkpoints to Kaggle with periodic private Hub

@@ -1,6 +1,6 @@
 # Kodum: Persian typed-decision models and evaluation
 
-Version 40 · Oct 21, 2026 · @Shah
+Version 41 · Oct 21, 2026 · @Shah
 
 ## Current status and ownership decision
 
@@ -67,9 +67,12 @@ not a prerequisite to the first fine-tune or its portfolio release.
    Next verify restore in a fresh saved session with that exact code/revision;
    KD-05 remains open until this succeeds. Final test was not evaluated.
 5. KD-04/KD-06: evaluate original Laya and the fine-tuned model on identical
-   test examples, plus DibaOne X1 on supported choice questions. Baseline
-   adapters can be completed alongside training. Freeze the evaluation protocol
-   before final test scoring; use development results for recipe selection.
+   test examples, plus DibaOne X1 on supported choice questions. The owner also
+   requested a Kaggle comparison of the best checkpoint and DibaOne X1 on
+   held-out ParsiNLU and PersianQA. Keep the exact dataset revisions, split,
+   conversion protocol, predictions and common-item coverage in the report.
+   Baseline adapters can be completed alongside training. Freeze the evaluation
+   protocol before final test scoring; use development results for recipe selection.
 6. Deliver one checkpoint, inference/calibration code, saved predictions, a
    concise model card/report and a small demo. Report measured improvements
    only; a competitor win or broad-generalization result is not a release gate.
@@ -488,7 +491,14 @@ metrics, adapter revisions, Diba mode, input budgets and common-item coverage.
 Development data can guide specialization and debugging; final test results
 cannot guide model selection while retaining an untouched-test claim.
 
-ParsiNLU, PersianQA and Belebele remain test-only optional later evaluations.
+ParsiNLU and PersianQA remain test-only. The requested Kaggle evaluation is an
+additional held-out report, not a training or tuning source. ParsiNLU task
+datasets and PersianQA repository commits must be pinned in each run manifest.
+PersianQA answerability may be represented as two-choice for Diba X1 only when
+the conversion is named in the report; this does not claim native X1 noul
+support. Keep source data and converted rows private and publish only permitted
+aggregate results or sanitized predictions. Belebele remains an optional later
+evaluation.
 MASSIVE/FarsTail, skills, STT, held-out templates and whole-context evaluation
 are follow-ups when released resources exist; missing resources do not block
 training or the first portfolio release. Do not make broad transfer claims
@@ -663,6 +673,7 @@ Licenses marked \* are from memory; confirm them on the page before use.
 
 | Version | Date | Changes |
 | --- | --- | --- |
+| 41 | Oct 21, 2026 | Add the owner-requested Kaggle evaluation of the exact best Laya checkpoint against DibaOne X1 on held-out ParsiNLU and PersianQA. Pin source revisions and split, enforce test-only conversion, label PersianQA answerability-to-choice conversion, and save per-item predictions plus common-item metrics. |
 | 40 | Oct 21, 2026 | Record the owner's saved Kaggle full-data Laya training result: 600 updates, best Persian development loss 0.953416 and durable private checkpoint revision. Keep KD-06 open for held-out evaluation and portfolio artifacts; document the intended Hub tag in the training handoff. |
 | 39 | Oct 20, 2026 | Record successful two-update Kaggle T4 x2 preflight and private checkpoint commit from the owner's saved notebook. Preserve code pin 0fa1a58 for the next fresh-session restore; KD-05 and main training remain open. |
 | 38 | Oct 20, 2026 | Record the second Kaggle attempt reaching both GPUs and stopping on nonfinite gradients before its first optimizer update. Add a conservative initial AMP scale and bounded synchronized batch replay on overflow, requiring actual finite updates and retaining fatal persistent-failure checks. GPU preflight/restore remain pending rerun. |
