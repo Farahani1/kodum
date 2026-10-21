@@ -154,4 +154,8 @@ def test_kaggle_notebook_code_is_valid_and_has_no_saved_outputs():
         assert not cell["outputs"]
     source = "\n".join("".join(cell["source"]) for cell in code_cells)
     assert "f315b5da129e2b1df55d971ddf2053c3cbfe5282" in source
+    assert "pip', 'install', '-q', 'dibaone'" not in source
+    assert "from dibaone_x1 import DibaOneX1" in source
+    assert "backend='torch', device=device" in source
+    assert "revision=diba_revision" in source
 

@@ -12,7 +12,10 @@ on held-out ParsiNLU and PersianQA data. The operational notebook is
   `laya-full-v1/best/`. The notebook verifies downloaded files against the
   snapshot manifest before loading.
 - Diba baseline: `Dibachain/DibaOne-X1`; its resolved Hub revision is saved
-  before inference. The adapter uses `mode="best"` and preserves request errors.
+  before downloading both the model assets and `dibaone_x1.py` from that same
+  revision. The notebook uses the model card's PyTorch backend; there is no
+  `dibaone` PyPI distribution. The adapter uses `mode="best"` and preserves
+  request errors.
 - ParsiNLU tasks: entailment, paraphrase, sentiment and multiple-choice QA.
   Each dataset revision is resolved once and used to load its held-out split.
 - PersianQA: the notebook records the cloned Git commit and reads only files
@@ -50,9 +53,12 @@ does not fit a temperature or guide checkpoint selection.
    with read access to the private model repository.
 2. Run all cells. The code checkout, model revision and all dataset commits are
    resolved and recorded in `/kaggle/working/kodoom-eval/results/manifest.json`.
-3. Save a private Kaggle notebook version/output to persist results. A live
-   Kaggle run has not yet verified the external repository layouts or Diba
-   runtime installation. The converters fail closed if a source layout differs.
+3. Save a private Kaggle notebook version/output to persist results. The
+   initial run failed in bootstrap because it attempted to install a nonexistent
+   `dibaone` PyPI package. The notebook now loads `dibaone_x1.py` and model files
+   from the pinned public Hub revision using the documented PyTorch backend. A
+   complete live rerun is still needed to validate Kaggle model loading and the
+   external dataset layouts; converters fail closed if a source layout differs.
 4. Preserve `results/report.json`, `results/<benchmark>/*.jsonl` and
    `results/manifest.json` together. A fresh run should use the same manifest
    revisions to reproduce the comparison.
