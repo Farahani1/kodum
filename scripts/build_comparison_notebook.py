@@ -180,7 +180,9 @@ group/type breakdowns and all paired comparisons. Each benchmark has three
 prediction JSONL files. `manifest.json` records models, datasets, sample hashes,
 dependencies, failures and output hashes. Outputs omit source passages.
 
-Save a **private Kaggle version with outputs** to preserve these files.
+The final cell packages the entire `results/` directory into `WORK/results.zip`
+and displays a download link. Save a **private Kaggle version with outputs**
+to preserve the archive and original files.
 For another run, use a fresh session and a new WORK path; set DIBA_REVISION
 from the previous manifest and PERSIANQA_REVISION from samples.json to retain
 the same input pins. Full restart and
@@ -200,6 +202,19 @@ table += "| " + " | ".join("---" for _ in columns) + " |\\n"
 table += "\\n".join("| " + " | ".join(row[key] for key in columns) + " |" for row in rows)
 display(Markdown(table))
 print("Save private Kaggle outputs from:", OUTPUT)
+""",
+        ),
+        cell(
+            "code",
+            """import shutil
+from IPython.display import FileLink, display
+
+archive_path = Path(shutil.make_archive(
+    str(OUTPUT.parent / OUTPUT.name), "zip",
+    root_dir=OUTPUT.parent, base_dir=OUTPUT.name,
+))
+print("Results archive saved to:", archive_path)
+display(FileLink(str(archive_path)))
 """,
         ),
     ]

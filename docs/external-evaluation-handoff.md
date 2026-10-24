@@ -84,7 +84,9 @@ There is no pooled native/translated/Helmo ranking.
 5. Preserve `samples.json` and `manifest.json` with the outputs. Model-load
    errors become failed predictions, allow other models to finish, and produce
    a failed manifest plus final exception. Item errors reduce coverage.
-6. Save a **private Kaggle version with outputs**; local disk is temporary.
+6. The final notebook cell creates `WORK/results.zip`, containing the entire
+   `results/` directory, and displays a download link. Save a **private Kaggle
+   version with outputs** to preserve the archive; local disk is temporary.
    For another run use a fresh session and new `WORK` path; existing results
    are refused. Set `DIBA_REVISION` from the prior manifest and
    `PERSIANQA_REVISION` from samples.json to retain those pins.
