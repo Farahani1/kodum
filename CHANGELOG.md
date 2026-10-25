@@ -74,6 +74,12 @@ Our checks and glossary are meant to catch this kind of inconsistency.
 
 ### Added
 
+- A bilingual `MODEL_CARD_EXAMPLES.md` companion covering context, questions,
+  candidate answers and illustrative expected answers for all seven groups in
+  the model card. The card links it in its opening, explains the Persian name
+  Kodoom, and distinguishes the author's report of similar English gains from
+  the supplied Persian metrics; English test details are forthcoming.
+
 - A Hugging Face-formatted Kodoom model card in `MODEL_CARD.md`, grounded in the
   owner's completed three-model evaluation. It highlights the four improved
   Persian workflows, distinguishes small external-task gains from the Helmo

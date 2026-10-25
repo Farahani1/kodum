@@ -14,20 +14,35 @@ tags:
   - mmbert
 ---
 
-# Kodoom: Persian decisions for practical workflows
+**Kodoom is fine-tuned for decisions in Persian and English: the Persian
+evaluation shows gains, and the model author reports measured English gains of
+nearly the same magnitude. [See context, question, and answer examples](MODEL_CARD_EXAMPLES.md).**
 
-**Turn Persian context into a choice your application can act on.** Kodoom is a
+# Kodoom: bilingual decisions for practical workflows
+
+**Turn Persian or English context into a choice your application can act on.** Kodoom is a
 322M-parameter Persian-focused adaptation of Laya-multilingual for developers
 building support triage, invoice workflows, agent monitoring, and security
 incident tools. Supply the context, a question, and candidate answers; the model
 scores the answers and returns probabilities, giving your application a
 structured decision interface.
 
+**Why "Kodoom"?** In colloquial Persian, **کدوم** means **"which?" or "which
+one?"** It is a natural way to ask a decision question, such as "Which option
+should I choose?" The name reflects the model's purpose: choosing among supplied
+alternatives using the available context.
+
 **68.3% accuracy on the selected held-out Persian workflow questions**, compared
 with **43.3% for Laya-multilingual** and **33.3% for DibaOne X1**: gains of
 **25.0 and 35.0 percentage points**, respectively. This evaluation covers 60
 questions from 12 complete cases, with higher point accuracy in all four tested
 workflows. It is a sample evaluation, not a score on the entire test split.
+
+**English evaluation update:** The model author reports that measurements on
+English data show nearly the same improvement as the Persian results. The
+English test results and evaluation details will be included soon. The
+numerical tables and confidence intervals currently presented in this card
+cover **Persian only**; no English scores or intervals are supplied here.
 
 **The English–Persian data used to train Kodoom will be released soon.** The
 planned dataset home is [Farahani/kodoom-en-fa](https://huggingface.co/datasets/Farahani/kodoom-en-fa).
@@ -166,8 +181,9 @@ The training handoff records **600 optimizer updates**, two epochs, effective
 batch size 32, and **50% Persian / 50% English replay** on Kaggle T4 x2. It uses
 soft-target cross-entropy and selects the best checkpoint using development
 criteria. The reported best Persian development loss is **0.953416**. English
-replay is part of the recipe; this Persian evaluation does not demonstrate
-retained English or other-language performance.
+replay is part of the bilingual recipe. The author-reported English gains
+described above await their accompanying test results and evaluation details;
+the supplied Persian evaluation does not establish performance in other languages.
 
 The broader bilingual dataset also contains a separate 2,000-question Helmo
 component. Those rows, the full released test split, and untranslated original
