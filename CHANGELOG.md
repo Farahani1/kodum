@@ -74,6 +74,14 @@ Our checks and glossary are meant to catch this kind of inconsistency.
 
 ### Added
 
+- Hugging Face publication layout and verification notes in
+  `docs/huggingface-publication.md`: root model card, bilingual examples under
+  `docs/`, and complete aggregate evaluation evidence under `eval/`. Preserve
+  the existing private repository and Apache-2.0 declaration, retain checkpoint
+  paths, and exclude private benchmark rows and local paths from the upload.
+  Hub commit `2bae4f3754825d216a62c795ec325c0284e5f6b8` contains all seven files;
+  their downloaded hashes matched the staged copies.
+
 - A bilingual `MODEL_CARD_EXAMPLES.md` companion covering context, questions,
   candidate answers and illustrative expected answers for all seven groups in
   the model card. The card links it in its opening, explains the Persian name

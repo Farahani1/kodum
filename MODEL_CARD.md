@@ -1,5 +1,6 @@
 ---
 model_name: Kodoom
+license: apache-2.0
 base_model: convaiinnovations/laya-multilingual
 base_model_relation: finetune
 language:
@@ -223,6 +224,12 @@ deployment. Validate those on separate examples from the intended application.
 
 ## Evaluation scope and reproducibility
 
+The [evaluation files and protocol](https://huggingface.co/Farahani/kodoom/tree/main/eval/persian-shared-choice-v2)
+include the complete aggregate report, a CSV summary, sanitized provenance,
+and checksums. They retain all evaluated tasks, including outcomes outside
+this card's selected capability summary. They contain no benchmark passages,
+per-item records, or sample ID lists.
+
 The completed run uses protocol **`shared-choice-persian-v2`**, seed **17**, and
 identical selected questions and option order for all three models. It reports
 **100% prediction coverage and zero prediction errors** for every model.
@@ -269,9 +276,10 @@ owner-approved Apache-2.0 grant for rights held by the grantor. The separate
 [Helmo source](https://huggingface.co/datasets/helmo/synthetic-typed-decisions)
 retains MIT terms. Dataset component licenses and notices remain distinct.
 
-The supplied release documents do not specify a separate license for the Kodoom
-fine-tuned weights. The kodoom repository's **0BSD code license** is separate
-from model-weight and dataset licensing.
+The existing [Kodoom model repository](https://huggingface.co/Farahani/kodoom)
+declares **Apache-2.0** for its model release; this card preserves that declaration.
+The kodoom code repository's **0BSD license** is separate from model-weight
+and dataset licensing.
 
 Evaluation credits: [ParsiNLU](https://github.com/persiannlp/parsinlu) and
 [PersianQA](https://github.com/sajjjadayobi/PersianQA). Their evaluation-only use
