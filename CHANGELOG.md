@@ -74,6 +74,13 @@ Our checks and glossary are meant to catch this kind of inconsistency.
 
 ### Added
 
+- A Hugging Face-formatted Kodoom model card in `MODEL_CARD.md`, grounded in the
+  owner's completed three-model evaluation. It highlights the four improved
+  Persian workflows, distinguishes small external-task gains from the Helmo
+  source-train diagnostic, discloses sampling and calibration limits, and
+  announces the forthcoming training-data release. Output fingerprints preserve
+  the connection to the supplied results without committing run artifacts.
+
 - Portable notebook workflow design and implementation status are tracked in
   `agent.md` and the separate `docs/workflow-change-plan.md`. The reference and
   active execution notebooks cover the current free-text gate; full training,
