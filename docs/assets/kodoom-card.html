@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kodoom – Hugging Face card</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@800&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&display=swap" rel="stylesheet">
+<style>
+  /* Card is a fixed 1200x630 canvas (standard social-preview size).
+     It is scaled to fit the window; screenshot it at 1200x630 for a PNG. */
+  :root {
+    --yellow: #FFD21E;
+    --amber: #FF9D00;
+    --ink: #1B1747;
+    --paper: #FFFDF4;
+    --muted: #5B5688;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; background: #e9e4d0; }
+  body { display: grid; place-items: center; overflow: hidden; }
+  .stage { width: 1200px; height: 630px; transform-origin: center; flex: none; }
+  .card {
+    position: relative; width: 1200px; height: 630px; overflow: hidden;
+    background: var(--yellow); color: var(--ink);
+    font-family: "Bricolage Grotesque", "Helvetica Neue", Arial, sans-serif;
+  }
+  /* big warm sweep behind the card panel */
+  .card::before {
+    content: ""; position: absolute; right: -180px; top: -140px;
+    width: 700px; height: 700px; border-radius: 50%; background: var(--amber); opacity: .55;
+  }
+  .left { position: absolute; left: 64px; top: 52px; bottom: 52px; width: 560px;
+          display: flex; flex-direction: column; }
+  .brand { display: flex; align-items: center; gap: 14px; font-weight: 800; font-size: 28px; letter-spacing: -.01em; }
+  .brand svg { width: 52px; height: 52px; }
+  .fa {
+    font-family: "Vazirmatn", Tahoma, "Noto Naskh Arabic", sans-serif; font-weight: 800;
+    font-size: 210px; line-height: 1.05; margin-top: 34px; direction: rtl; text-align: left;
+  }
+  .name { font-weight: 800; font-size: 76px; letter-spacing: -.035em; line-height: 1; margin-top: -4px; }
+  .tag { font-size: 28px; line-height: 1.25; margin-top: 16px; font-weight: 500; max-width: 500px; }
+  .repo { margin-top: auto; font-size: 24px; font-weight: 500; }
+  .repo b { font-weight: 800; }
+
+  .panel {
+    position: absolute; right: 64px; top: 78px; width: 450px; height: 474px;
+    background: var(--paper); border: 4px solid var(--ink); border-radius: 28px;
+    box-shadow: 12px 12px 0 var(--ink); padding: 34px 34px 28px;
+    display: flex; flex-direction: column;
+  }
+  .q { font-weight: 800; font-size: 34px; letter-spacing: -.02em; }
+  .sub { font-size: 18px; color: var(--muted); margin-top: 6px; line-height: 1.3; }
+  .opts { margin-top: 26px; display: flex; flex-direction: column; gap: 20px; }
+  .opt .row { display: flex; justify-content: space-between; align-items: baseline; font-size: 20px; font-weight: 500; }
+  .opt .val { font-weight: 800; font-size: 26px; font-variant-numeric: tabular-nums; }
+  .bar { height: 22px; background: #ECE8D2; border-radius: 11px; margin-top: 8px; overflow: hidden; }
+  .bar i { display: block; height: 100%; border-radius: 11px; background: #B9B4D6; }
+  .opt.win .bar i { background: var(--ink); }
+  .opt.win .row { font-weight: 800; }
+  .chips { margin-top: auto; display: flex; gap: 10px; flex-wrap: wrap; }
+  .chip { border: 2.5px solid var(--ink); border-radius: 999px; padding: 5px 14px; font-size: 17px; font-weight: 500; background: #fff; }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="card">
+    <div class="left">
+      <div class="brand">
+        <!-- Simplified hugging-face emoji mark (the Hugging Face logo) -->
+        <svg viewBox="0 0 120 120" role="img" aria-label="Hugging Face logo">
+          <defs>
+            <radialGradient id="g" cx="50%" cy="38%" r="65%">
+              <stop offset="0" stop-color="#FFE45C"/><stop offset="1" stop-color="#FFB400"/>
+            </radialGradient>
+          </defs>
+          <circle cx="60" cy="58" r="46" fill="url(#g)" stroke="#1B1747" stroke-width="4"/>
+          <ellipse cx="42" cy="48" rx="6" ry="8.5" fill="#1B1747"/>
+          <ellipse cx="78" cy="48" rx="6" ry="8.5" fill="#1B1747"/>
+          <circle cx="44" cy="45" r="2" fill="#fff"/><circle cx="80" cy="45" r="2" fill="#fff"/>
+          <path d="M36 68 Q60 92 84 68 Q60 78 36 68Z" fill="#7A2E0E" stroke="#1B1747" stroke-width="3" stroke-linejoin="round"/>
+          <ellipse cx="26" cy="92" rx="14" ry="11" transform="rotate(-25 26 92)" fill="#FFC21A" stroke="#1B1747" stroke-width="4"/>
+          <ellipse cx="94" cy="92" rx="14" ry="11" transform="rotate(25 94 92)" fill="#FFC21A" stroke="#1B1747" stroke-width="4"/>
+        </svg>
+        Hugging Face
+      </div>
+      <div class="fa" lang="fa" dir="rtl">کدوم</div>
+      <div class="name">Kodoom</div>
+      <div class="tag">Bilingual decisions for practical workflows</div>
+      <div class="repo"><b>Farahani</b>/kodoom</div>
+    </div>
+
+    <div class="panel">
+      <div class="q">Which one?</div>
+      <div class="sub">Accuracy on 60 held-out Persian workflow questions</div>
+      <div class="opts">
+        <div class="opt win"><div class="row"><span>Kodoom</span><span class="val">68.3%</span></div><div class="bar"><i style="width:68.3%"></i></div></div>
+        <div class="opt"><div class="row"><span>Laya-multilingual</span><span class="val">43.3%</span></div><div class="bar"><i style="width:43.3%"></i></div></div>
+        <div class="opt"><div class="row"><span>DibaOne X1</span><span class="val">33.3%</span></div><div class="bar"><i style="width:33.3%"></i></div></div>
+      </div>
+      <div class="chips">
+        <span class="chip">Persian + English</span>
+        <span class="chip">322M params</span>
+        <span class="chip">Apache-2.0</span>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  // Scale the 1200x630 canvas to fit the window
+  const stage = document.getElementById('stage');
+  function fit() {
+    const s = Math.min(window.innerWidth / 1200, window.innerHeight / 630, 1);
+    stage.style.transform = 'scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit); fit();
+</script>
+</body>
+</html>

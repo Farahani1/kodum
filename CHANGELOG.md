@@ -72,6 +72,9 @@ Our checks and glossary are meant to catch this kind of inconsistency.
 
 ## Unreleased
 
+- Add the owner's HTML-designed Kodoom banner to the model card, with a
+  1200 by 630 PNG for Hugging Face and the editable source under `docs/assets/`.
+
 ### Added
 
 - Hugging Face publication layout and verification notes in

@@ -17,6 +17,15 @@ hashes matched the staged copies, including the unmodified CSV and JSON report.
 
 ## Layout and source mapping
 
+The owner's HTML banner was rendered with Edge at 1200 by 630 pixels and
+visually checked before inclusion below the opening model-card introduction.
+Hub commit `d2a7089d6ac4558a5573ec976785e9ea492cc4f2` adds
+`docs/assets/kodoom-card.png` and its editable HTML source, updates `README.md`,
+and refreshes the publication checksums for the changed card and new assets.
+All four uploaded files were downloaded at that commit and hash-verified.
+The Hub reported the repository as public during this update; the banner
+upload did not change its visibility.
+
 | Local source | Path in the model repository | Purpose |
 | --- | --- | --- |
 | `MODEL_CARD.md` | `README.md` | Rendered Hugging Face model card. |

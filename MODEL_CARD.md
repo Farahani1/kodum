@@ -21,6 +21,8 @@ nearly the same magnitude. [See context, question, and answer examples](MODEL_CA
 
 # Kodoom: bilingual decisions for practical workflows
 
+![Kodoom: Persian and English decisions; 68.3% accuracy on 60 held-out Persian workflow questions, compared with 43.3% for Laya-multilingual and 33.3% for DibaOne X1.](docs/assets/kodoom-card.png)
+
 **Turn Persian or English context into a choice your application can act on.** Kodoom is a
 322M-parameter Persian-focused adaptation of Laya-multilingual for developers
 building support triage, invoice workflows, agent monitoring, and security
